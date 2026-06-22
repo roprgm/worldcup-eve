@@ -1,6 +1,6 @@
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -34,6 +34,26 @@ function messageText(message: EveMessage): string {
   return text;
 }
 
+function messageKey(message: EveMessage, index: number): string {
+  if (message.role !== "user") return message.id;
+  return `${message.role}-${index}`;
+}
+
+function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
+  return (
+    message.role === "assistant" &&
+    message.metadata?.status === "streaming" &&
+    messageText(message).length === 0
+  );
+}
+
+function latestUserTurnId(messages: readonly EveMessage[]): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === "user") return message.metadata?.turnId;
+  }
+}
+
 /**
  * True when the backend rejected the turn with a 429 (rate limited). Eve surfaces
  * the original `ClientError` (with its HTTP `status`) on `agent.error`, so read it
@@ -52,8 +72,18 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
   const { data, status, send, stop, error } = agent;
   const messages = data.messages;
   const [input, setInput] = useState("");
-  const isEmpty = messages.length === 0;
   const isBusy = status === "submitted" || status === "streaming";
+  const activeTurnId = latestUserTurnId(messages);
+  const hasAssistantMessageForActiveTurn = messages.some(
+    (message) =>
+      message.role === "assistant" && message.metadata?.turnId === activeTurnId,
+  );
+  const latestMessage = messages.at(-1);
+  const showEmptyState = messages.length === 0 && !isBusy;
+  const showPendingRow =
+    isBusy &&
+    latestMessage?.role !== "assistant" &&
+    (activeTurnId === undefined || !hasAssistantMessageForActiveTurn);
 
   const submit = (text: string) => {
     const message = text.trim();
@@ -71,19 +101,20 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
     <div className="flex min-h-0 flex-1 flex-col">
       <Conversation>
         <ConversationContent>
-          {isEmpty ? (
+          {showEmptyState ? (
             <EmptyState onSelect={submit} />
           ) : (
             <div className="flex flex-col gap-6">
               {messages.map((message, index) => (
                 <MessageRow
-                  key={message.id}
+                  key={messageKey(message, index)}
                   message={message}
                   index={index}
+                  animate={!isEmptyStreamingAssistantMessage(message)}
                   streaming={message.metadata?.status === "streaming"}
                 />
               ))}
-              {status === "submitted" && <PendingRow />}
+              {showPendingRow && <PendingRow key="pending-assistant" />}
             </div>
           )}
         </ConversationContent>
@@ -111,9 +142,12 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
             onStop={stop}
             status={status}
           />
-          <p className="mt-2.5 text-center font-mono text-[10.5px] tracking-wide text-subtle-foreground">
-            WC26.chat can make mistakes — verify important details
-          </p>
+          <div className="mt-2.5 flex flex-col items-center gap-1.5 text-center font-mono">
+            <p className="text-[10.5px] tracking-wide text-subtle-foreground">
+              WC26.chat can make mistakes — verify important details
+            </p>
+            <EveAttribution />
+          </div>
         </div>
       </div>
     </div>
@@ -123,10 +157,12 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
 function MessageRow({
   message,
   index,
+  animate,
   streaming,
 }: {
   message: EveMessage;
   index: number;
+  animate: boolean;
   streaming: boolean;
 }) {
   const isUser = message.role === "user";
@@ -134,7 +170,7 @@ function MessageRow({
   return (
     <Message
       from={message.role}
-      className="wc-animate-in"
+      className={animate ? "wc-animate-in" : undefined}
       style={{ animationDelay: `${Math.min(index, 6) * 30}ms` }}
     >
       {!isUser && <MessageAvatar streaming={streaming} />}
@@ -155,7 +191,7 @@ function MessageRow({
 
 function PendingRow() {
   return (
-    <Message from="assistant" className="wc-animate-in">
+    <Message from="assistant">
       <MessageAvatar streaming />
       <MessageContent from="assistant">
         <div className="flex h-7 items-center">
@@ -163,6 +199,29 @@ function PendingRow() {
         </div>
       </MessageContent>
     </Message>
+  );
+}
+
+function EveAttribution({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <a
+      href="https://vercel.com/eve"
+      target="_blank"
+      rel="noreferrer"
+      className={cn(
+        "text-[12px] text-subtle-foreground transition-colors hover:text-foreground",
+        className,
+      )}
+      style={style}
+    >
+      made with <span className="text-muted-foreground">eve</span>
+    </a>
   );
 }
 
@@ -237,15 +296,10 @@ function EmptyState({ onSelect }: { onSelect: (suggestion: string) => void }) {
         </Suggestions>
       </div>
 
-      <a
-        href="https://vercel.com/eve"
-        target="_blank"
-        rel="noreferrer"
-        className="wc-animate-in mt-10 font-mono text-[11px] text-subtle-foreground transition-colors hover:text-foreground"
+      <EveAttribution
+        className="wc-animate-in mt-10 font-mono"
         style={{ animationDelay: "240ms" }}
-      >
-        Powered by <span className="text-muted-foreground">eve</span>
-      </a>
+      />
     </div>
   );
 }
