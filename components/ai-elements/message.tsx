@@ -1,6 +1,6 @@
+import { cn } from "cnfast";
 import type { ComponentProps } from "react";
 import { BallIcon } from "@/components/icons";
-import { cn } from "@/lib/utils";
 
 type ChatRole = "assistant" | "user";
 

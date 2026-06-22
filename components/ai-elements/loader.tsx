@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "cnfast";
 
 /** Three-dot typing indicator shown while the agent is "thinking". */
 export function Loader({ className }: { className?: string }) {

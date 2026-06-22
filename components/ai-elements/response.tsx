@@ -1,6 +1,6 @@
+import { cn } from "cnfast";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
-import { cn } from "@/lib/utils";
 
 // AI Elements–style Response: streams markdown safely via Streamdown.
 export const Response = memo(

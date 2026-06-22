@@ -15,7 +15,7 @@
   "dependencies": {
     "@vercel/functions": "^3.7.2",
     "ai": "7.0.0-beta.178",
-    "clsx": "^2.1.1",
+    "cnfast": "^0.0.8",
     "eve": "^0.12.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.21.0",
@@ -23,7 +23,6 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "streamdown": "^2.5.0",
-    "tailwind-merge": "^3.6.0",
     "use-stick-to-bottom": "^1.1.6",
     "zod": "4.4.3"
   },

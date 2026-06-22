@@ -1,7 +1,7 @@
 import type { UseEveAgentStatus } from "eve/react";
+import { cn } from "cnfast";
 import { ArrowUp, Square } from "lucide-react";
 import { BallIcon } from "@/components/icons";
-import { cn } from "@/lib/utils";
 
 interface SubmitButtonProps {
   status: UseEveAgentStatus;

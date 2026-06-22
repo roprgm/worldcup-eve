@@ -1,7 +1,7 @@
+import { cn } from "cnfast";
 import { ArrowDown } from "lucide-react";
 import { type ComponentProps, useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { cn } from "@/lib/utils";
 
 // AI Elements–style Conversation, built on use-stick-to-bottom for auto-scroll.
 

@@ -1,3 +1,4 @@
+import { cn } from "cnfast";
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
 import { type CSSProperties, type ReactNode, useState } from "react";
@@ -16,7 +17,6 @@ import { PromptInput } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { BallIcon } from "@/components/icons";
-import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",

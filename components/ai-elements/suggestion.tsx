@@ -1,6 +1,6 @@
+import { cn } from "cnfast";
 import { ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 export function Suggestions({
   children,
