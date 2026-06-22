@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { fetchStandings, type StandingEntry } from "@/lib/espn";
+import { fetchStandings, type StandingEntry } from "@/agent/lib/espn";
 
 const groupLetter = z.enum([
   "A",

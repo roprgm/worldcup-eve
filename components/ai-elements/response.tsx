@@ -1,0 +1,18 @@
+import { type ComponentProps, memo } from "react";
+import { Streamdown } from "streamdown";
+import { cn } from "@/lib/utils";
+
+// AI Elements–style Response: streams markdown safely via Streamdown.
+export const Response = memo(
+  ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
+    <Streamdown
+      className={cn(
+        "text-[0.9375rem] leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        className,
+      )}
+      {...props}
+    />
+  ),
+  (prev, next) => prev.children === next.children,
+);
+Response.displayName = "Response";

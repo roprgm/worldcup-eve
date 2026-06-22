@@ -1,7 +1,7 @@
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
-import scheduleData from "@/data/schedule.json" with { type: "json" };
-import { tournamentDay, tournamentTime } from "@/lib/time";
+import scheduleData from "@/agent/lib/schedule";
+import { tournamentDay, tournamentTime } from "@/agent/lib/time";
 
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
 

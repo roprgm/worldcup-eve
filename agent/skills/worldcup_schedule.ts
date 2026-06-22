@@ -1,11 +1,11 @@
 import { defineSkill } from "eve/skills";
-import scheduleData from "@/data/schedule.json" with { type: "json" };
+import scheduleData from "@/agent/lib/schedule";
 
 import {
   TOURNAMENT_DAY_ROLLOVER_UTC,
   tournamentDay,
   tournamentTime,
-} from "@/lib/time";
+} from "@/agent/lib/time";
 
 const matches = scheduleData
   .map((m) => {

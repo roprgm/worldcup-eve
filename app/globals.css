@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+/* Let Tailwind pick up the classes Streamdown renders markdown with. */
+@source "../node_modules/streamdown/dist/index.js";
+
+/*
+  WC26.chat — design tokens derived from Vercel's Geist design system (dark).
+  Reference: https://vercel.com/design.dark.md
+*/
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --background: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #141414;
+
+  /* Text */
+  --foreground: #ededed; /* gray-1000 / primary */
+  --muted-foreground: #a0a0a0; /* secondary */
+  --subtle-foreground: #6e6e6e;
+
+  /* Lines */
+  --muted: #1a1a1a; /* gray-100 */
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Brand / interaction */
+  --primary: #ededed;
+  --primary-foreground: #000000;
+  --accent: #006efe; /* Geist blue */
+  --accent-foreground: #eaf6ff;
+
+  --ring: #006efe;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Geist motion easing */
+  --ease-geist: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
+    Consolas, monospace;
+
+  --radius: var(--radius-sm);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    background-color: var(--background);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--accent) 32%, transparent);
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* Scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+    border: 3px solid var(--background);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #303030;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Motion + decorative bits
+---------------------------------------------------------------------------- */
+.wc-animate-in {
+  animation: wc-fade-up 0.5s var(--ease-geist) both;
+}
+
+@keyframes wc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* typing indicator */
+.wc-loader-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--muted-foreground);
+  animation: wc-bounce 1.25s infinite ease-in-out both;
+}
+.wc-loader-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.wc-loader-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes wc-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* assistant avatar — active while streaming */
+.wc-streaming {
+  animation: wc-streaming 1.9s var(--ease-geist) infinite;
+}
+@keyframes wc-streaming {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 24%, transparent);
+  }
+}
+
+/* soft halo behind the empty-state mark */
+.wc-halo {
+  position: absolute;
+  inset: -90%;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in oklab, var(--foreground) 13%, transparent),
+    transparent 68%
+  );
+  filter: blur(6px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* submit button — the up-arrow morphs into a soccer ball that kicks up and out
+   (clipped to the button via overflow-hidden) */
+.wc-send-arrow,
+.wc-send-ball {
+  transition:
+    opacity 0.15s var(--ease-geist),
+    transform 0.15s var(--ease-geist);
+}
+.wc-send-ball {
+  opacity: 0;
+}
+[data-launching="true"] .wc-send-arrow {
+  animation: wc-arrow-out 0.5s var(--ease-geist) forwards;
+}
+[data-launching="true"] .wc-send-ball {
+  animation: wc-ball-launch 0.5s var(--ease-geist) forwards;
+}
+@keyframes wc-arrow-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  24%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@keyframes wc-ball-launch {
+  0% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.4) rotate(0deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(12deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-8px) scale(0.92) rotate(46deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.78) rotate(82deg);
+  }
+}
+
+/* subtle pop when the stop control appears */
+.wc-pop {
+  animation: wc-pop 0.18s var(--ease-geist) both;
+}
+@keyframes wc-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

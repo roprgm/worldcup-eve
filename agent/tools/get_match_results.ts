@@ -7,8 +7,8 @@ import {
   matchStatus,
   type Competitor,
   type Competition,
-} from "@/lib/espn";
-import { tournamentDateTime } from "@/lib/time";
+} from "@/agent/lib/espn";
+import { tournamentDateTime } from "@/agent/lib/time";
 
 const tournamentDate = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/);
 

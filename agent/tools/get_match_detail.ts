@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { eventIdForMatch, fetchSummary } from "@/lib/espn";
+import { eventIdForMatch, fetchSummary } from "@/agent/lib/espn";
 
 export default defineTool({
   description:

@@ -1,6 +1,6 @@
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
-import { TOURNAMENT_DAY_ROLLOVER_UTC, tournamentDay } from "@/lib/time";
+import { TOURNAMENT_DAY_ROLLOVER_UTC, tournamentDay } from "@/agent/lib/time";
 
 // Dynamic instructions run per turn, so the agent always knows the current tournament day.
 export default defineDynamic({
