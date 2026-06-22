@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "paths": {
+      "@/data/*": ["./data/*"],
+      "@/*": ["./agent/*"]
+    }
+  },
+  "include": [
+    "agent/**/*.ts",
+    "evals/**/*.ts",
+    "middleware.ts",
+    ".eve/**/*.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}
