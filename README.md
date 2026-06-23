@@ -1,42 +1,55 @@
-# World Cup Eve App
+# World Cup Eve
 
-A tiny [**eve**](https://github.com/vercel/eve) agent and Next.js chat app for questions about
-the 2026 FIFA World Cup. The UI and the Eve routes share one origin, so the chat calls `/eve/v1/*`
-directly.
+An Eve agent for answering questions about the World Cup.
 
-## Run it
+Built with [Eve](https://github.com/vercel/eve), [Next.js](https://nextjs.org), and [AI SDK](https://ai-sdk.dev).
 
-You need **Node 24+**, **Bun**, and a model credential. The default model is `openai/gpt-5-nano`,
-so set `OPENAI_API_KEY` (or `AI_GATEWAY_API_KEY` for the Vercel AI Gateway). Change the model in
-`agent/agent.ts` to use another provider.
+## Highlights
+
+- ⚡ Live match context: scores, standings, and match events exposed to the Eve agent as typed tools
+- 🧠 Open model routing: `gpt-oss-120b` served through the Vercel AI Gateway with provider ordering
+- 💬 Resumable chats: each conversation gets a `/s/<id>` URL and restores from browser storage
+- 🧩 Complete Eve setup: tools, an on-demand skill, dynamic instructions, evals, and a chat UI in one small app
+
+## Requirements
+
+- Node.js 24+
+- Bun
+- `AI_GATEWAY_API_KEY` or another provider credential supported by your model
+
+## Development
 
 ```bash
 bun install
 bun run dev
 ```
 
-Open `http://localhost:3000` and try:
+Open `http://localhost:3000`.
 
-- "When does match 1 kick off?"
-- "What were the results on June 19, 2026?"
-- "What happened in match 29?"
-
-## Test it
+## Scripts
 
 ```bash
 bun run typecheck
-bunx eve eval --url http://localhost:3000
-```
-
-## Build and deploy
-
-`next.config.ts` wraps Next with `withEve`, so Vercel deploys the web app and Eve runtime as one
-project.
-
-```bash
+bun run format:check
 bun run build
 ```
 
-## Learn more
+## Eve
 
-The full Eve docs ship in `node_modules/eve/docs/` — start with `getting-started.mdx`.
+- `agent/agent.ts` configures the model and provider routing
+- `agent/tools/*` exposes typed tools to the agent
+- `agent/skills/*` contains an on-demand skill
+- `agent/instructions/*` adds dynamic instructions
+- `evals/*` contains Eve evals for the agent behavior
+
+`next.config.ts` wraps Next with `withEve`, so the web app and Eve runtime deploy as one project.
+
+## Evals
+
+```bash
+bunx eve eval --url http://localhost:3000
+```
+
+## License
+
+MIT

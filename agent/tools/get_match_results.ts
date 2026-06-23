@@ -41,7 +41,7 @@ function compactCompetition({ competitors }: Competition) {
 
 export default defineTool({
   description:
-    "Scores and live status for 2026 FIFA World Cup matches. Filters are optional and combine.",
+    "Scores and live status for World Cup matches. Filters are optional and combine.",
   inputSchema: z.object({
     status: z
       .enum(["scheduled", "live", "final"])
