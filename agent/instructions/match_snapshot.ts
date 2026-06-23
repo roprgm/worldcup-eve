@@ -1,9 +1,10 @@
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
 import scheduleData from "@/agent/lib/schedule";
-import { tournamentDay, tournamentTime } from "@/agent/lib/time";
+import { tournamentDay } from "@/agent/lib/time";
 
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
 
 const matches = scheduleData
   .map((match) => ({
@@ -12,12 +13,17 @@ const matches = scheduleData
   }))
   .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime());
 
-function matchLine(match: (typeof matches)[number]): string {
-  return `match ${match.number}: ${match.teamA ?? "TBD"} vs ${match.teamB ?? "TBD"}, ${tournamentDay(match.kickoff)} ${tournamentTime(match.kickoff)}, ${match.stadium}`;
+function matchLine(match: (typeof matches)[number], now: number): string {
+  const diffMs = match.kickoff.getTime() - now;
+  const minutesUntil = Math.max(1, Math.floor(diffMs / MINUTE_MS));
+  const relativeTime = diffMs > 0 ? `, starts_in_minutes ${minutesUntil}` : "";
+  return `match ${match.number}: ${match.teamA ?? "TBD"} vs ${match.teamB ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}${relativeTime}, ${match.stadium}`;
 }
 
-function lines(items: typeof matches): string {
-  return items.length ? items.map(matchLine).join("; ") : "none";
+function lines(items: typeof matches, now: number): string {
+  return items.length
+    ? items.map((match) => matchLine(match, now)).join("; ")
+    : "none";
 }
 
 function sameKickoffAs(
@@ -48,9 +54,9 @@ export default defineDynamic({
       return defineInstructions({
         markdown: [
           "# Match Snapshot",
-          `Last match: ${lines(sameKickoffAs(last))}.`,
-          `Current match: ${lines(current)}.`,
-          `Next match: ${lines(sameKickoffAs(next))}.`,
+          `Last match: ${lines(sameKickoffAs(last), now)}.`,
+          `Current match: ${lines(current, now)}.`,
+          `Next match: ${lines(sameKickoffAs(next), now)}.`,
         ].join("\n"),
       });
     },

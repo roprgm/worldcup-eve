@@ -62,16 +62,20 @@ export default defineTool({
     const scoreboard = await fetchScoreboard();
 
     const results = scoreboard.events
-      .map((event) => ({
-        id: matchIdForEvent(event.id),
-        kickoffAt: tournamentDateTime(new Date(event.date)),
-        status: event.status,
-        competitions: event.competitions.map(compactCompetition),
-      }))
+      .map((event) => {
+        const kickoff = new Date(event.date);
+        return {
+          id: matchIdForEvent(event.id),
+          kickoffAtUtc: kickoff.toISOString(),
+          tournamentKickoffAt: tournamentDateTime(kickoff),
+          status: event.status,
+          competitions: event.competitions.map(compactCompetition),
+        };
+      })
       .filter(
         (match) =>
           match.id !== undefined &&
-          inRange(match.kickoffAt, from, to) &&
+          inRange(match.tournamentKickoffAt, from, to) &&
           (!status || matchStatus(match.status) === status),
       );
 
