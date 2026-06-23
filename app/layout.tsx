@@ -5,9 +5,21 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://wc26.chat"),
   title: "WC26.chat",
-  description:
-    "WC26.chat — ask an AI agent anything about the 2026 FIFA World Cup across the USA, Canada, and Mexico.",
+  description: "WC26.chat — ask an AI agent anything about the World Cup.",
+  openGraph: {
+    title: "WC26.chat",
+    description: "Ask an AI agent anything about the World Cup.",
+    url: "https://wc26.chat",
+    siteName: "WC26.chat",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WC26.chat",
+    description: "Ask an AI agent anything about the World Cup.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

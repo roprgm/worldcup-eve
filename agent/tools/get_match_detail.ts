@@ -5,7 +5,7 @@ import { eventIdForMatch, fetchSummary } from "@/agent/lib/espn";
 
 export default defineTool({
   description:
-    "Incident timeline for one 2026 FIFA World Cup match by id. Can also include team stats.",
+    "Incident timeline for one World Cup match by id. Can also include team stats.",
   inputSchema: z.object({
     id: z.number().int().min(1).max(104).describe("World Cup match id, 1-104."),
     includeStats: z

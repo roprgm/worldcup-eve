@@ -1,6 +1,7 @@
 {
   "name": "worldcup-eve",
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "next build",
@@ -10,7 +11,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "start": "node scripts/start.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@vercel/functions": "^3.7.2",

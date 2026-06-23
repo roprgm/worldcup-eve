@@ -44,7 +44,7 @@ function compactEntry(entry: StandingEntry) {
 
 export default defineTool({
   description:
-    "Current 2026 FIFA World Cup group standings and teams already qualified for the knockout stage.",
+    "Current World Cup group standings and teams already qualified for the knockout stage.",
   inputSchema: z.object({
     group: groupLetter.optional().describe("Optional group letter, A-L."),
     qualifiedOnly: z
