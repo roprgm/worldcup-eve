@@ -10,6 +10,8 @@ export const Response = memo(
         "text-[0.9375rem] leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
+      // Drop the table copy/download/fullscreen toolbar.
+      controls={{ table: false }}
       {...props}
     />
   ),
