@@ -4,14 +4,21 @@ export function Header() {
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-2.5">
+        {/* Home is a fresh chat, so the logo doubles as "new chat". Full navigation
+            so it always remounts clean, even from a /s/<id> URL set via pushState. */}
+        <a
+          href="/"
+          aria-label="New chat"
+          title="New chat"
+          className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
+        >
           <span className="flex size-8 items-center justify-center rounded-[9px] border border-border bg-surface text-foreground">
             <BallIcon className="size-[18px]" />
           </span>
           <span className="text-[0.95rem] font-semibold tracking-tight text-foreground">
             WC26<span className="text-muted-foreground">.chat</span>
           </span>
-        </div>
+        </a>
         <a
           href="https://github.com/roprgm/worldcup-eve"
           target="_blank"
