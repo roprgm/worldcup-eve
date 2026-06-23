@@ -14,6 +14,7 @@
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.7.2",
     "ai": "7.0.0-beta.178",
     "cnfast": "^0.0.8",
