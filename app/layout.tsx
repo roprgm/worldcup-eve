@@ -15,11 +15,20 @@ export const metadata: Metadata = {
     url: "https://wc26.chat",
     siteName: "WC26.chat",
     type: "website",
+    images: [
+      {
+        url: "/og-image-v2.png",
+        width: 1200,
+        height: 628,
+        alt: "WC26.chat",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "WC26.chat",
     description: "Ask an AI agent anything about the World Cup.",
+    images: ["/og-image-v2.png"],
   },
   appleWebApp: {
     capable: true,
