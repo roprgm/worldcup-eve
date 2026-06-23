@@ -75,6 +75,11 @@ export function PromptInput({
     [],
   );
 
+  // Focus the input on mount so you can start typing right away.
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
   // Send the message and fire the submit-button launch animation (click or Enter).
   const submit = useCallback(() => {
     if (isBusy || !value.trim()) return;
