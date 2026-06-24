@@ -26,7 +26,7 @@ import { BallIcon } from "@/components/icons";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
-  "What time is the next match?",
+  "Who is more likely to win the next match?",
   "Where did Argentina play their last match?",
   "Who got the red card in Belgium vs Iran?",
 ];
