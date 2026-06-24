@@ -1,5 +1,5 @@
 import type { Spec } from "@json-render/core";
-import { Renderer } from "@json-render/react";
+import { JSONUIProvider, Renderer } from "@json-render/react";
 import { cn } from "cnfast";
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
@@ -276,7 +276,11 @@ function MessageRow({
           <>
             {text ? <Response>{text}</Response> : null}
             {specs.map(({ id, spec }) => (
-              <Renderer key={id} spec={spec} registry={registry} />
+              // Renderer needs the json-render context providers; the bare
+              // <Renderer> shown in the README throws useVisibility otherwise.
+              <JSONUIProvider key={id} registry={registry}>
+                <Renderer spec={spec} registry={registry} />
+              </JSONUIProvider>
             ))}
             {!text && specs.length === 0 ? (
               <ActivityStatus label={assistantActivityLabel(message)} />
