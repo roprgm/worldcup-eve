@@ -41,8 +41,9 @@ export const viewport: Viewport = {
   themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // The 16px prompt-input font already prevents iOS focus-zoom, so keep pinch-zoom
+  // available for accessibility (WCAG 1.4.4) instead of locking the viewport.
+  maximumScale: 5,
   viewportFit: "cover",
 };
 
