@@ -35,15 +35,22 @@ function hasTitleFavorite(output: unknown): boolean {
   );
 }
 
+function assertNoMarkdownTable(message: string | null | undefined): void {
+  if (message?.split("\n").some((line) => line.trim().startsWith("|"))) {
+    throw new Error("Prediction reply should not use markdown tables.");
+  }
+}
+
 export default defineEval({
   description: "Use static predictions for World Cup title favorites.",
   async test(t) {
-    await t.send("Who is the favorite to win the World Cup?");
+    const turn = await t.send("Who is the favorite to win the World Cup?");
 
     t.completed();
     t.calledTool("get_match_prediction", {
       output: hasTitleFavorite,
     });
     t.messageIncludes(countryPattern);
+    assertNoMarkdownTable(turn.message);
   },
 });
