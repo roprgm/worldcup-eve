@@ -111,9 +111,12 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
   const [turnTimedOut, setTurnTimedOut] = useState(false);
   const timeoutRef = useRef<number | null>(null);
   const isBusy = status === "submitted" || status === "streaming";
-  const visibleMessages = turnTimedOut
-    ? messages.filter((message) => !isEmptyStreamingAssistantMessage(message))
-    : messages;
+  // Only the in-flight turn should render empty streaming placeholders. Once idle
+  // — settled, errored, timed out, or restored from storage mid-stream — drop them
+  // so a persisted "streaming" message can't show a loader that never resolves.
+  const visibleMessages = isBusy
+    ? messages
+    : messages.filter((message) => !isEmptyStreamingAssistantMessage(message));
   const activeTurnId = latestUserTurnId(messages);
   const hasAssistantMessageForActiveTurn = messages.some(
     (message) =>
@@ -175,9 +178,7 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
                   message={message}
                   index={index}
                   animate={!isEmptyStreamingAssistantMessage(message)}
-                  streaming={
-                    message.metadata?.status === "streaming" && !turnTimedOut
-                  }
+                  streaming={message.metadata?.status === "streaming" && isBusy}
                 />
               ))}
               {showPendingRow && <PendingRow key="pending-assistant" />}

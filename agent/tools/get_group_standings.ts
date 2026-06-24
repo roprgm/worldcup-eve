@@ -2,21 +2,8 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { fetchStandings, type StandingEntry } from "@/agent/lib/espn";
+import { groupLetter } from "@/agent/lib/groups";
 
-const groupLetter = z.enum([
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-  "K",
-  "L",
-]);
 const statNames = new Set(
   "rank points gamesPlayed wins ties losses pointsFor pointsAgainst pointDifferential overall".split(
     " ",

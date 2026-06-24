@@ -1,23 +1,9 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { type GroupLetter, groupLetter } from "@/agent/lib/groups";
 import scheduleData from "@/agent/lib/schedule";
 import predictions from "@/data/predictions.json";
-
-const groupLetter = z.enum([
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-  "K",
-  "L",
-]);
 
 type PredictionTeam = (typeof predictions.teams)[number];
 
@@ -152,7 +138,7 @@ function topTeams(limit: number) {
     .map(compactTeam);
 }
 
-function groupTeams(group: z.infer<typeof groupLetter>) {
+function groupTeams(group: GroupLetter) {
   return teams
     .filter((team) => team.group === group)
     .sort(
