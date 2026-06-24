@@ -10,6 +10,7 @@ type Competitor = {
 };
 
 type MatchResult = {
+  id?: number;
   kickoffAtUtc?: string;
   status?: {
     displayClock?: string;
@@ -102,4 +103,25 @@ export function matchResultsSpec(output: unknown): Spec | null {
 
   elements.root = { type: "MatchList", props: {}, children: cardIds };
   return { root: "root", elements };
+}
+
+/** True when the output has at least one renderable match card. */
+export function hasMatchResults(output: unknown): boolean {
+  return matchResultsSpec(output) !== null;
+}
+
+/** All match ids present in the output (used to poll for live updates). */
+export function matchCardIds(output: unknown): number[] {
+  const results = (output as ResultsOutput | null)?.results;
+  if (!Array.isArray(results)) return [];
+  return results
+    .map((match) => match.id)
+    .filter((id): id is number => typeof id === "number");
+}
+
+/** True when any match in the output is currently live. */
+export function hasLiveMatch(output: unknown): boolean {
+  const results = (output as ResultsOutput | null)?.results;
+  if (!Array.isArray(results)) return false;
+  return results.some((match) => matchState(match.status) === "live");
 }

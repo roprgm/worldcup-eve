@@ -1,5 +1,3 @@
-import type { Spec } from "@json-render/core";
-import { JSONUIProvider, Renderer } from "@json-render/react";
 import { cn } from "cnfast";
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
@@ -25,8 +23,8 @@ import { PromptInput } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { BallIcon } from "@/components/icons";
-import { matchResultsSpec } from "@/components/render/match-card";
-import { registry } from "@/components/render/registry";
+import { hasMatchResults } from "@/components/render/match-card";
+import { MatchCards } from "@/components/render/match-cards";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
@@ -51,22 +49,22 @@ function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-/** Match-card specs for any get_match_results tool calls in this message. */
-function matchResultSpecs(
+/** get_match_results payloads in this message that have renderable cards. */
+function matchResultOutputs(
   message: EveMessage,
-): Array<{ id: string; spec: Spec }> {
-  const specs: Array<{ id: string; spec: Spec }> = [];
+): Array<{ id: string; output: unknown }> {
+  const outputs: Array<{ id: string; output: unknown }> = [];
   for (const part of message.parts) {
     if (
       part.type === "dynamic-tool" &&
       part.toolName === "get_match_results" &&
-      part.state === "output-available"
+      part.state === "output-available" &&
+      hasMatchResults(part.output)
     ) {
-      const spec = matchResultsSpec(part.output);
-      if (spec) specs.push({ id: part.toolCallId, spec });
+      outputs.push({ id: part.toolCallId, output: part.output });
     }
   }
-  return specs;
+  return outputs;
 }
 
 function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
@@ -261,7 +259,7 @@ function MessageRow({
 }) {
   const isUser = message.role === "user";
   const text = messageText(message);
-  const specs = isUser ? [] : matchResultSpecs(message);
+  const cards = isUser ? [] : matchResultOutputs(message);
   return (
     <Message
       from={message.role}
@@ -275,14 +273,10 @@ function MessageRow({
         ) : (
           <>
             {text ? <Response>{text}</Response> : null}
-            {specs.map(({ id, spec }) => (
-              // Renderer needs the json-render context providers; the bare
-              // <Renderer> shown in the README throws useVisibility otherwise.
-              <JSONUIProvider key={id} registry={registry}>
-                <Renderer spec={spec} registry={registry} />
-              </JSONUIProvider>
+            {cards.map(({ id, output }) => (
+              <MatchCards key={id} initialOutput={output} />
             ))}
-            {!text && specs.length === 0 ? (
+            {!text && cards.length === 0 ? (
               <ActivityStatus label={assistantActivityLabel(message)} />
             ) : null}
           </>
