@@ -58,15 +58,16 @@ function Session({ id }: { id?: string }) {
     }
   }, [chatId, agent.session?.sessionId]);
 
-  // Save the conversation under its id after each turn settles.
+  // Save the conversation under its id as events arrive, so refreshes during a
+  // long turn restore the latest known state instead of the previous settled turn.
   useEffect(() => {
-    if (chatId && agent.status === "ready") {
+    if (chatId) {
       localStorage.setItem(
         storageKey(chatId),
         JSON.stringify({ session: agent.session, events: agent.events }),
       );
     }
-  }, [chatId, agent.status, agent.session, agent.events]);
+  }, [chatId, agent.session, agent.events]);
 
   return (
     <div className="relative z-10 flex h-dvh flex-col overflow-hidden">

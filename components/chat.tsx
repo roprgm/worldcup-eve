@@ -111,14 +111,18 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
   const [turnTimedOut, setTurnTimedOut] = useState(false);
   const timeoutRef = useRef<number | null>(null);
   const isBusy = status === "submitted" || status === "streaming";
+  const visibleMessages = turnTimedOut
+    ? messages.filter((message) => !isEmptyStreamingAssistantMessage(message))
+    : messages;
   const activeTurnId = latestUserTurnId(messages);
   const hasAssistantMessageForActiveTurn = messages.some(
     (message) =>
       message.role === "assistant" && message.metadata?.turnId === activeTurnId,
   );
-  const latestMessage = messages.at(-1);
-  const showEmptyState = messages.length === 0 && !isBusy;
+  const latestMessage = visibleMessages.at(-1);
+  const showEmptyState = visibleMessages.length === 0 && !isBusy;
   const showPendingRow =
+    !turnTimedOut &&
     isBusy &&
     latestMessage?.role !== "assistant" &&
     (activeTurnId === undefined || !hasAssistantMessageForActiveTurn);
@@ -165,13 +169,15 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
             <EmptyState onSelect={submit} />
           ) : (
             <div className="flex flex-col gap-6">
-              {messages.map((message, index) => (
+              {visibleMessages.map((message, index) => (
                 <MessageRow
                   key={messageKey(message, index)}
                   message={message}
                   index={index}
                   animate={!isEmptyStreamingAssistantMessage(message)}
-                  streaming={message.metadata?.status === "streaming"}
+                  streaming={
+                    message.metadata?.status === "streaming" && !turnTimedOut
+                  }
                 />
               ))}
               {showPendingRow && <PendingRow key="pending-assistant" />}
