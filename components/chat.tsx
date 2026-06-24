@@ -1,7 +1,13 @@
 import { cn } from "cnfast";
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Conversation,
   ConversationContent,
@@ -24,6 +30,8 @@ const SUGGESTIONS = [
   "Where did Argentina play their last match?",
   "Who got the red card in Belgium vs Iran?",
 ];
+
+const TURN_TIMEOUT_MS = 45_000;
 
 /** Concatenate the renderable text parts of an Eve message. */
 function messageText(message: EveMessage): string {
@@ -100,6 +108,8 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
   const { data, status, send, stop, error } = agent;
   const messages = data.messages;
   const [input, setInput] = useState("");
+  const [turnTimedOut, setTurnTimedOut] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
   const isBusy = status === "submitted" || status === "streaming";
   const activeTurnId = latestUserTurnId(messages);
   const hasAssistantMessageForActiveTurn = messages.some(
@@ -113,9 +123,31 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
     latestMessage?.role !== "assistant" &&
     (activeTurnId === undefined || !hasAssistantMessageForActiveTurn);
 
+  useEffect(() => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!isBusy) return;
+
+    timeoutRef.current = window.setTimeout(() => {
+      setTurnTimedOut(true);
+      stop();
+    }, TURN_TIMEOUT_MS);
+
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [isBusy, stop]);
+
   const submit = (text: string) => {
     const message = text.trim();
     if (!message || isBusy) return;
+    setTurnTimedOut(false);
     // Errors surface via `status === 'error'`; swallow the rejection here.
     void send({ message }).catch(() => {});
   };
@@ -151,7 +183,12 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
 
       <div className="shrink-0 border-t border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto w-full max-w-3xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-6">
-          {status === "error" &&
+          {turnTimedOut ? (
+            <Notice icon={TriangleAlert} tone="red">
+              The agent took too long to respond. Please try again.
+            </Notice>
+          ) : (
+            status === "error" &&
             (isRateLimited(error) ? (
               <Notice icon={Clock} tone="amber">
                 You’re sending messages quickly. This public demo is limited to{" "}
@@ -162,7 +199,8 @@ export function Chat({ agent }: { agent: UseEveAgentHelpers<EveMessageData> }) {
               <Notice icon={TriangleAlert} tone="red">
                 Couldn’t reach the agent. Please try again.
               </Notice>
-            ))}
+            ))
+          )}
           <PromptInput
             value={input}
             onChange={setInput}
