@@ -1,3 +1,5 @@
+import type { Spec } from "@json-render/core";
+import { Renderer } from "@json-render/react";
 import { cn } from "cnfast";
 import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { Clock, type LucideIcon, TriangleAlert } from "lucide-react";
@@ -23,6 +25,8 @@ import { PromptInput } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { BallIcon } from "@/components/icons";
+import { matchResultsSpec } from "@/components/render/match-card";
+import { registry } from "@/components/render/registry";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
@@ -45,6 +49,24 @@ function messageText(message: EveMessage): string {
 function messageKey(message: EveMessage, index: number): string {
   if (message.role !== "user") return message.id;
   return `${message.role}-${index}`;
+}
+
+/** Match-card specs for any get_match_results tool calls in this message. */
+function matchResultSpecs(
+  message: EveMessage,
+): Array<{ id: string; spec: Spec }> {
+  const specs: Array<{ id: string; spec: Spec }> = [];
+  for (const part of message.parts) {
+    if (
+      part.type === "dynamic-tool" &&
+      part.toolName === "get_match_results" &&
+      part.state === "output-available"
+    ) {
+      const spec = matchResultsSpec(part.output);
+      if (spec) specs.push({ id: part.toolCallId, spec });
+    }
+  }
+  return specs;
 }
 
 function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
@@ -239,6 +261,7 @@ function MessageRow({
 }) {
   const isUser = message.role === "user";
   const text = messageText(message);
+  const specs = isUser ? [] : matchResultSpecs(message);
   return (
     <Message
       from={message.role}
@@ -249,10 +272,16 @@ function MessageRow({
       <MessageContent from={message.role}>
         {isUser ? (
           text
-        ) : text ? (
-          <Response>{text}</Response>
         ) : (
-          <ActivityStatus label={assistantActivityLabel(message)} />
+          <>
+            {text ? <Response>{text}</Response> : null}
+            {specs.map(({ id, spec }) => (
+              <Renderer key={id} spec={spec} registry={registry} />
+            ))}
+            {!text && specs.length === 0 ? (
+              <ActivityStatus label={assistantActivityLabel(message)} />
+            ) : null}
+          </>
         )}
       </MessageContent>
     </Message>
