@@ -1,23 +1,11 @@
 import { defineEval } from "eve/evals";
 
-import predictions from "@/data/predictions.json";
+import { countryPattern } from "@/evals/countries";
 
 type PredictionOutput = {
   type?: string;
   teams?: Array<{ code?: string; name?: string; championPercent?: number }>;
 };
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-const countryPattern = new RegExp(
-  predictions.teams
-    .map((team) => escapeRegExp(team.name))
-    .sort((a, b) => b.length - a.length)
-    .join("|"),
-  "i",
-);
 
 function hasTitleFavorite(output: unknown): boolean {
   if (!output || typeof output !== "object") {
