@@ -47,6 +47,34 @@ function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
   );
 }
 
+function assistantActivityLabel(message: EveMessage): string {
+  const latestTool = message.parts
+    .filter((part) => part.type === "dynamic-tool")
+    .at(-1);
+
+  if (latestTool) {
+    const kind = latestTool.toolMetadata?.eve?.kind;
+    const name = latestTool.toolMetadata?.eve?.name ?? latestTool.toolName;
+
+    if (latestTool.state === "output-error") return "Couldn’t read match data";
+    if (kind === "load-skill") return "Checking the World Cup schedule";
+    if (/standings/i.test(name)) return "Checking group standings";
+    if (/match|result|detail/i.test(name)) return "Checking match data";
+    if (latestTool.state === "output-available") return "Preparing the answer";
+    return "Checking match context";
+  }
+
+  if (message.parts.some((part) => part.type === "reasoning")) {
+    return "Thinking through the match context";
+  }
+
+  if (message.parts.some((part) => part.type === "step-start")) {
+    return "Starting the reply";
+  }
+
+  return "Starting the agent";
+}
+
 function latestUserTurnId(messages: readonly EveMessage[]): string | undefined {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
@@ -180,9 +208,7 @@ function MessageRow({
         ) : text ? (
           <Response>{text}</Response>
         ) : (
-          <div className="flex h-7 items-center">
-            <Loader />
-          </div>
+          <ActivityStatus label={assistantActivityLabel(message)} />
         )}
       </MessageContent>
     </Message>
@@ -194,11 +220,18 @@ function PendingRow() {
     <Message from="assistant">
       <MessageAvatar streaming />
       <MessageContent from="assistant">
-        <div className="flex h-7 items-center">
-          <Loader />
-        </div>
+        <ActivityStatus label="Starting the agent" />
       </MessageContent>
     </Message>
+  );
+}
+
+function ActivityStatus({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
+      <Loader className="shrink-0" />
+      <span>{label}</span>
+    </div>
   );
 }
 
