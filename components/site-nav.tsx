@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { cn } from "cnfast";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const LAST_CHAT_KEY = "wc26:last-chat-path";
 
@@ -26,36 +27,32 @@ function useLastChatHref(pathname: string) {
   return href;
 }
 
+const linkClass = (active: boolean) =>
+  cn(
+    "rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-surface",
+    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+  );
+
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
   const pathname = usePathname();
   const chatHref = useLastChatHref(pathname);
 
-  const links = [
-    { href: chatHref, label: "Chat", active: isChatPath(pathname) },
-    {
-      href: "/predictions",
-      label: "Predictions",
-      active: pathname === "/predictions",
-    },
-  ];
-
   return (
     <nav className="flex items-center gap-0.5">
-      {links.map((l) => (
-        <a
-          key={l.label}
-          href={l.href}
-          className={cn(
-            "rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-surface",
-            l.active
-              ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {l.label}
-        </a>
-      ))}
+      {/* Chat stays a full-page load: a saved `/chat/<id>` only restores from
+          storage when ChatProvider remounts, which client-side nav skips. */}
+      <a href={chatHref} className={linkClass(isChatPath(pathname))}>
+        Chat
+      </a>
+      {/* Link prefetches the route so the switch is instant even on a slow
+          connection; the page renders its own skeleton while data loads. */}
+      <Link
+        href="/predictions"
+        className={linkClass(pathname === "/predictions")}
+      >
+        Predictions
+      </Link>
     </nav>
   );
 }
