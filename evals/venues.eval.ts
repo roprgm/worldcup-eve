@@ -7,5 +7,7 @@ export default defineEval({
 
     t.completed();
     t.loadedSkill("worldcup_venues");
+    t.noFailedActions();
+    t.messageIncludes(/Atlanta/i);
   },
 });

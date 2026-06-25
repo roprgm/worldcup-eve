@@ -2,11 +2,13 @@ import { defineEval } from "eve/evals";
 
 export default defineEval({
   description:
-    "A 'who's likely to play' knockout question routes to get_knockout_forecast.",
+    "A 'who's likely to play' knockout question routes to get_knockout_forecast and is framed as a prediction.",
   async test(t) {
-    await t.send("Who is likely to play in match 100?");
+    await t.send("Who is most likely to play in match 100?");
 
     t.completed();
     t.calledTool("get_knockout_forecast");
+    t.noFailedActions();
+    t.messageIncludes(/likely|probabl|chance|decided|yet|expect/i);
   },
 });

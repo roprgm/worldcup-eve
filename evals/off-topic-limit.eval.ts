@@ -9,5 +9,6 @@ export default defineEval({
 
     t.completed();
     t.usedNoTools();
+    t.messageIncludes(/World Cup|mundial|fútbol|football|soccer/i);
   },
 });

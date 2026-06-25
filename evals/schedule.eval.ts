@@ -7,5 +7,7 @@ export default defineEval({
 
     t.completed();
     t.loadedSkill("worldcup_schedule");
+    t.noFailedActions();
+    t.messageIncludes(/:\d\d|UTC|Jun/i);
   },
 });
