@@ -1,5 +1,6 @@
-// The flat per-team prediction shape the agent's tool reads, projected from the
-// shared cached predictions snapshot (one build serves the page and the agent).
+// The agent-facing projections of the shared cached predictions snapshot (one
+// build serves the page and the agent): the flat per-team odds the prediction
+// tool reads, and the per-knockout-slot contenders the slot tool reads.
 
 import { getCachedPredictions } from "@/lib/cached-predictions";
 import type { Predictions } from "@/lib/predictions";
@@ -24,16 +25,31 @@ export interface PredictionSnapshot {
   teams: PredictionTeam[];
 }
 
+export interface SlotCandidate {
+  code: string;
+  name: string;
+  probability: number;
+}
+
+export interface KnockoutSlots {
+  updatedAt: string;
+  /** Likely teams per knockout slot (matches 73–104), by match number, for the
+   * matchups whose sides aren't decided yet. Candidates are sorted high→low. */
+  slots: Record<number, { home: SlotCandidate[]; away: SlotCandidate[] }>;
+}
+
+const teamName = (code: string) => teamById[code]?.name ?? code;
+
 // Flatten the rich snapshot into one row per team: group odds joined with the
 // per-round reach probabilities and the market champion price.
-function project(snapshot: Predictions): PredictionSnapshot {
+function projectTeams(snapshot: Predictions): PredictionTeam[] {
   const reachByCode = new Map(snapshot.reach.map((team) => [team.code, team]));
-  const teams = snapshot.groups.flatMap((group) =>
+  return snapshot.groups.flatMap((group) =>
     group.teams.map((team) => {
       const reach = reachByCode.get(team.code);
       return {
         code: team.code,
-        name: teamById[team.code]?.name ?? team.code,
+        name: teamName(team.code),
         group: group.letter,
         groupStage: {
           first: team.first,
@@ -50,9 +66,27 @@ function project(snapshot: Predictions): PredictionSnapshot {
       };
     }),
   );
-  return { updatedAt: snapshot.updatedAt, teams };
+}
+
+function projectSlots(snapshot: Predictions): KnockoutSlots["slots"] {
+  const slots: KnockoutSlots["slots"] = {};
+  for (const slot of snapshot.slots) {
+    const entry = (slots[slot.match] ??= { home: [], away: [] });
+    entry[slot.side] = slot.candidates.map((candidate) => ({
+      code: candidate.code,
+      name: teamName(candidate.code),
+      probability: candidate.probability,
+    }));
+  }
+  return slots;
 }
 
 export async function getPredictionSnapshot(): Promise<PredictionSnapshot> {
-  return project(await getCachedPredictions());
+  const snapshot = await getCachedPredictions();
+  return { updatedAt: snapshot.updatedAt, teams: projectTeams(snapshot) };
+}
+
+export async function getKnockoutSlots(): Promise<KnockoutSlots> {
+  const snapshot = await getCachedPredictions();
+  return { updatedAt: snapshot.updatedAt, slots: projectSlots(snapshot) };
 }
