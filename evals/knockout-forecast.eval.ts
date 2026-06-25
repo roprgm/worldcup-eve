@@ -9,6 +9,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_knockout_forecast");
     t.noFailedActions();
-    t.messageIncludes(/likely|probabl|chance|decided|yet|expect/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer frame it as a prediction (the teams aren't decided yet), give the most likely team for each side with a chance percentage, and say the match is played by the winners of two earlier matches?",
+    );
   },
 });
