@@ -11,11 +11,13 @@ import {
   roundMatches,
   thirdPlaceMatch,
 } from "@/app/predictions/bracket";
+import { groupGridColumns } from "@/components/widgets/group-card";
 import type { KnockoutMatch, Round, SlotRef } from "@/lib/tournament";
 
-const GROUP_SUMMARY_COLUMNS = "repeat(3, 1.5rem)";
+const GROUP_TEAMS = 4;
 const GROUP_COUNT = 12;
-const GROUP_RESULT_ROW_HEIGHT = "h-[20px]";
+// Matches GroupCard's ResultCell box: py-1.5 (12px) + leading-none 11px text.
+const GROUP_RESULT_ROW_HEIGHT = "h-[23px]";
 const GROUP_SLOT_ROWS = 4;
 const MAX_SLOT_ROWS = 8;
 
@@ -39,13 +41,13 @@ function SkeletonGroupCard() {
 
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5">
-        <Skeleton className="h-3 w-20" />
+      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] tracking-wide">
+        <Skeleton className="inline-block h-3 w-20 align-middle" />
       </div>
       <div
         className="grid items-center gap-x-1 gap-y-1 px-1.5 py-2"
         style={{
-          gridTemplateColumns: `auto repeat(4, minmax(0, 1fr)) ${GROUP_SUMMARY_COLUMNS}`,
+          gridTemplateColumns: groupGridColumns(GROUP_TEAMS),
         }}
       >
         <span />
@@ -153,10 +155,10 @@ function SkeletonSide({ side, rows }: { side: "home" | "away"; rows: number }) {
 function SkeletonCard({ match }: { match: KnockoutMatch }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 py-1.5">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="ml-auto h-3 w-24" />
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] tracking-wide">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="ml-auto h-4 w-24" />
       </div>
       <div className="grid flex-1 grid-cols-2">
         <SkeletonSide

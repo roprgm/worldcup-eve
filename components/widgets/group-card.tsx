@@ -7,13 +7,14 @@ import { cn } from "cnfast";
 type ResultStatus = "predicted" | "final" | "live";
 type Marker = "advance" | "third" | "none";
 
-const RESULT_COLUMN_WIDTH = "2.35rem";
 const GOAL_DIFF_COLUMN_WIDTH = "1.5rem";
 const POINTS_COLUMN_WIDTH = "1.75rem";
 const MARKER_COLUMN_WIDTH = "1.25rem";
 
-function groupGridColumns(count: number): string {
-  return `minmax(5rem, 1fr) repeat(${count}, minmax(2.15rem, ${RESULT_COLUMN_WIDTH})) ${GOAL_DIFF_COLUMN_WIDTH} ${POINTS_COLUMN_WIDTH} ${MARKER_COLUMN_WIDTH}`;
+// Team and result columns each take an equal 1fr share so extra width spreads
+// evenly across them; GD/Pts/marker stay fixed and naturally tighter.
+export function groupGridColumns(count: number): string {
+  return `minmax(5rem, 1.4fr) repeat(${count}, minmax(2.15rem, 1fr)) ${GOAL_DIFF_COLUMN_WIDTH} ${POINTS_COLUMN_WIDTH} ${MARKER_COLUMN_WIDTH}`;
 }
 
 interface TeamSummary {
@@ -119,7 +120,7 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
 
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {live && <LiveBadge />}
       </div>

@@ -26,21 +26,14 @@ type ResultStatus = "live" | "final" | "predicted";
 
 /**
  * Per-fixture scoreline: a real result if the match has been played, else the
- * market's most-likely exact score, else the stronger team winning 1-0 as a
- * last resort.
+ * market's most-likely exact score.
  */
 function resultsFor(group: GroupOdds, predicted: Scores, real: Scores): Scores {
-  const rank = new Map(group.teams.map((t, i) => [t.code, i]));
   const results: Scores = {};
   for (const m of groupMatches) {
     if (m.group !== group.letter) continue;
     const known = real[m.id] ?? predicted[m.id];
-    if (known) {
-      results[m.id] = known;
-      continue;
-    }
-    const homeWins = (rank.get(m.homeId) ?? 99) < (rank.get(m.awayId) ?? 99);
-    results[m.id] = { h: homeWins ? 1 : 0, a: homeWins ? 0 : 1 };
+    if (known) results[m.id] = known;
   }
   return results;
 }
