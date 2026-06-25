@@ -18,9 +18,9 @@ for (const match of [...matchSchedule].sort((a, b) =>
   const when =
     utcDay === day ? `${time} UTC` : `${utcDay.slice(5)} ${time} UTC`;
   const line = `Match ${match.number}: ${teamName(match.homeId)} vs ${teamName(match.awayId)}, ${when}`;
-  let lines = byDay.get(day);
-  if (!lines) byDay.set(day, (lines = []));
+  const lines = byDay.get(day) ?? [];
   lines.push(line);
+  byDay.set(day, lines);
 }
 
 const days = [...byDay]
