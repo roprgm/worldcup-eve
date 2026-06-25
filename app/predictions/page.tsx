@@ -1,5 +1,6 @@
 "use client";
 
+import { addMinutes, format } from "date-fns";
 import { useMemo } from "react";
 
 import {
@@ -50,18 +51,15 @@ function showAllCandidates(ref: SlotRef, round: Round): boolean {
   return round === "R32" && (ref.kind === "winner" || ref.kind === "runner");
 }
 
-const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
-
-// "2026-07-04T21:00:00Z" → "Jul 4 · 21h" (UTC).
+// "2026-07-04T21:00:00Z" → "Jul 4 · 21h" (UTC). date-fns formats in local time,
+// so shift by the offset to render the UTC wall clock deterministically.
 function kickoffLabel(kickoffAt: string): string {
-  const d = new Date(kickoffAt);
-  const day = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
-  const minutes = d.getUTCMinutes();
-  const time =
-    minutes === 0
-      ? `${d.getUTCHours()}h`
-      : `${d.getUTCHours()}:${String(minutes).padStart(2, "0")}h`;
-  return `${day} · ${time}`;
+  const date = new Date(kickoffAt);
+  const utc = addMinutes(date, date.getTimezoneOffset());
+  return format(
+    utc,
+    utc.getMinutes() === 0 ? "MMM d · H'h'" : "MMM d · H:mm'h'",
+  );
 }
 
 function sideFor(match: KnockoutMatch, side: "home" | "away", lookup: Lookup) {
