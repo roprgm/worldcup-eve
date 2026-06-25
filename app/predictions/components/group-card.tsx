@@ -1,5 +1,7 @@
 import { Check, X } from "lucide-react";
 
+import { Flag } from "@/app/predictions/components/flags";
+
 import { cn } from "cnfast";
 
 type ResultStatus = "predicted" | "final" | "live";
@@ -14,7 +16,6 @@ function groupGridColumns(count: number): string {
 interface TeamSummary {
   code: string;
   name?: string;
-  flagSrc?: string;
   confirmed?: boolean;
 }
 
@@ -38,34 +39,6 @@ interface GroupCardProps {
   title: string;
   columns: string[];
   rows: GroupCardRow[];
-}
-
-function FlagImage({ src, size }: { src?: string; size: number }) {
-  const height = Math.round((size * 3) / 4);
-  const className = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
-
-  if (!src) {
-    return (
-      <span
-        aria-hidden
-        style={{ width: size, height }}
-        className={cn(className, "bg-muted")}
-      />
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      width={size}
-      height={height}
-      style={{ width: size, height }}
-      className={cn(className, "object-cover")}
-    />
-  );
 }
 
 function LiveDot({ className }: { className?: string }) {
@@ -182,7 +155,7 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
             <span className="w-3 text-right text-[10px] text-muted-foreground tabular-nums">
               {row.position}
             </span>
-            <FlagImage src={row.team.flagSrc} size={16} />
+            <Flag code={row.team.code} size={16} />
             <span
               className={cn(
                 "text-[12px] font-semibold tracking-wide",

@@ -1,10 +1,14 @@
 // MatchWidget — a self-contained card for a single match: two teams, score,
 // status/clock, optional kickoff time and win odds. Pure presentation: it
-// fetches nothing — the caller passes everything in.
+// fetches nothing — the caller passes everything in. Flags come from the shared
+// spritesheet via <Flag>, keyed by team code, so the card costs no per-flag
+// requests.
 //
-// Reusable across projects. It only needs Tailwind plus a few theme tokens
-// (card, foreground, muted, muted-foreground, surface-border, surface-divider,
-// pick); the props are documented on the interfaces below.
+// Needs Tailwind plus a few theme tokens (card, foreground, muted,
+// muted-foreground, surface-border, surface-divider, pick); the props are
+// documented on the interfaces below.
+
+import { Flag } from "@/app/predictions/components/flags";
 
 import { cn } from "cnfast";
 
@@ -13,7 +17,6 @@ export type MatchStatus = "scheduled" | "live" | "final";
 export interface MatchTeam {
   code: string;
   name?: string;
-  flagSrc?: string;
   score?: number | null;
   winner?: boolean;
 }
@@ -60,34 +63,6 @@ function Caption({
     >
       {children}
     </span>
-  );
-}
-
-function FlagImage({ src, size }: { src?: string; size: number }) {
-  const height = Math.round((size * 3) / 4);
-  const className = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
-
-  if (!src) {
-    return (
-      <span
-        aria-hidden
-        style={{ width: size, height }}
-        className={cn(className, "bg-muted")}
-      />
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      width={size}
-      height={height}
-      style={{ width: size, height }}
-      className={cn(className, "object-cover")}
-    />
   );
 }
 
@@ -162,7 +137,7 @@ function TeamColumn({
         dimmed && "opacity-50",
       )}
     >
-      <FlagImage src={team.flagSrc} size={32} />
+      <Flag code={team.code} size={32} />
       <span
         className={cn(
           "text-[13px] font-semibold tracking-wide",

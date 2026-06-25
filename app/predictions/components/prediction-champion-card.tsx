@@ -1,5 +1,7 @@
 import { Trophy } from "lucide-react";
 
+import { Flag } from "@/app/predictions/components/flags";
+
 import { cn } from "cnfast";
 
 const MIN_PROBABILITY = 0.01;
@@ -8,7 +10,6 @@ interface ChampionCandidate {
   code: string;
   probability: number;
   name?: string;
-  flagSrc?: string;
 }
 
 interface PredictionChampionCardProps {
@@ -17,34 +18,6 @@ interface PredictionChampionCardProps {
 
 function formatPct(p: number): string {
   return `${Math.round(p * 100)}%`;
-}
-
-function FlagImage({ src, size }: { src?: string; size: number }) {
-  const height = Math.round((size * 3) / 4);
-  const className = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
-
-  if (!src) {
-    return (
-      <span
-        aria-hidden
-        style={{ width: size, height }}
-        className={cn(className, "bg-muted")}
-      />
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      width={size}
-      height={height}
-      style={{ width: size, height }}
-      className={cn(className, "object-cover")}
-    />
-  );
 }
 
 export function PredictionChampionCard({
@@ -68,7 +41,7 @@ export function PredictionChampionCard({
         </span>
         {leader ? (
           <div className="flex items-center gap-2">
-            <FlagImage src={leader.flagSrc} size={20} />
+            <Flag code={leader.code} size={20} />
             <span className="text-base font-semibold text-pick">
               {leader.name ?? leader.code}
             </span>
@@ -86,7 +59,7 @@ export function PredictionChampionCard({
                 key={candidate.code}
                 className="flex items-center gap-1 text-[12px] text-muted-foreground"
               >
-                <FlagImage src={candidate.flagSrc} size={12} />
+                <Flag code={candidate.code} size={12} />
                 <span className="font-medium">{candidate.code}</span>
                 <span className="tabular-nums">
                   {formatPct(candidate.probability)}

@@ -1,3 +1,5 @@
+import { Flag } from "@/app/predictions/components/flags";
+
 import { cn } from "cnfast";
 
 const MAX_PER_SIDE = 8;
@@ -9,7 +11,6 @@ interface Candidate {
   code: string;
   probability: number;
   name?: string;
-  flagSrc?: string;
 }
 
 interface MatchSide {
@@ -39,34 +40,6 @@ function topCandidates(list: Candidate[], showAll = false): Candidate[] {
   return kept.slice(0, MAX_PER_SIDE);
 }
 
-function FlagImage({ src, size }: { src?: string; size: number }) {
-  const height = Math.round((size * 3) / 4);
-  const className = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
-
-  if (!src) {
-    return (
-      <span
-        aria-hidden
-        style={{ width: size, height }}
-        className={cn(className, "bg-muted")}
-      />
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      width={size}
-      height={height}
-      style={{ width: size, height }}
-      className={cn(className, "object-cover")}
-    />
-  );
-}
-
 function CandidateRow({
   candidate,
   side,
@@ -77,7 +50,7 @@ function CandidateRow({
   lead: boolean;
 }) {
   const isZero = Math.round(candidate.probability * 100) === 0;
-  const flag = <FlagImage src={candidate.flagSrc} size={14} />;
+  const flag = <Flag code={candidate.code} size={14} />;
   const code = (
     <span
       title={candidate.name}
@@ -189,7 +162,7 @@ export function PredictionMatchCard({
   return (
     <div
       title={title}
-      className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card"
+      className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-left text-foreground/70">

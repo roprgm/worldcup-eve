@@ -27,15 +27,10 @@ import { teamById } from "@/lib/tournament";
 type Candidate = { code: string; probability: number };
 type Lookup = Map<string, Candidate[]>;
 
-function flagSrc(code: string): string {
-  return `/flags/${code.toLowerCase()}.png`;
-}
-
 function candidateView(candidate: Candidate) {
   return {
     ...candidate,
     name: teamById[candidate.code]?.name,
-    flagSrc: flagSrc(candidate.code),
   };
 }
 
@@ -172,7 +167,6 @@ function currentTeamView(side: Side) {
   return {
     code: side.code,
     name: teamById[side.code]?.name,
-    flagSrc: side.code ? flagSrc(side.code) : undefined,
     score: side.score,
     winner: side.winner,
   };

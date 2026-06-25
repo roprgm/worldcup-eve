@@ -1,9 +1,9 @@
 import { CardGrid } from "@/app/predictions/components/card-grid";
 import { GroupCard } from "@/app/predictions/components/group-card";
-import type { GroupOdds } from "@/lib/predictions";
-import type { MatchStatus } from "@/lib/results";
 import { groupMatches, teamById } from "@/lib/tournament";
+import type { MatchStatus } from "@/lib/results";
 import { computeStandings, type Scores } from "@/lib/tournament/standings";
+import type { GroupOdds } from "@/lib/predictions";
 
 // Match the bracket's threshold: a market this lopsided is treated as decided.
 const QUALIFIED = 0.999;
@@ -23,10 +23,6 @@ interface GroupStageProps {
 
 type GroupFixture = (typeof groupMatches)[number];
 type ResultStatus = "live" | "final" | "predicted";
-
-function flagSrc(code?: string): string | undefined {
-  return code ? `/flags/${code.toLowerCase()}.png` : undefined;
-}
 
 /**
  * Per-fixture scoreline: a real result if the match has been played, else the
@@ -114,7 +110,6 @@ export function GroupStage({ groups, predicted, live }: GroupStageProps) {
                 team: {
                   code: team.id,
                   name: team.name,
-                  flagSrc: flagSrc(team.id),
                   confirmed: (advanceOf.get(standing.teamId) ?? 0) >= QUALIFIED,
                 },
                 dimmed: index >= 3,
