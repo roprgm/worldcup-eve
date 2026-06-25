@@ -55,6 +55,7 @@ const toolActivityLabels: Record<string, string> = {
 
 const skillActivityLabels: Record<string, string> = {
   worldcup_schedule: "Checking the schedule",
+  worldcup_venues: "Checking the venues",
 };
 
 function getToolActivityLabel(toolName: string): string | undefined {
