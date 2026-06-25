@@ -8,9 +8,8 @@ import {
 } from "@/agent/lib/espn";
 import { tournamentDateTime } from "@/agent/lib/time";
 
-// Shared scoreboard-shaping logic, used by both the `get_match_results` tool
-// (agent side) and the `/api/matches` route (client polling for live updates),
-// so the two always return the same shape.
+// Shapes the ESPN scoreboard into the result rows the `get_match_results` tool
+// returns.
 
 export type MatchResultsFilter = {
   status?: MatchStatus;
@@ -18,8 +17,6 @@ export type MatchResultsFilter = {
   from?: string;
   /** Latest kickoff by tournament-day date (YYYY-MM-DD or YYYY-MM-DDTHH:MM). */
   to?: string;
-  /** Restrict to specific match ids — used by the live-poll endpoint. */
-  ids?: number[];
 };
 
 function rangePoint(value: string, end = false): string {
@@ -53,10 +50,8 @@ export async function loadMatchResults({
   status,
   from,
   to,
-  ids,
 }: MatchResultsFilter) {
   const scoreboard = await fetchScoreboard();
-  const idSet = ids?.length ? new Set(ids) : undefined;
 
   const results = scoreboard.events
     .map((event) => {
@@ -72,7 +67,6 @@ export async function loadMatchResults({
     .filter(
       (match) =>
         match.id !== undefined &&
-        (!idSet || idSet.has(match.id)) &&
         inRange(match.tournamentKickoffAt, from, to) &&
         (!status || matchStatus(match.status) === status),
     );

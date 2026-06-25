@@ -23,14 +23,20 @@ import { PromptInput } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { BallIcon } from "@/components/icons";
-import { hasMatchResults } from "@/components/render/match-card";
-import { MatchCards } from "@/components/render/match-cards";
+import {
+  GroupCard,
+  type GroupCardProps,
+} from "@/components/widgets/group-card";
+import {
+  MatchWidget,
+  type MatchWidgetProps,
+} from "@/components/widgets/match-widget";
 
 const SUGGESTIONS = [
-  "Which matches are playing today?",
+  "Show me Group A",
+  "Show me match 49",
+  "Show a Round of 16 match",
   "Who is more likely to win the next match?",
-  "Where did Argentina play their last match?",
-  "Who got the red card in Belgium vs Iran?",
 ];
 
 const TURN_TIMEOUT_MS = 45_000;
@@ -49,22 +55,28 @@ function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-/** get_match_results payloads in this message that have renderable cards. */
-function matchResultOutputs(
-  message: EveMessage,
-): Array<{ id: string; output: unknown }> {
-  const outputs: Array<{ id: string; output: unknown }> = [];
+/** Widgets produced by the tool calls in this assistant message. */
+function toolWidgets(message: EveMessage): ReactNode[] {
+  const widgets: ReactNode[] = [];
   for (const part of message.parts) {
-    if (
-      part.type === "dynamic-tool" &&
-      part.toolName === "get_match_results" &&
-      part.state === "output-available" &&
-      hasMatchResults(part.output)
-    ) {
-      outputs.push({ id: part.toolCallId, output: part.output });
+    if (part.type !== "dynamic-tool" || part.state !== "output-available") {
+      continue;
+    }
+    if (part.toolName === "get_match") {
+      widgets.push(
+        <div key={part.toolCallId} className="w-full max-w-sm">
+          <MatchWidget {...(part.output as MatchWidgetProps)} />
+        </div>,
+      );
+    } else if (part.toolName === "get_group") {
+      widgets.push(
+        <div key={part.toolCallId} className="w-full max-w-lg">
+          <GroupCard {...(part.output as GroupCardProps)} />
+        </div>,
+      );
     }
   }
-  return outputs;
+  return widgets;
 }
 
 function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
@@ -86,6 +98,7 @@ function assistantActivityLabel(message: EveMessage): string {
 
     if (latestTool.state === "output-error") return "Couldn’t read match data";
     if (kind === "load-skill") return "Checking the World Cup schedule";
+    if (name === "get_group") return "Checking the group";
     if (/standings/i.test(name)) return "Checking group standings";
     if (/match|result|detail/i.test(name)) return "Checking match data";
     if (latestTool.state === "output-available") return "Preparing the answer";
@@ -259,7 +272,7 @@ function MessageRow({
 }) {
   const isUser = message.role === "user";
   const text = messageText(message);
-  const cards = isUser ? [] : matchResultOutputs(message);
+  const widgets = isUser ? [] : toolWidgets(message);
   return (
     <Message
       from={message.role}
@@ -273,10 +286,10 @@ function MessageRow({
         ) : (
           <>
             {text ? <Response>{text}</Response> : null}
-            {cards.map(({ id, output }) => (
-              <MatchCards key={id} initialOutput={output} />
-            ))}
-            {!text && cards.length === 0 ? (
+            {widgets.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-3">{widgets}</div>
+            ) : null}
+            {!text && widgets.length === 0 ? (
               <ActivityStatus label={assistantActivityLabel(message)} />
             ) : null}
           </>

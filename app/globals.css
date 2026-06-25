@@ -26,6 +26,12 @@
   --border: rgba(255, 255, 255, 0.09);
   --border-strong: rgba(255, 255, 255, 0.16);
 
+  /* Widget cards */
+  --card: #131313;
+  --surface-border: rgba(255, 255, 255, 0.04);
+  --surface-divider: rgba(255, 255, 255, 0.07);
+  --pick: #34d399; /* emerald-400 — predicted / advancing */
+
   /* Brand / interaction */
   --primary: #ededed;
   --primary-foreground: #000000;
@@ -54,6 +60,11 @@
 
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+
+  --color-card: var(--card);
+  --color-surface-border: var(--surface-border);
+  --color-surface-divider: var(--surface-divider);
+  --color-pick: var(--pick);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
