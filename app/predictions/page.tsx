@@ -1,6 +1,5 @@
 "use client";
 
-import { format, isValid } from "date-fns";
 import { useMemo } from "react";
 
 import {
@@ -9,9 +8,7 @@ import {
   roundMatches,
   thirdPlaceMatch,
 } from "@/app/predictions/bracket";
-import { CardGrid } from "@/app/predictions/components/card-grid";
 import { GroupStage } from "@/app/predictions/components/group-stage";
-import { MatchWidget } from "@/app/predictions/components/match-widget";
 import { PredictionChampionCard } from "@/app/predictions/components/prediction-champion-card";
 import {
   PredictionMatchGrid,
@@ -19,8 +16,8 @@ import {
 } from "@/app/predictions/components/prediction-sections";
 import { PredictionsSkeleton } from "@/app/predictions/components/predictions-skeleton";
 import { usePredictions, useResults } from "@/app/predictions/hooks";
-import type { MatchOdds, Predictions } from "@/lib/predictions";
-import type { MatchResult, Results, Side } from "@/lib/results";
+import type { Predictions } from "@/lib/predictions";
+import type { Results } from "@/lib/results";
 import type { KnockoutMatch, Round, SlotRef } from "@/lib/tournament";
 import { teamById } from "@/lib/tournament";
 
@@ -88,117 +85,6 @@ function matchView(match: KnockoutMatch, lookup: Lookup, phaseLabel: string) {
   };
 }
 
-const FIFA_DAY_TIME_ZONE = "America/New_York";
-const fifaDayFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: FIFA_DAY_TIME_ZONE,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  hour: "numeric",
-  minute: "numeric",
-  hourCycle: "h23",
-});
-
-interface FifaDateTimeParts {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-}
-
-function fifaDateTimeParts(date: Date): FifaDateTimeParts | null {
-  if (!isValid(date)) return null;
-  const parts = Object.fromEntries(
-    fifaDayFormatter
-      .formatToParts(date)
-      .map((part) => [part.type, Number(part.value)]),
-  );
-  return {
-    year: parts.year,
-    month: parts.month,
-    day: parts.day,
-    hour: parts.hour,
-    minute: parts.minute,
-  };
-}
-
-function fifaDayKey(date: Date): string {
-  const parts = fifaDateTimeParts(date);
-  return parts ? `${parts.year}-${parts.month}-${parts.day}` : "";
-}
-
-function fifaDate(parts: FifaDateTimeParts): Date {
-  return new Date(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-  );
-}
-
-function matchFifaDayKey(match: MatchResult): string {
-  if (!match.kickoff) return "";
-  return fifaDayKey(new Date(match.kickoff));
-}
-
-function isMatchOnFifaDay(match: MatchResult, dayKey: string): boolean {
-  return matchFifaDayKey(match) === dayKey;
-}
-
-// Kickoff shown for upcoming matches, e.g. "Jul 22, 12hs" (US FIFA day time).
-function formatKickoff(iso: string): string {
-  const parts = fifaDateTimeParts(new Date(iso));
-  if (!parts) return "";
-  return format(
-    fifaDate(parts),
-    parts.minute === 0 ? "MMM d, H'hs'" : "MMM d, H:mm'hs'",
-  );
-}
-
-// Win odds are keyed by the unordered team pair so we can attach them to an
-// ESPN match regardless of which side the feed lists as home.
-function pairKey(a: string, b: string): string {
-  return a < b ? `${a}-${b}` : `${b}-${a}`;
-}
-
-function currentTeamView(side: Side) {
-  return {
-    code: side.code,
-    name: teamById[side.code]?.name,
-    score: side.score,
-    winner: side.winner,
-  };
-}
-
-// Orient the fixture's home/away odds to the ESPN match's home/away. Only shown
-// before full time — once settled the result, not the market, is what matters.
-function matchPrediction(match: MatchResult, chance?: MatchOdds) {
-  if (!chance || match.status === "final") return undefined;
-  return chance.home === match.home.code
-    ? { homeWin: chance.homeWin, awayWin: chance.awayWin }
-    : { homeWin: chance.awayWin, awayWin: chance.homeWin };
-}
-
-function currentMatchView(match: MatchResult, odds: Map<string, MatchOdds>) {
-  const group = teamById[match.home.code]?.group;
-  return {
-    number: match.n,
-    phaseLabel: group ? `Group ${group}` : undefined,
-    status: match.status,
-    detail: match.detail,
-    live: match.status === "live",
-    kickoff: match.kickoff ? formatKickoff(match.kickoff) : undefined,
-    home: currentTeamView(match.home),
-    away: currentTeamView(match.away),
-    prediction: matchPrediction(
-      match,
-      odds.get(pairKey(match.home.code, match.away.code)),
-    ),
-  };
-}
-
 const FUNNEL: Round[] = ["R32", "R16", "QF", "SF"];
 const PHASE_LABEL: Record<Round, string> = {
   R32: "R32",
@@ -212,22 +98,10 @@ const PHASE_LABEL: Record<Round, string> = {
 function PredictionsContent({
   predictions,
   results,
-  odds,
 }: {
   predictions: Predictions;
   results: Results | null;
-  odds: MatchOdds[];
 }) {
-  const todayMatches = useMemo(() => {
-    const todayKey = fifaDayKey(new Date());
-    const oddsByPair = new Map(odds.map((o) => [pairKey(o.home, o.away), o]));
-    return (results?.matches ?? [])
-      .filter((match) => isMatchOnFifaDay(match, todayKey))
-      .sort(
-        (a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? "") || a.n - b.n,
-      )
-      .map((m) => currentMatchView(m, oddsByPair));
-  }, [results, odds]);
   const lookup = useMemo(() => {
     const next: Lookup = new Map();
     for (const slot of predictions.slots) {
@@ -255,16 +129,6 @@ function PredictionsContent({
 
   return (
     <div className="space-y-3">
-      {todayMatches.length > 0 && (
-        <PredictionSection title="Today">
-          <CardGrid>
-            {todayMatches.map((match) => (
-              <MatchWidget key={match.number} {...match} />
-            ))}
-          </CardGrid>
-        </PredictionSection>
-      )}
-
       <PredictionSection title="Groups">
         <GroupStage
           groups={predictions.groups}
@@ -298,11 +162,7 @@ export default function PredictionsPage() {
         {!predictions ? (
           <PredictionsSkeleton />
         ) : (
-          <PredictionsContent
-            predictions={predictions}
-            results={results}
-            odds={predictions.matchOdds}
-          />
+          <PredictionsContent predictions={predictions} results={results} />
         )}
       </div>
     </main>
