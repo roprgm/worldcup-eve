@@ -5,6 +5,13 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
+  "files": {
+    "includes": [
+      "**",
+      "!lib/predictions/markets.json",
+      "!lib/predictions/group-markets.json"
+    ]
+  },
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2
@@ -18,7 +25,7 @@
     "enabled": true,
     "actions": {
       "source": {
-        "organizeImports": "on"
+        "organizeImports": "off"
       }
     }
   }

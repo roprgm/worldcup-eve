@@ -1,14 +1,8 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import {
-  type Competition,
-  type Competitor,
-  fetchScoreboard,
-  matchIdForEvent,
-  matchStatus,
-} from "@/agent/lib/espn";
 import { tournamentDateTime } from "@/agent/lib/time";
+import { buildResults } from "@/lib/results";
 
 const tournamentDate = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/);
 
@@ -16,32 +10,22 @@ function rangePoint(value: string, end = false): string {
   return value.includes("T") ? value : `${value}T${end ? "23:59" : "00:00"}`;
 }
 
-function inRange(kickoffAt: string, from?: string, to?: string): boolean {
+function inRange(
+  kickoffAt: string | undefined,
+  from?: string,
+  to?: string,
+): boolean {
+  if (!from && !to) return true;
+  if (!kickoffAt) return false;
   return (
     (!from || kickoffAt >= rangePoint(from)) &&
     (!to || kickoffAt <= rangePoint(to, true))
   );
 }
 
-function compactCompetitor({ homeAway, winner, score, team }: Competitor) {
-  return {
-    homeAway,
-    winner,
-    score,
-    team: {
-      abbreviation: team.abbreviation,
-      displayName: team.displayName,
-    },
-  };
-}
-
-function compactCompetition({ competitors }: Competition) {
-  return { competitors: competitors.map(compactCompetitor) };
-}
-
 export default defineTool({
   description:
-    "Scores and live status for World Cup matches. Filters are optional and combine.",
+    "Final scores and live status for World Cup matches, including who played whom and the result. Use this for any score or result question. Filters are optional and combine.",
   inputSchema: z.object({
     status: z
       .enum(["scheduled", "live", "final"])
@@ -59,24 +43,27 @@ export default defineTool({
       ),
   }),
   async execute({ status, from, to }) {
-    const scoreboard = await fetchScoreboard();
+    const { matches } = await buildResults();
 
-    const results = scoreboard.events
-      .map((event) => {
-        const kickoff = new Date(event.date);
+    const results = matches
+      .map((match) => {
+        const kickoff = match.kickoff ? new Date(match.kickoff) : undefined;
         return {
-          id: matchIdForEvent(event.id),
-          kickoffAtUtc: kickoff.toISOString(),
-          tournamentKickoffAt: tournamentDateTime(kickoff),
-          status: event.status,
-          competitions: event.competitions.map(compactCompetition),
+          id: match.n,
+          status: match.status,
+          detail: match.detail,
+          kickoffAtUtc: kickoff?.toISOString(),
+          tournamentKickoffAt: kickoff
+            ? tournamentDateTime(kickoff)
+            : undefined,
+          home: match.home,
+          away: match.away,
         };
       })
       .filter(
         (match) =>
-          match.id !== undefined &&
-          inRange(match.tournamentKickoffAt, from, to) &&
-          (!status || matchStatus(match.status) === status),
+          (!status || match.status === status) &&
+          inRange(match.tournamentKickoffAt, from, to),
       );
 
     return { results };

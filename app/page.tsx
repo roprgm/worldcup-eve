@@ -7,13 +7,15 @@ import {
 } from "@/components/ai-elements/conversation";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
+import { ChatView } from "@/components/chat/chat-view";
 import { Composer } from "@/components/composer";
 import { EveAttribution } from "@/components/eve";
 import { BallIcon } from "@/components/icons";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
-  "Who is more likely to win the next match?",
+  "Who's favored, Spain or Uruguay?",
+  "Who is most likely to play in match 100?",
   "Where did Argentina play their last match?",
   "Who got the red card in Belgium vs Iran?",
 ];
@@ -78,13 +80,17 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { start } = useChat();
+  const { agent, start } = useChat();
   const [input, setInput] = useState("");
 
   const handleSubmit = useCallback(() => {
     start(input);
     setInput("");
   }, [start, input]);
+
+  // Once a chat starts the conversation renders here immediately, so the user
+  // sees their message without waiting for the `/chat/[id]` navigation.
+  if (agent.data.messages.length > 0) return <ChatView />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

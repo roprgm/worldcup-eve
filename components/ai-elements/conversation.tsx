@@ -26,7 +26,7 @@ export function ConversationContent({
 }: ComponentProps<typeof StickToBottom.Content>) {
   return (
     <StickToBottom.Content
-      className={cn("mx-auto w-full max-w-3xl px-4 py-6 sm:px-6", className)}
+      className={cn("mx-auto w-full max-w-4xl px-4 py-6 sm:px-6", className)}
       {...props}
     />
   );

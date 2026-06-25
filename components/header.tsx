@@ -4,7 +4,7 @@ import { BallIcon, GitHubIcon } from "@/components/icons";
 export function Header() {
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-6">
         {/* Full navigation remounts cleanly, even from a /chat/<id> URL set via the History API. */}
         <a
           href="/"
