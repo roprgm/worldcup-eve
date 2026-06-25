@@ -3,20 +3,8 @@
 // schedule and venue metadata. This module queries nothing — it is the single
 // source of truth the predictions and results modules build on.
 
-export type GroupLetter =
-  | "A"
-  | "B"
-  | "C"
-  | "D"
-  | "E"
-  | "F"
-  | "G"
-  | "H"
-  | "I"
-  | "J"
-  | "K"
-  | "L";
-
+// biome-ignore format: keep this compact
+export type GroupLetter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L";
 export type Round = "R32" | "R16" | "QF" | "SF" | "TP" | "FINAL";
 
 export interface Team {
