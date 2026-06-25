@@ -74,15 +74,28 @@ function AssistantMessage({
     <>
       <MessageAvatar streaming={streaming} />
       <MessageContent from="assistant">
-        <AssistantBody message={message} />
+        <AssistantBody message={message} streaming={streaming} />
       </MessageContent>
     </>
   );
 }
 
-/** Streamed answer text once it arrives, otherwise a live activity label. */
-function AssistantBody({ message }: { message: EveMessage }) {
+/**
+ * Streamed answer text once it arrives, otherwise a live activity label — but
+ * the loader shows only while the turn is in flight. A settled assistant message
+ * with no text (e.g. one parked on `ask_question`) is filtered out upstream, so
+ * it never reaches a loader that would never resolve.
+ */
+function AssistantBody({
+  message,
+  streaming,
+}: {
+  message: EveMessage;
+  streaming: boolean;
+}) {
   const text = messageText(message);
   if (text) return <Response>{text}</Response>;
-  return <ActivityStatus label={assistantActivityLabel(message)} />;
+  if (streaming)
+    return <ActivityStatus label={assistantActivityLabel(message)} />;
+  return null;
 }

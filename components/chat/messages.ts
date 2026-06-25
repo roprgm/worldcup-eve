@@ -14,12 +14,14 @@ export function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-export function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
-  return (
-    message.role === "assistant" &&
-    message.metadata?.status === "streaming" &&
-    messageText(message).length === 0
-  );
+/**
+ * True when an assistant message carries no renderable text. It may still be
+ * mid-stream (about to produce text), or it may have settled with only tool
+ * calls — e.g. a turn that parks on `ask_question` ends with `metadata.status`
+ * already `"complete"` and no text at all.
+ */
+export function isContentlessAssistantMessage(message: EveMessage): boolean {
+  return message.role === "assistant" && messageText(message).length === 0;
 }
 
 const toolActivityLabels: Record<string, string> = {
@@ -41,8 +43,6 @@ function getToolActivityLabel(toolName: string): string | undefined {
 }
 
 export function assistantActivityLabel(message: EveMessage): string {
-  console.log(message);
-
   const latestTool = message.parts
     .filter((part) => part.type === "dynamic-tool")
     .at(-1);

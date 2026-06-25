@@ -1,7 +1,7 @@
 import type { EveMessage } from "eve/react";
 import { MessageRow, PendingRow } from "@/components/chat/message-row";
 import {
-  isEmptyStreamingAssistantMessage,
+  isContentlessAssistantMessage,
   latestUserTurnId,
   messageKey,
 } from "@/components/chat/messages";
@@ -13,12 +13,14 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  // Only the in-flight turn should render empty streaming placeholders. Once idle
-  // — settled, errored, timed out, or restored from storage mid-stream — drop them
-  // so a persisted "streaming" message can't show a loader that never resolves.
+  // A contentless assistant bubble is only a live progress placeholder while its
+  // turn is actually in flight. Once idle — settled, errored, timed out, or
+  // restored from storage mid-stream — drop it so it can't strand a loader that
+  // never resolves. (Progress is driven by `isBusy`, never by "the text is still
+  // empty".)
   const visible = isBusy
     ? messages
-    : messages.filter((message) => !isEmptyStreamingAssistantMessage(message));
+    : messages.filter((message) => !isContentlessAssistantMessage(message));
 
   const activeTurnId = latestUserTurnId(messages);
   const hasAssistantReply = messages.some(
@@ -37,7 +39,7 @@ export function MessageList({
           key={messageKey(message, index)}
           message={message}
           index={index}
-          animate={!isEmptyStreamingAssistantMessage(message)}
+          animate={!isContentlessAssistantMessage(message)}
           streaming={message.metadata?.status === "streaming" && isBusy}
         />
       ))}
