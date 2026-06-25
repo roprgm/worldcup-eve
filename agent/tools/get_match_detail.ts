@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { eventIdForMatch, fetchSummary } from "@/agent/lib/espn";
+import { buildMatchDetail } from "@/lib/results/match-detail";
 
 export default defineTool({
   description:
@@ -13,26 +13,7 @@ export default defineTool({
       .optional()
       .describe("Set true when the user asks for match or team statistics."),
   }),
-  async execute({ id, includeStats }) {
-    const summary = await fetchSummary(eventIdForMatch(id));
-    const competition = summary.header?.competitions?.[0];
-    if (!competition) throw new Error(`No competition found for match ${id}`);
-
-    return {
-      id,
-      status: competition.status,
-      events: summary.keyEvents?.length
-        ? summary.keyEvents
-        : (competition.details ?? []),
-      ...(includeStats
-        ? {
-            teams:
-              summary.boxscore?.teams?.map(({ team, statistics }) => ({
-                team,
-                statistics,
-              })) ?? [],
-          }
-        : {}),
-    };
+  execute({ id, includeStats }) {
+    return buildMatchDetail(id, includeStats);
   },
 });

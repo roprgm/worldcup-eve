@@ -124,6 +124,13 @@ export const EVENT_IDS = [
 ];
 const matchByEvent = new Map(EVENT_IDS.map((id, i) => [id, i + 1]));
 
+/** FIFA match number (1–104) → ESPN event id; throws for an out-of-range number. */
+export function eventIdForMatch(matchNumber: number): string {
+  const id = EVENT_IDS[matchNumber - 1];
+  if (!id) throw new Error(`No event id mapped for match ${matchNumber}`);
+  return id;
+}
+
 export type MatchStatus = "scheduled" | "live" | "final";
 
 export interface Side {
