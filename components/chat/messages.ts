@@ -34,6 +34,15 @@ export function isRenderableMessage(message: EveMessage): boolean {
   );
 }
 
+export function activeQuestion(
+  messages: readonly EveMessage[],
+): EveMessageInputRequest | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const question = pendingQuestion(messages[i]);
+    if (question) return question;
+  }
+}
+
 const toolActivityLabels: Record<string, string> = {
   get_match_detail: "Fetching match details",
   get_match_prediction: "Fetching match prediction",
