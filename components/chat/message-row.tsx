@@ -39,7 +39,6 @@ export function MessageRow({
   );
 }
 
-/** The single in-flight progress indicator, shown below the last bubble. */
 export function ActivityRow({ label }: { label: string }) {
   return (
     <Message from="assistant">
@@ -60,7 +59,6 @@ function AssistantBody({ message }: { message: EveMessage }) {
   return <Response>{messageText(message)}</Response>;
 }
 
-/** An `ask_question` prompt: the question plus its options as answer chips. */
 function QuestionPrompt({ request }: { request: EveMessageInputRequest }) {
   const { agent } = useChat();
   const busy = agent.status === "submitted" || agent.status === "streaming";

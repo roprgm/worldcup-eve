@@ -18,7 +18,6 @@ export function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-/** The `ask_question` prompt awaiting an answer on this message, if any. */
 export function pendingQuestion(
   message: EveMessage,
 ): EveMessageInputRequest | undefined {
@@ -29,7 +28,6 @@ export function pendingQuestion(
   return part?.toolMetadata?.eve?.inputRequest;
 }
 
-/** A message worth rendering as a bubble: visible text or a pending question. */
 export function isRenderableMessage(message: EveMessage): boolean {
   return (
     messageText(message).length > 0 || pendingQuestion(message) !== undefined

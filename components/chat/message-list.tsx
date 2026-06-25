@@ -13,9 +13,8 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  // Only messages with visible content are bubbles. A text-less, in-flight turn
-  // is represented by the single trailing ActivityRow below — never by a loader
-  // inside a bubble — so exactly one progress indicator can ever show.
+  // A text-less in-flight turn shows the one trailing ActivityRow, not a loader
+  // inside a bubble — so only one progress indicator can ever show at a time.
   const bubbles = messages.filter(isRenderableMessage);
   const replying = isBusy && bubbles.at(-1)?.role !== "assistant";
   const latestAssistant = messages.findLast((m) => m.role === "assistant");
