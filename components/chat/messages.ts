@@ -45,14 +45,16 @@ export function activeQuestion(
 }
 
 const toolActivityLabels: Record<string, string> = {
-  get_match_detail: "Fetching match details",
-  get_match_prediction: "Fetching match prediction",
-  get_match_results: "Fetching match results",
-  get_group_standings: "Fetching group standings",
+  get_match_detail: "Looking up the match",
+  get_match_prediction: "Checking the predictions",
+  get_match_results: "Checking the results",
+  get_group_standings: "Checking the standings",
+  get_match_forecast: "Checking the predictions",
+  get_knockout_forecast: "Checking the predictions",
 };
 
 const skillActivityLabels: Record<string, string> = {
-  worldcup_schedule: "Checking the World Cup schedule",
+  worldcup_schedule: "Checking the schedule",
 };
 
 function getToolActivityLabel(toolName: string): string | undefined {
