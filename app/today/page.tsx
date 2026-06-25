@@ -21,7 +21,7 @@ export default function TodayPage() {
     : null;
 
   return (
-    <main className="flex-1 overflow-y-auto">
+    <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl px-3 py-3 sm:px-4">
         {matches === null ? (
           <Message>Loading today’s matches…</Message>

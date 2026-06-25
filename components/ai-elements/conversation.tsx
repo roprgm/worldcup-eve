@@ -11,7 +11,10 @@ export function Conversation({
 }: ComponentProps<typeof StickToBottom>) {
   return (
     <StickToBottom
-      className={cn("relative min-h-0 flex-1 overflow-y-auto", className)}
+      className={cn(
+        "relative min-h-0 flex-1 overflow-y-auto overscroll-contain",
+        className,
+      )}
       initial="smooth"
       resize="smooth"
       role="log"

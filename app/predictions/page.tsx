@@ -157,7 +157,7 @@ export default function PredictionsPage() {
   const results = useResults();
 
   return (
-    <main className="flex-1 overflow-y-auto">
+    <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl px-3 py-3 sm:px-4">
         {!predictions || !results ? (
           <PredictionsSkeleton />

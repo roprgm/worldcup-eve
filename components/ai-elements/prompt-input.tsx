@@ -117,7 +117,7 @@ export function PromptInput({
         placeholder={placeholder}
         aria-label="Message WC26.chat"
         enterKeyHint="send"
-        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[1rem] leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
+        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-[1rem] leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
       />
 
       <SubmitButton
