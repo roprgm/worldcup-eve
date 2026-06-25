@@ -2,13 +2,12 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { type GroupLetter, groupLetter } from "@/agent/lib/groups";
+import {
+  getPredictionSnapshot,
+  type PredictionTeam,
+} from "@/agent/lib/predictions-snapshot";
 import scheduleData from "@/agent/lib/schedule";
-import predictions from "@/data/predictions.json";
-
-type PredictionTeam = (typeof predictions.teams)[number];
-
-const teams = predictions.teams;
-const teamByCode = new Map(teams.map((team) => [team.code, team]));
+import { teams as tournamentTeams } from "@/lib/tournament";
 
 const extraAliases: Record<string, string> = {
   bosnia: "BIH",
@@ -44,20 +43,19 @@ function lookupKey(value: string): string {
     .toLowerCase();
 }
 
-const teamAliases = new Map<string, PredictionTeam>();
-
-for (const team of teams) {
-  teamAliases.set(lookupKey(team.code), team);
-  teamAliases.set(lookupKey(team.name), team);
+// Alias key → FIFA code. Team names and codes are static (from the tournament
+// module); only the probabilities, fetched per request, change.
+const codeByAlias = new Map<string, string>();
+for (const team of tournamentTeams) {
+  codeByAlias.set(lookupKey(team.id), team.id);
+  codeByAlias.set(lookupKey(team.name), team.id);
 }
-
 for (const [alias, code] of Object.entries(extraAliases)) {
-  const team = teamByCode.get(code);
-  if (team) teamAliases.set(lookupKey(alias), team);
+  codeByAlias.set(lookupKey(alias), code);
 }
 
-function teamFor(value?: string | null): PredictionTeam | undefined {
-  return value ? teamAliases.get(lookupKey(value)) : undefined;
+function codeFor(value?: string | null): string | undefined {
+  return value ? codeByAlias.get(lookupKey(value)) : undefined;
 }
 
 function percent(value: number): number {
@@ -127,18 +125,18 @@ function compareTeams(teamA: PredictionTeam, teamB: PredictionTeam) {
         estimatedWinPercent: percent(probabilityB),
       },
     ],
-    note: "Directional estimate from a static prediction snapshot.",
+    note: "Directional estimate from market-derived predictions.",
   };
 }
 
-function topTeams(limit: number) {
+function topTeams(teams: PredictionTeam[], limit: number) {
   return [...teams]
     .sort((a, b) => b.champion - a.champion)
     .slice(0, limit)
     .map(compactTeam);
 }
 
-function groupTeams(group: GroupLetter) {
+function groupTeams(teams: PredictionTeam[], group: GroupLetter) {
   return teams
     .filter((team) => team.group === group)
     .sort(
@@ -151,7 +149,7 @@ function groupTeams(group: GroupLetter) {
 
 export default defineTool({
   description:
-    "Static World Cup prediction estimates for likely winners, favorites, title chances, and group advancement.",
+    "World Cup prediction estimates for likely winners, favorites, title chances, and group advancement.",
   inputSchema: z.object({
     matchId: z
       .number()
@@ -182,13 +180,20 @@ export default defineTool({
       .describe("Maximum teams to return for title rankings."),
   }),
   async execute({ matchId, teamA, teamB, team, group, limit }) {
+    const snapshot = await getPredictionSnapshot();
+    const teamByCode = new Map(snapshot.teams.map((t) => [t.code, t]));
+    const teamFor = (value?: string | null): PredictionTeam | undefined => {
+      const code = codeFor(value);
+      return code ? teamByCode.get(code) : undefined;
+    };
+
     const match = matchId
       ? scheduleData.find((match) => match.number === matchId)
       : undefined;
 
     if (matchId && !match) {
       return {
-        updatedAt: predictions.updatedAt,
+        updatedAt: snapshot.updatedAt,
         error: "Match not found.",
         requested: { matchId },
       };
@@ -196,7 +201,7 @@ export default defineTool({
 
     if (matchId && (!match?.teamA || !match.teamB)) {
       return {
-        updatedAt: predictions.updatedAt,
+        updatedAt: snapshot.updatedAt,
         type: "matchup",
         matchId,
         error: "Match teams are not known yet.",
@@ -211,15 +216,15 @@ export default defineTool({
     if (firstTeamInput && secondTeamInput) {
       if (!firstTeam || !secondTeam) {
         return {
-          updatedAt: predictions.updatedAt,
+          updatedAt: snapshot.updatedAt,
           error: "Unknown team in matchup.",
           requested: { matchId, teamA: firstTeamInput, teamB: secondTeamInput },
-          knownTeams: teams.map(({ code, name }) => ({ code, name })),
+          knownTeams: snapshot.teams.map(({ code, name }) => ({ code, name })),
         };
       }
 
       return {
-        updatedAt: predictions.updatedAt,
+        updatedAt: snapshot.updatedAt,
         type: "matchup",
         matchId,
         ...compareTeams(firstTeam, secondTeam),
@@ -229,7 +234,7 @@ export default defineTool({
     const singleTeam = teamFor(team ?? teamA);
     if (singleTeam) {
       return {
-        updatedAt: predictions.updatedAt,
+        updatedAt: snapshot.updatedAt,
         type: "team",
         team: compactTeam(singleTeam),
       };
@@ -237,17 +242,17 @@ export default defineTool({
 
     if (group) {
       return {
-        updatedAt: predictions.updatedAt,
+        updatedAt: snapshot.updatedAt,
         type: "group",
         group,
-        teams: groupTeams(group),
+        teams: groupTeams(snapshot.teams, group),
       };
     }
 
     return {
-      updatedAt: predictions.updatedAt,
+      updatedAt: snapshot.updatedAt,
       type: "title_ranking",
-      teams: topTeams(limit ?? 8),
+      teams: topTeams(snapshot.teams, limit ?? 8),
     };
   },
 });

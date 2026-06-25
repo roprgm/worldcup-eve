@@ -8,7 +8,6 @@
   "files": {
     "includes": [
       "**",
-      "!data/predictions.json",
       "!lib/predictions/markets.json",
       "!lib/predictions/group-markets.json"
     ]

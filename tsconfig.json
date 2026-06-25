@@ -34,7 +34,6 @@
     "hooks/**/*.ts",
     "agent/**/*.ts",
     "evals/**/*.ts",
-    "scripts/**/*.ts",
     "next.config.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
