@@ -19,6 +19,15 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
 
+  // A chat can open from a suggestion tap, so only steal focus (and pop the
+  // keyboard) on devices with a fine pointer — on touch it causes a jarring
+  // scroll as the keyboard slides in.
+  const [autoFocus] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(pointer: fine)").matches,
+  );
+
   const handleSubmit = () => {
     send(input);
     setInput("");
@@ -39,6 +48,7 @@ export function ChatView() {
         onSubmit={handleSubmit}
         onStop={agent.stop}
         status={agent.status}
+        autoFocus={autoFocus}
         notice={
           <ChatNotice
             status={agent.status}

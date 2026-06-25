@@ -11,6 +11,7 @@ export function Composer({
   onStop,
   status,
   notice,
+  autoFocus,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -18,6 +19,7 @@ export function Composer({
   onStop: () => void;
   status: UseEveAgentStatus;
   notice?: ReactNode;
+  autoFocus?: boolean;
 }) {
   return (
     <div className="shrink-0 border-t border-border bg-background/80 backdrop-blur-xl">
@@ -29,6 +31,7 @@ export function Composer({
           onSubmit={onSubmit}
           onStop={onStop}
           status={status}
+          autoFocus={autoFocus}
         />
         <div className="mt-2.5 flex flex-col items-center gap-1.5 text-center font-mono">
           <p className="text-[10.5px] tracking-wide text-subtle-foreground">

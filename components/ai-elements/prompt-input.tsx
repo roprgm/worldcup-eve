@@ -15,6 +15,7 @@ interface PromptInputProps {
   onStop: () => void;
   status: UseEveAgentStatus;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export function PromptInput({
@@ -24,6 +25,7 @@ export function PromptInput({
   onStop,
   status,
   placeholder = "Ask about the 2026 World Cup…",
+  autoFocus = true,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const launchTimer = useRef<number | null>(null);
@@ -77,8 +79,8 @@ export function PromptInput({
 
   // Focus the input on mount so you can start typing right away.
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+    if (autoFocus) textareaRef.current?.focus();
+  }, [autoFocus]);
 
   // Send the message and fire the submit-button launch animation (click or Enter).
   const submit = useCallback(() => {
