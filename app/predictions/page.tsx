@@ -50,8 +50,18 @@ function showAllCandidates(ref: SlotRef, round: Round): boolean {
   return round === "R32" && (ref.kind === "winner" || ref.kind === "runner");
 }
 
-function timeLabel(time: string): string {
-  return time.endsWith(":00") ? `${time.slice(0, 2)}h` : `${time}h`;
+const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+
+// "2026-07-04T21:00:00Z" → "Jul 4 · 21h" (UTC).
+function kickoffLabel(kickoffAt: string): string {
+  const d = new Date(kickoffAt);
+  const day = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  const minutes = d.getUTCMinutes();
+  const time =
+    minutes === 0
+      ? `${d.getUTCHours()}h`
+      : `${d.getUTCHours()}:${String(minutes).padStart(2, "0")}h`;
+  return `${day} · ${time}`;
 }
 
 function sideFor(match: KnockoutMatch, side: "home" | "away", lookup: Lookup) {
@@ -65,21 +75,13 @@ function sideFor(match: KnockoutMatch, side: "home" | "away", lookup: Lookup) {
   };
 }
 
-function matchTitle(match: KnockoutMatch): string {
-  return `${match.venue} · ${match.city}`;
-}
-
-function matchDateTime(match: KnockoutMatch): string {
-  return `${match.date} · ${timeLabel(match.time)}`;
-}
-
 function matchView(match: KnockoutMatch, lookup: Lookup, phaseLabel: string) {
   return {
     number: match.number,
     phaseLabel,
-    dateTime: matchDateTime(match),
-    location: match.city,
-    title: matchTitle(match),
+    dateTime: kickoffLabel(match.kickoffAt),
+    location: match.venue,
+    title: match.venue,
     home: sideFor(match, "home", lookup),
     away: sideFor(match, "away", lookup),
   };

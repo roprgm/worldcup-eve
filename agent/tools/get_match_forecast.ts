@@ -1,10 +1,9 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import scheduleData from "@/agent/lib/schedule";
 import { codeFor } from "@/agent/lib/team-aliases";
 import { getCachedPredictions } from "@/lib/cached-predictions";
-import { groupFixture } from "@/lib/tournament";
+import { groupFixture, groupMatches } from "@/lib/tournament";
 
 function percent(value: number): number {
   return Math.round(value * 1000) / 10;
@@ -26,14 +25,14 @@ export default defineTool({
   }),
   async execute({ matchId, teamA, teamB }) {
     const match = matchId
-      ? scheduleData.find((m) => m.number === matchId)
+      ? groupMatches.find((m) => m.number === matchId)
       : undefined;
     if (matchId && !match) {
       return { error: "Match not found.", requested: { matchId } };
     }
 
-    const codeA = codeFor(match?.teamA ?? teamA);
-    const codeB = codeFor(match?.teamB ?? teamB);
+    const codeA = codeFor(match?.homeId ?? teamA);
+    const codeB = codeFor(match?.awayId ?? teamB);
     if (!codeA || !codeB) {
       return {
         error: "Could not resolve both teams.",

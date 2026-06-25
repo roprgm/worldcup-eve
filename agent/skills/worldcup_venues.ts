@@ -1,15 +1,14 @@
 import { defineSkill } from "eve/skills";
 
-import scheduleData from "@/agent/lib/schedule";
-import { teamById } from "@/lib/tournament";
+import { matchSchedule, teamById } from "@/lib/tournament";
 
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";
 
-const rows = scheduleData
+const rows = matchSchedule
   .map(
     (match) =>
-      `Match ${match.number}: ${teamName(match.teamA)} vs ${teamName(match.teamB)} at ${match.stadium}`,
+      `Match ${match.number}: ${teamName(match.homeId)} vs ${teamName(match.awayId)} at ${match.venue}`,
   )
   .join("\n");
 

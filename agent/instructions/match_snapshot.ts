@@ -1,12 +1,12 @@
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
-import scheduleData from "@/agent/lib/schedule";
 import { tournamentDay } from "@/agent/lib/time";
+import { matchSchedule } from "@/lib/tournament";
 
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
-const matches = scheduleData
+const matches = matchSchedule
   .map((match) => ({
     ...match,
     kickoff: new Date(match.kickoffAt),
@@ -17,7 +17,7 @@ function matchLine(match: (typeof matches)[number], now: number): string {
   const diffMs = match.kickoff.getTime() - now;
   const minutesUntil = Math.max(1, Math.floor(diffMs / MINUTE_MS));
   const relativeTime = diffMs > 0 ? `, starts_in_minutes ${minutesUntil}` : "";
-  return `match ${match.number}: ${match.teamA ?? "TBD"} vs ${match.teamB ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}${relativeTime}, ${match.stadium}`;
+  return `match ${match.number}: ${match.homeId ?? "TBD"} vs ${match.awayId ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}${relativeTime}, ${match.venue}`;
 }
 
 function lines(items: typeof matches, now: number): string {

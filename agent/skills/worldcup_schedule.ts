@@ -1,15 +1,14 @@
 import { defineSkill } from "eve/skills";
 
-import scheduleData from "@/agent/lib/schedule";
 import { TOURNAMENT_DAY_ROLLOVER_UTC, tournamentDay } from "@/agent/lib/time";
-import { teamById } from "@/lib/tournament";
+import { matchSchedule, teamById } from "@/lib/tournament";
 
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";
 
 // Group matches under their tournament day, in kickoff order within each day.
 const byDay = new Map<string, string[]>();
-for (const match of [...scheduleData].sort((a, b) =>
+for (const match of [...matchSchedule].sort((a, b) =>
   a.kickoffAt.localeCompare(b.kickoffAt),
 )) {
   const day = tournamentDay(new Date(match.kickoffAt));
@@ -18,7 +17,7 @@ for (const match of [...scheduleData].sort((a, b) =>
   // Only spell out the date when the kickoff lands on the next UTC day.
   const when =
     utcDay === day ? `${time} UTC` : `${utcDay.slice(5)} ${time} UTC`;
-  const line = `Match ${match.number}: ${teamName(match.teamA)} vs ${teamName(match.teamB)}, ${when}`;
+  const line = `Match ${match.number}: ${teamName(match.homeId)} vs ${teamName(match.awayId)}, ${when}`;
   let lines = byDay.get(day);
   if (!lines) byDay.set(day, (lines = []));
   lines.push(line);
