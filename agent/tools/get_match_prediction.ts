@@ -1,11 +1,12 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { type GroupLetter, groupLetter } from "@/agent/lib/groups";
 import { codeFor } from "@/agent/lib/team-aliases";
 import { getCachedPredictions } from "@/lib/cached-predictions";
 import type { Predictions } from "@/lib/predictions";
-import { teamById } from "@/lib/tournament";
+import { type GroupLetter, groupLetters, teamById } from "@/lib/tournament";
+
+const groupLetter = z.enum(groupLetters as [GroupLetter, ...GroupLetter[]]);
 
 interface PredictionTeam {
   code: string;
