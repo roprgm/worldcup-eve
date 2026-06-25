@@ -45,8 +45,10 @@ await buildPredictions(cache)    // later calls reuse it (~100 ms + fetch)
 // drop or replace `cache` to invalidate — e.g. every few minutes
 ```
 
-This is a deliberately minimal hook; wire it to your platform's real cache
-(Redis, Vercel Runtime Cache, …) however you like.
+This is a deliberately minimal hook. `lib/cached-predictions.ts` wires it to the
+Vercel Runtime Cache: the anchor weights are serialized and persisted under a key
+versioned by `catalog.generatedAt`, so a cold instance (even after a redeploy)
+warm-starts from them instead of recomputing the ~2 s anchor.
 
 ## What it returns
 

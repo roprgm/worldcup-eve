@@ -9,6 +9,12 @@ import { knockoutMatches, type SlotRef } from "../tournament";
 type Dist = Map<string, number>;
 export type Strengths = Map<string, number>;
 
+/** `Strengths` flattened to `[code, strength]` pairs for durable storage. */
+export type StrengthsBlob = [string, number][];
+export const serializeStrengths = (s: Strengths): StrengthsBlob => [...s];
+export const deserializeStrengths = (blob: StrengthsBlob): Strengths =>
+  new Map(blob);
+
 /** `${matchNum}:home` | `${matchNum}:away` → distribution over teams. */
 export type R32Slots = Map<string, Dist>;
 
