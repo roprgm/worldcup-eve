@@ -2,11 +2,51 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { type GroupLetter, groupLetter } from "@/agent/lib/groups";
-import {
-  getPredictionSnapshot,
-  type PredictionTeam,
-} from "@/agent/lib/predictions-snapshot";
 import { codeFor } from "@/agent/lib/team-aliases";
+import { getCachedPredictions } from "@/lib/cached-predictions";
+import type { Predictions } from "@/lib/predictions";
+import { teamById } from "@/lib/tournament";
+
+interface PredictionTeam {
+  code: string;
+  name: string;
+  group: string;
+  groupStage: { first: number; second: number; advance: number };
+  knockout: {
+    roundOf16: number;
+    quarterfinal: number;
+    semifinal: number;
+    final: number;
+  };
+  champion: number;
+}
+
+// Join each team's group odds with its per-round reach and market champion price.
+function projectTeams(snapshot: Predictions): PredictionTeam[] {
+  const reachByCode = new Map(snapshot.reach.map((team) => [team.code, team]));
+  return snapshot.groups.flatMap((group) =>
+    group.teams.map((team) => {
+      const reach = reachByCode.get(team.code);
+      return {
+        code: team.code,
+        name: teamById[team.code]?.name ?? team.code,
+        group: group.letter,
+        groupStage: {
+          first: team.first,
+          second: team.second,
+          advance: team.advance,
+        },
+        knockout: {
+          roundOf16: reach?.r16 ?? 0,
+          quarterfinal: reach?.qf ?? 0,
+          semifinal: reach?.sf ?? 0,
+          final: reach?.final ?? 0,
+        },
+        champion: reach?.mktChampion ?? 0,
+      };
+    }),
+  );
+}
 
 function percent(value: number): number {
   return Math.round(value * 1000) / 10;
@@ -70,41 +110,37 @@ export default defineTool({
       .describe("Maximum teams for the title ranking."),
   }),
   async execute({ team, group, limit }) {
-    const snapshot = await getPredictionSnapshot();
+    const snapshot = await getCachedPredictions();
+    const teams = projectTeams(snapshot);
+    const updatedAt = snapshot.updatedAt;
 
     if (team) {
       const code = codeFor(team);
-      const found = code
-        ? snapshot.teams.find((t) => t.code === code)
-        : undefined;
+      const found = code ? teams.find((t) => t.code === code) : undefined;
       if (!found) {
         return {
-          updatedAt: snapshot.updatedAt,
+          updatedAt,
           error: "Unknown team.",
           requested: { team },
-          knownTeams: snapshot.teams.map(({ code, name }) => ({ code, name })),
+          knownTeams: teams.map(({ code, name }) => ({ code, name })),
         };
       }
-      return {
-        updatedAt: snapshot.updatedAt,
-        type: "team",
-        team: compactTeam(found),
-      };
+      return { updatedAt, type: "team", team: compactTeam(found) };
     }
 
     if (group) {
       return {
-        updatedAt: snapshot.updatedAt,
+        updatedAt,
         type: "group",
         group,
-        teams: groupTeams(snapshot.teams, group),
+        teams: groupTeams(teams, group),
       };
     }
 
     return {
-      updatedAt: snapshot.updatedAt,
+      updatedAt,
       type: "title_ranking",
-      teams: topTeams(snapshot.teams, limit ?? 8),
+      teams: topTeams(teams, limit ?? 8),
     };
   },
 });

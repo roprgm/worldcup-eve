@@ -1,9 +1,9 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { getGroupForecasts } from "@/agent/lib/predictions-snapshot";
 import scheduleData from "@/agent/lib/schedule";
 import { codeFor } from "@/agent/lib/team-aliases";
+import { getCachedPredictions } from "@/lib/cached-predictions";
 import { groupFixture } from "@/lib/tournament";
 
 function percent(value: number): number {
@@ -49,11 +49,12 @@ export default defineTool({
       };
     }
 
-    const { updatedAt, forecasts } = await getGroupForecasts();
-    const forecast = forecasts[fixture.id];
-    if (!forecast) {
+    const snapshot = await getCachedPredictions();
+    const score = snapshot.groupScores[fixture.id];
+    const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
+    if (!score && !odds) {
       return {
-        updatedAt,
+        updatedAt: snapshot.updatedAt,
         fixture: fixture.id,
         error:
           "No forecast available (the match may be played or has no market).",
@@ -61,19 +62,13 @@ export default defineTool({
     }
 
     return {
-      updatedAt,
-      fixture: forecast.fixture,
-      home: forecast.home,
-      away: forecast.away,
-      predictedScore: forecast.predictedScore,
-      homeWinPercent:
-        forecast.homeWinProbability != null
-          ? percent(forecast.homeWinProbability)
-          : undefined,
-      awayWinPercent:
-        forecast.awayWinProbability != null
-          ? percent(forecast.awayWinProbability)
-          : undefined,
+      updatedAt: snapshot.updatedAt,
+      fixture: fixture.id,
+      home: fixture.homeId,
+      away: fixture.awayId,
+      predictedScore: score ? { home: score.h, away: score.a } : undefined,
+      homeWinPercent: odds ? percent(odds.homeWin) : undefined,
+      awayWinPercent: odds ? percent(odds.awayWin) : undefined,
     };
   },
 });
