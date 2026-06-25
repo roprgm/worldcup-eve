@@ -7,7 +7,7 @@ import {
   CardGrid,
   CardGridFrame,
 } from "@/app/predictions/components/card-grid";
-import { PredictionMatchCard } from "@/app/predictions/components/prediction-match-card";
+import { PredictionMatchCard } from "@/components/widgets/prediction-match-card";
 
 import { cn } from "cnfast";
 

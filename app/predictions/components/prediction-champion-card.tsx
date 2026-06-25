@@ -1,6 +1,6 @@
 import { Trophy } from "lucide-react";
 
-import { Flag } from "@/app/predictions/components/flags";
+import { Flag } from "@/components/flags";
 
 import { cn } from "cnfast";
 

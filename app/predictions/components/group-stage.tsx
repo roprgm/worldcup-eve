@@ -1,5 +1,5 @@
 import { CardGrid } from "@/app/predictions/components/card-grid";
-import { GroupCard } from "@/app/predictions/components/group-card";
+import { GroupCard } from "@/components/widgets/group-card";
 import { groupMatches, teamById } from "@/lib/tournament";
 import type { MatchStatus } from "@/lib/results";
 import { computeStandings, type Scores } from "@/lib/tournament/standings";

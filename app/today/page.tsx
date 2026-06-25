@@ -1,7 +1,7 @@
 "use client";
 
 import { CardGrid } from "@/app/predictions/components/card-grid";
-import { MatchWidget } from "@/app/predictions/components/match-widget";
+import { MatchWidget } from "@/components/widgets/match-widget";
 import { usePredictions, useResults } from "@/app/predictions/hooks";
 import { todayMatchViews } from "@/app/today/today-matches";
 
