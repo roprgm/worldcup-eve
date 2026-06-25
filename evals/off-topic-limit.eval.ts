@@ -9,6 +9,8 @@ export default defineEval({
 
     t.completed();
     t.usedNoTools();
-    t.messageIncludes(/no puedo|lo siento|can'?t|cannot|unable|sorry/i);
+    t.judge.autoevals.closedQA(
+      "Does the assistant decline or refuse the request instead of helping write the contract?",
+    );
   },
 });
