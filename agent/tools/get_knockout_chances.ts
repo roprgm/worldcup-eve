@@ -24,7 +24,7 @@ function chances(candidates: SlotCandidate[]) {
 
 export default defineTool({
   description:
-    "Likely teams to reach each side of an undecided knockout match (Round of 32 to Final), by match id.",
+    "Likely teams to reach each side of a knockout match whose teams aren't decided yet (Round of 32 to Final), by match id. Use it whenever someone asks who plays such a match, not only who is more likely; the teams aren't settled, so present it as a prediction.",
   inputSchema: z.object({
     id: z
       .number()

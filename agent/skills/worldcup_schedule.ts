@@ -14,7 +14,7 @@ const matches = scheduleData
 
 export default defineSkill({
   description:
-    "Use when the user asks about World Cup match numbers, fixtures, kickoff times, or which teams play.",
+    "Use when the user asks about World Cup match numbers, fixtures, kickoff times, stadiums, or which teams play.",
   markdown: `# World Cup 2026 Schedule
 
 Use this lookup data for fixtures, kickoff times, stadiums, and team matchups. Filter by the tournament_day exactly; tournament days roll over at ${TOURNAMENT_DAY_ROLLOVER_UTC}.
