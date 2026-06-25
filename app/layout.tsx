@@ -1,8 +1,11 @@
 import { Analytics } from "@vercel/analytics/next";
+import { cn } from "cnfast";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { ChatProvider } from "@/components/chat/chat-context";
+import { Header } from "@/components/header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,9 +44,7 @@ export const viewport: Viewport = {
   themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
-  // The 16px prompt-input font already prevents iOS focus-zoom, so keep pinch-zoom
-  // available for accessibility (WCAG 1.4.4) instead of locking the viewport.
-  maximumScale: 5,
+  maximumScale: 1,
   viewportFit: "cover",
 };
 
@@ -51,30 +52,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`dark ${GeistSans.variable} ${GeistMono.variable}`}
+      className={cn("dark", GeistSans.variable, GeistMono.variable)}
     >
       <body>
-        {/* Subtle atmospheric depth: a soft top glow and a gentle vignette. */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-        >
-          <div
-            className="absolute -top-48 left-1/2 h-[42rem] w-[64rem] -translate-x-1/2 rounded-full opacity-[0.06]"
-            style={{
-              background:
-                "radial-gradient(circle, #ffffff 0%, transparent 62%)",
-            }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(120% 75% at 50% 0%, transparent 56%, rgba(0,0,0,0.55) 100%)",
-            }}
-          />
-        </div>
-        {children}
+        <ChatProvider>
+          <div className="flex h-dvh flex-col overflow-hidden">
+            <Header />
+            {children}
+          </div>
+        </ChatProvider>
         <Analytics />
       </body>
     </html>

@@ -2,11 +2,11 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import {
+  type Competition,
+  type Competitor,
   fetchScoreboard,
   matchIdForEvent,
   matchStatus,
-  type Competitor,
-  type Competition,
 } from "@/agent/lib/espn";
 import { tournamentDateTime } from "@/agent/lib/time";
 

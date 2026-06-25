@@ -5,7 +5,7 @@ export function Header() {
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-4 sm:px-6">
-        {/* Full navigation remounts cleanly, even from a /s/<id> URL set via pushState. */}
+        {/* Full navigation remounts cleanly, even from a /chat/<id> URL set via the History API. */}
         <a
           href="/"
           aria-label="New chat"
@@ -36,7 +36,7 @@ export function Header() {
             title="GitHub repository"
             className="flex size-8 items-center justify-center rounded-md text-subtle-foreground transition-colors hover:bg-surface hover:text-foreground"
           >
-            <GitHubIcon className="size-[17px]" />
+            <GitHubIcon className="size-[20px]" />
           </a>
         </div>
       </div>

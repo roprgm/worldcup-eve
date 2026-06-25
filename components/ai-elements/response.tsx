@@ -11,7 +11,7 @@ export const Response = memo(
         className,
       )}
       // Drop the table copy/download/fullscreen toolbar.
-      controls={{ table: false }}
+      controls={false}
       {...props}
     />
   ),
