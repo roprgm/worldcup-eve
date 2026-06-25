@@ -1,5 +1,6 @@
 import { MessageSquarePlus } from "lucide-react";
 import { BallIcon, GitHubIcon } from "@/components/icons";
+import { SiteNav } from "@/components/site-nav";
 
 export function Header() {
   return (
@@ -15,11 +16,14 @@ export function Header() {
           <span className="flex size-8 items-center justify-center rounded-[9px] border border-border bg-surface text-foreground">
             <BallIcon className="size-[18px]" />
           </span>
-          <span className="text-[0.95rem] font-semibold tracking-tight text-foreground">
+          <span className="text-[0.95rem] mr-2 font-semibold tracking-tight text-foreground">
             WC26<span className="text-muted-foreground">.chat</span>
           </span>
         </a>
-        <div className="flex items-center gap-1.5">
+        {/* Slanted divider between the wordmark and the nav, à la Vercel. */}
+        <span className="mx-2 hidden h-4 w-px rotate-18 bg-border-strong sm:block" />
+        <SiteNav />
+        <div className="ml-auto flex items-center gap-1.5">
           <a
             href="/"
             title="New chat"
