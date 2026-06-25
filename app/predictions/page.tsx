@@ -158,7 +158,7 @@ export default function PredictionsPage() {
 
   return (
     <main className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-4xl px-3 py-3 sm:px-4">
+      <div className="mx-auto w-full max-w-[1440px] px-3 py-3 sm:px-4">
         {!predictions ? (
           <PredictionsSkeleton />
         ) : (

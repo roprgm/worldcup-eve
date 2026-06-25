@@ -7,10 +7,13 @@ import { cn } from "cnfast";
 type ResultStatus = "predicted" | "final" | "live";
 type Marker = "advance" | "third" | "none";
 
-const SUMMARY_COLUMN_WIDTH = "1.5rem";
+const RESULT_COLUMN_WIDTH = "2.35rem";
+const GOAL_DIFF_COLUMN_WIDTH = "1.5rem";
+const POINTS_COLUMN_WIDTH = "1.75rem";
+const MARKER_COLUMN_WIDTH = "1.25rem";
 
 function groupGridColumns(count: number): string {
-  return `auto repeat(${count}, minmax(0, 1fr)) repeat(3, ${SUMMARY_COLUMN_WIDTH})`;
+  return `minmax(5rem, 1fr) repeat(${count}, minmax(2.15rem, ${RESULT_COLUMN_WIDTH})) ${GOAL_DIFF_COLUMN_WIDTH} ${POINTS_COLUMN_WIDTH} ${MARKER_COLUMN_WIDTH}`;
 }
 
 interface TeamSummary {
@@ -68,7 +71,7 @@ function ResultCell({ result }: { result: GroupCardResult }) {
   return (
     <div
       className={cn(
-        "w-full rounded py-1.5 text-center text-[11px] leading-none tabular-nums select-none",
+        "w-full rounded px-0.5 py-1.5 text-center text-[11px] leading-none tabular-nums whitespace-nowrap select-none",
         live
           ? "font-semibold text-rose-400"
           : result.status === "final"
@@ -115,7 +118,7 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
   );
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {live && <LiveBadge />}
@@ -131,15 +134,15 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
         {columns.map((code) => (
           <span
             key={`head-${code}`}
-            className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase"
+            className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap"
           >
             {code}
           </span>
         ))}
-        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase">
+        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
           GD
         </span>
-        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase">
+        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
           Pts
         </span>
         <span />
@@ -148,7 +151,7 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
           <div
             key={`${row.team.code}:team`}
             className={cn(
-              "flex items-center gap-1.5 pr-1",
+              "flex min-w-0 items-center gap-1.5 pr-1",
               row.dimmed && "opacity-45",
             )}
           >
@@ -158,7 +161,7 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
             <Flag code={row.team.code} size={16} />
             <span
               className={cn(
-                "text-[12px] font-semibold tracking-wide",
+                "truncate text-[12px] font-semibold tracking-wide",
                 row.team.confirmed && "text-pick",
               )}
               title={row.team.name}

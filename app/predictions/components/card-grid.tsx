@@ -12,12 +12,7 @@ interface CardGridProps {
 
 export function CardGridFrame({ children, className }: CardGridFrameProps) {
   return (
-    <div
-      className={cn(
-        "mx-auto w-full sm:max-w-[968px] 2xl:max-w-none",
-        className,
-      )}
-    >
+    <div className={cn("mx-auto w-full max-w-[1392px]", className)}>
       {children}
     </div>
   );
@@ -27,18 +22,12 @@ export function CardGrid({ children }: CardGridProps) {
   const items = Children.toArray(children);
 
   return (
-    <CardGridFrame className="grid grid-cols-1 justify-items-center gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+    <CardGridFrame className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,21rem),21rem))] justify-center gap-3">
       {items.map((child, index) => {
         const key =
           isValidElement(child) && child.key != null ? child.key : index;
         return (
-          <div
-            key={key}
-            className={cn(
-              "w-full max-w-[480px] shrink-0",
-              items.length === 2 && index === 0 && "2xl:col-start-2",
-            )}
-          >
+          <div key={key} className="w-full min-w-0 shrink-0">
             {child}
           </div>
         );
