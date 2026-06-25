@@ -31,6 +31,7 @@
     "components/**/*.ts",
     "components/**/*.tsx",
     "lib/**/*.ts",
+    "hooks/**/*.ts",
     "agent/**/*.ts",
     "evals/**/*.ts",
     "next.config.ts",

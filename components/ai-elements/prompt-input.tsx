@@ -42,7 +42,7 @@ export function PromptInput({
 
   useLayoutEffect(() => {
     fit();
-  }, [value, fit]);
+  }, [fit]);
 
   useEffect(() => {
     const el = textareaRef.current;

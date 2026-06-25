@@ -1,5 +1,105 @@
-import { ChatApp } from "@/components/chat-app";
+"use client";
+
+import { useCallback, useState } from "react";
+import {
+  Conversation,
+  ConversationContent,
+} from "@/components/ai-elements/conversation";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { useChat } from "@/components/chat/chat-context";
+import { Composer } from "@/components/composer";
+import { EveAttribution } from "@/components/eve";
+import { BallIcon } from "@/components/icons";
+
+const SUGGESTIONS = [
+  "Which matches are playing today?",
+  "Who is more likely to win the next match?",
+  "Where did Argentina play their last match?",
+  "Who got the red card in Belgium vs Iran?",
+];
+
+function EmptyState() {
+  const { start } = useChat();
+  const handleSuggestion = useCallback(
+    (suggestion: string) => {
+      start(suggestion);
+    },
+    [start],
+  );
+
+  return (
+    <div className="flex min-h-[62dvh] flex-col items-center justify-center py-10 text-center">
+      <div className="animate-fade-up relative mb-7">
+        <div className="wc-halo" />
+        <span className="relative flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-foreground">
+          <BallIcon className="size-7" />
+        </span>
+      </div>
+
+      <h1
+        className="animate-fade-up text-[1.6rem] leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-3xl"
+        style={{ animationDelay: "60ms" }}
+      >
+        Ask anything about the
+        <br />
+        2026 World Cup
+      </h1>
+
+      <p
+        className="animate-fade-up mt-3.5 font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase"
+        style={{ animationDelay: "120ms" }}
+      >
+        USA · Canada · México — Jun 11 → Jul 19
+      </p>
+
+      <div
+        className="animate-fade-up mt-9 w-full max-w-lg"
+        style={{ animationDelay: "180ms" }}
+      >
+        <Suggestions className="justify-center">
+          {SUGGESTIONS.map((suggestion) => (
+            <Suggestion
+              key={suggestion}
+              suggestion={suggestion}
+              onSelect={handleSuggestion}
+            />
+          ))}
+        </Suggestions>
+      </div>
+
+      <div
+        className="animate-fade-up mt-10 font-mono"
+        style={{ animationDelay: "240ms" }}
+      >
+        <EveAttribution />
+      </div>
+    </div>
+  );
+}
 
 export default function Page() {
-  return <ChatApp />;
+  const { start } = useChat();
+  const [input, setInput] = useState("");
+
+  const handleSubmit = useCallback(() => {
+    start(input);
+    setInput("");
+  }, [start, input]);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <Conversation>
+        <ConversationContent>
+          <EmptyState />
+        </ConversationContent>
+      </Conversation>
+      <Composer
+        value={input}
+        onChange={setInput}
+        onSubmit={handleSubmit}
+        onStop={() => {}}
+        status="ready"
+      />
+    </div>
+  );
 }
