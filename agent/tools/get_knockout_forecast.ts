@@ -10,21 +10,24 @@ function percent(value: number): number {
   return Math.round(value * 1000) / 10;
 }
 
-// Top likely teams for one side of a knockout slot, as chance percentages.
-function chances(candidates: SlotCandidate[]) {
-  return candidates
-    .filter((candidate) => candidate.probability > 0)
-    .slice(0, 6)
-    .map((candidate) => ({
-      code: candidate.code,
-      name: candidate.name,
+// One side of the slot: the single most likely team, plus a few alternatives.
+function side(candidates: SlotCandidate[]) {
+  const ranked = candidates.filter((candidate) => candidate.probability > 0);
+  const [top, ...rest] = ranked;
+  return {
+    mostLikely: top
+      ? { team: top.name, chancePercent: percent(top.probability) }
+      : null,
+    others: rest.slice(0, 3).map((candidate) => ({
+      team: candidate.name,
       chancePercent: percent(candidate.probability),
-    }));
+    })),
+  };
 }
 
 export default defineTool({
   description:
-    "Likely teams to reach each side of a knockout match whose teams aren't decided yet (Round of 32 to Final), by match id. Use it whenever someone asks who plays such a match, not only who is more likely; the teams aren't settled, so present it as a prediction.",
+    "Likely teams to reach each side of a knockout match whose teams aren't decided yet (Round of 32 to Final), by match id. Use it whenever someone asks who plays such a match, not only who is more likely. The teams aren't settled, so present it as a prediction and lead with the single most likely team on each side.",
   inputSchema: z.object({
     id: z
       .number()
@@ -46,9 +49,9 @@ export default defineTool({
     return {
       updatedAt,
       matchId: id,
-      home: chances(slot.home),
-      away: chances(slot.away),
-      note: "Likely teams for each side, from the prediction model.",
+      home: side(slot.home),
+      away: side(slot.away),
+      note: "Teams aren't decided yet — lead with the most likely team on each side; mention the others only if asked.",
     };
   },
 });
