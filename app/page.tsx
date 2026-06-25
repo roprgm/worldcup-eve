@@ -1,10 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import {
-  Conversation,
-  ConversationContent,
-} from "@/components/ai-elements/conversation";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
@@ -30,7 +26,7 @@ function EmptyState() {
   );
 
   return (
-    <div className="flex min-h-[62dvh] flex-col items-center justify-center py-10 text-center">
+    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-6 text-center">
       <div className="animate-fade-up relative mb-7">
         <div className="wc-halo" />
         <span className="relative flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-foreground">
@@ -94,11 +90,9 @@ export default function Page() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Conversation>
-        <ConversationContent>
-          <EmptyState />
-        </ConversationContent>
-      </Conversation>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <EmptyState />
+      </div>
       <Composer
         value={input}
         onChange={setInput}
