@@ -25,7 +25,7 @@ function inRange(
 
 export default defineTool({
   description:
-    "Scores and live status for World Cup matches. Filters are optional and combine.",
+    "Final scores and live status for World Cup matches, including who played whom and the result. Use this for any score or result question. Filters are optional and combine.",
   inputSchema: z.object({
     status: z
       .enum(["scheduled", "live", "final"])
