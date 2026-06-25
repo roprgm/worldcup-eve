@@ -1,9 +1,10 @@
 import type { EveMessage } from "eve/react";
-import { MessageRow, PendingRow } from "@/components/chat/message-row";
+import { ActivityRow, MessageRow } from "@/components/chat/message-row";
 import {
-  isEmptyStreamingAssistantMessage,
-  latestUserTurnId,
+  assistantActivityLabel,
+  isRenderableMessage,
   messageKey,
+  messageText,
 } from "@/components/chat/messages";
 
 export function MessageList({
@@ -13,35 +14,32 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  // Only the in-flight turn should render empty streaming placeholders. Once idle
-  // — settled, errored, timed out, or restored from storage mid-stream — drop them
-  // so a persisted "streaming" message can't show a loader that never resolves.
-  const visible = isBusy
-    ? messages
-    : messages.filter((message) => !isEmptyStreamingAssistantMessage(message));
-
-  const activeTurnId = latestUserTurnId(messages);
-  const hasAssistantReply = messages.some(
-    (message) =>
-      message.role === "assistant" && message.metadata?.turnId === activeTurnId,
-  );
-  const showPending =
-    isBusy &&
-    visible.at(-1)?.role !== "assistant" &&
-    (activeTurnId === undefined || !hasAssistantReply);
+  const bubbles = messages.filter(isRenderableMessage);
+  const latestAssistant = messages.findLast((m) => m.role === "assistant");
+  // The reply is in flight until its text starts streaming. Until then the one
+  // trailing ActivityRow stands in for it — so only one loader can ever show.
+  const replying =
+    isBusy && (!latestAssistant || messageText(latestAssistant).length === 0);
 
   return (
     <div className="flex flex-col gap-6">
-      {visible.map((message, index) => (
+      {bubbles.map((message, index) => (
         <MessageRow
           key={messageKey(message, index)}
           message={message}
           index={index}
-          animate={!isEmptyStreamingAssistantMessage(message)}
-          streaming={message.metadata?.status === "streaming" && isBusy}
+          streaming={isBusy && message.metadata?.status === "streaming"}
         />
       ))}
-      {showPending && <PendingRow key="pending-assistant" />}
+      {replying && (
+        <ActivityRow
+          label={
+            latestAssistant
+              ? assistantActivityLabel(latestAssistant)
+              : "Thinking"
+          }
+        />
+      )}
     </div>
   );
 }

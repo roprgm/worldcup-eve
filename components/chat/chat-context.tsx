@@ -11,6 +11,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { activeQuestion } from "@/components/chat/messages";
 
 type Agent = UseEveAgentHelpers<EveMessageData>;
 
@@ -71,7 +72,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (text: string) => {
       const message = text.trim();
       if (!message) return;
-      void agent.send({ message }).catch(() => {});
+      // While a question is parked, a plain message would be dropped as
+      // "ignored"; route it back as the answer to the pending request.
+      const question = activeQuestion(agent.data.messages);
+      const payload = question
+        ? { inputResponses: [{ requestId: question.requestId, text: message }] }
+        : { message };
+      void agent.send(payload).catch(() => {});
     },
     [agent],
   );

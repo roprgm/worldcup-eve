@@ -1,4 +1,8 @@
-import type { EveMessage } from "eve/react";
+import type {
+  EveDynamicToolPart,
+  EveMessage,
+  EveMessageInputRequest,
+} from "eve/react";
 
 /** Concatenate the renderable text parts of an Eve message. */
 export function messageText(message: EveMessage): string {
@@ -14,12 +18,30 @@ export function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-export function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
-  return (
-    message.role === "assistant" &&
-    message.metadata?.status === "streaming" &&
-    messageText(message).length === 0
+export function questionPart(
+  message: EveMessage,
+): EveDynamicToolPart | undefined {
+  return message.parts.findLast(
+    (p): p is EveDynamicToolPart =>
+      p.type === "dynamic-tool" &&
+      p.toolMetadata?.eve?.inputRequest !== undefined,
   );
+}
+
+export function isRenderableMessage(message: EveMessage): boolean {
+  return messageText(message).length > 0 || questionPart(message) !== undefined;
+}
+
+export function activeQuestion(
+  messages: readonly EveMessage[],
+): EveMessageInputRequest | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const part = questionPart(messages[i]);
+    if (part)
+      return part.state === "approval-requested"
+        ? part.toolMetadata?.eve?.inputRequest
+        : undefined;
+  }
 }
 
 const toolActivityLabels: Record<string, string> = {
@@ -41,8 +63,6 @@ function getToolActivityLabel(toolName: string): string | undefined {
 }
 
 export function assistantActivityLabel(message: EveMessage): string {
-  console.log(message);
-
   const latestTool = message.parts
     .filter((part) => part.type === "dynamic-tool")
     .at(-1);
@@ -68,13 +88,4 @@ export function assistantActivityLabel(message: EveMessage): string {
   }
 
   return "Thinking";
-}
-
-export function latestUserTurnId(
-  messages: readonly EveMessage[],
-): string | undefined {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message?.role === "user") return message.metadata?.turnId;
-  }
 }
