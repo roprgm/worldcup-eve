@@ -27,7 +27,7 @@ function side(candidates: SlotCandidate[]) {
 
 export default defineTool({
   description:
-    "Likely teams to reach each side of a knockout match whose teams aren't decided yet (Round of 32 to Final), by match id. Use it whenever someone asks who plays such a match, not only who is more likely. The teams aren't settled, so present it as a prediction and lead with the single most likely team on each side.",
+    "Likely teams to reach each side of a knockout match whose teams aren't decided yet (Round of 32 to Final), by match id. Use it whenever someone asks who plays such a match, not only who is more likely. The teams aren't settled, so present it as a prediction, leading with the single most likely team on each side and mentioning the others only if asked.",
   inputSchema: z.object({
     id: z
       .number()
@@ -51,7 +51,6 @@ export default defineTool({
       matchId: id,
       home: side(slot.home),
       away: side(slot.away),
-      note: "Teams aren't decided yet — lead with the most likely team on each side; mention the others only if asked.",
     };
   },
 });

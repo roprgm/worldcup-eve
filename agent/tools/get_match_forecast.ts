@@ -74,7 +74,6 @@ export default defineTool({
         forecast.awayWinProbability != null
           ? percent(forecast.awayWinProbability)
           : undefined,
-      note: "Predicted scoreline and market win odds for this upcoming match.",
     };
   },
 });
