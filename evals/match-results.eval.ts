@@ -1,13 +1,10 @@
 import { defineEval } from "eve/evals";
 
+type Side = { code?: string; score?: number | null };
 type MatchResult = {
   id?: number;
-  competitions?: Array<{
-    competitors?: Array<{
-      score?: string;
-      team?: { abbreviation?: string };
-    }>;
-  }>;
+  home?: Side;
+  away?: Side;
 };
 
 function matchesFrom(output: unknown): MatchResult[] {
@@ -26,16 +23,14 @@ function hasScore(
   awayCode: string,
   awayScore: number,
 ): boolean {
-  return matchesFrom(output).some((match) => {
-    const competitors = match.competitions?.[0]?.competitors;
-    return (
+  return matchesFrom(output).some(
+    (match) =>
       match.id === id &&
-      competitors?.[0]?.team?.abbreviation === homeCode &&
-      competitors[0].score === String(homeScore) &&
-      competitors[1]?.team?.abbreviation === awayCode &&
-      competitors[1].score === String(awayScore)
-    );
-  });
+      match.home?.code === homeCode &&
+      match.home.score === homeScore &&
+      match.away?.code === awayCode &&
+      match.away.score === awayScore,
+  );
 }
 
 export default defineEval({

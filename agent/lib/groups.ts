@@ -1,19 +1,10 @@
 import { z } from "zod";
 
-/** World Cup group letters, A–L (12 groups of four). */
-export const groupLetter = z.enum([
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-  "K",
-  "L",
-]);
+import { type GroupLetter, groupLetters } from "@/lib/tournament";
 
-export type GroupLetter = z.infer<typeof groupLetter>;
+/** World Cup group letters, A–L (12 groups of four), sourced from the tournament module. */
+export const groupLetter = z.enum(
+  groupLetters as [GroupLetter, ...GroupLetter[]],
+);
+
+export type { GroupLetter };
