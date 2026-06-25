@@ -8,15 +8,15 @@ import {
 
 export function MessageList({
   messages,
-  isBusy,
+  isGenerating,
 }: {
   messages: readonly EveMessage[];
-  isBusy: boolean;
+  isGenerating: boolean;
 }) {
   // Only the in-flight turn should render empty streaming placeholders. Once idle
   // — settled, errored, timed out, or restored from storage mid-stream — drop them
   // so a persisted "streaming" message can't show a loader that never resolves.
-  const visible = isBusy
+  const visible = isGenerating
     ? messages
     : messages.filter((message) => !isEmptyStreamingAssistantMessage(message));
 
@@ -26,7 +26,7 @@ export function MessageList({
       message.role === "assistant" && message.metadata?.turnId === activeTurnId,
   );
   const showPending =
-    isBusy &&
+    isGenerating &&
     visible.at(-1)?.role !== "assistant" &&
     (activeTurnId === undefined || !hasAssistantReply);
 
@@ -38,7 +38,11 @@ export function MessageList({
           message={message}
           index={index}
           animate={!isEmptyStreamingAssistantMessage(message)}
-          streaming={message.metadata?.status === "streaming" && isBusy}
+          active={
+            message.role === "assistant" &&
+            message.metadata?.turnId === activeTurnId &&
+            isGenerating
+          }
         />
       ))}
       {showPending && <PendingRow key="pending-assistant" />}

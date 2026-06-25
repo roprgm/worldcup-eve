@@ -1,5 +1,6 @@
 import { cn } from "cnfast";
 import type { EveMessage } from "eve/react";
+import { TriangleAlert } from "lucide-react";
 import { Loader } from "@/components/ai-elements/loader";
 import {
   Message,
@@ -26,12 +27,12 @@ export function MessageRow({
   message,
   index,
   animate,
-  streaming,
+  active,
 }: {
   message: EveMessage;
   index: number;
   animate: boolean;
-  streaming: boolean;
+  active: boolean;
 }) {
   return (
     <Message
@@ -42,7 +43,7 @@ export function MessageRow({
       {message.role === "user" ? (
         <UserMessage message={message} />
       ) : (
-        <AssistantMessage message={message} streaming={streaming} />
+        <AssistantMessage message={message} active={active} />
       )}
     </Message>
   );
@@ -65,24 +66,40 @@ function UserMessage({ message }: { message: EveMessage }) {
 
 function AssistantMessage({
   message,
-  streaming,
+  active,
 }: {
   message: EveMessage;
-  streaming: boolean;
+  active: boolean;
 }) {
   return (
     <>
-      <MessageAvatar streaming={streaming} />
+      <MessageAvatar streaming={active} />
       <MessageContent from="assistant">
-        <AssistantBody message={message} />
+        <AssistantBody message={message} active={active} />
       </MessageContent>
     </>
   );
 }
 
 /** Streamed answer text once it arrives, otherwise a live activity label. */
-function AssistantBody({ message }: { message: EveMessage }) {
+function AssistantBody({
+  message,
+  active,
+}: {
+  message: EveMessage;
+  active: boolean;
+}) {
   const text = messageText(message);
   if (text) return <Response>{text}</Response>;
+  if (!active) return <SettledWithoutReply />;
   return <ActivityStatus label={assistantActivityLabel(message)} />;
+}
+
+function SettledWithoutReply() {
+  return (
+    <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
+      <TriangleAlert className="size-4 shrink-0 text-muted-foreground" />
+      <span>The agent stopped before sending a reply.</span>
+    </div>
+  );
 }

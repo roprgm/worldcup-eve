@@ -1,4 +1,6 @@
-import type { EveMessage } from "eve/react";
+import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
+
+type EveEvent = UseEveAgentHelpers<EveMessageData>["events"][number];
 
 /** Concatenate the renderable text parts of an Eve message. */
 export function messageText(message: EveMessage): string {
@@ -18,7 +20,33 @@ export function isEmptyStreamingAssistantMessage(message: EveMessage): boolean {
   return (
     message.role === "assistant" &&
     message.metadata?.status === "streaming" &&
-    messageText(message).length === 0
+    messageText(message).length === 0 &&
+    !hasAssistantWorkTrace(message)
+  );
+}
+
+function hasAssistantWorkTrace(message: EveMessage): boolean {
+  return message.parts.some((part) => {
+    if (part.type === "dynamic-tool") return true;
+    if (part.type === "text" || part.type === "reasoning") {
+      return part.text.length > 0;
+    }
+    return false;
+  });
+}
+
+export function isTurnSettledEvent(event: EveEvent | undefined): boolean {
+  if (event?.type === "message.completed") {
+    return event.data.finishReason !== "tool-calls";
+  }
+
+  return (
+    event?.type === "session.waiting" ||
+    event?.type === "session.completed" ||
+    event?.type === "session.failed" ||
+    event?.type === "turn.completed" ||
+    event?.type === "turn.failed" ||
+    event?.type === "result.completed"
   );
 }
 

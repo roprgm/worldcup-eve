@@ -9,13 +9,22 @@ import {
 import { useChat } from "@/components/chat/chat-context";
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { MessageList } from "@/components/chat/message-list";
+import { isTurnSettledEvent } from "@/components/chat/messages";
 import { Composer } from "@/components/composer";
 
 export default function Page() {
   const { agent, send } = useChat();
 
   const [input, setInput] = useState("");
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
+  const reachedTurnSettledEvent = isTurnSettledEvent(agent.events.at(-1));
+  const isGenerating =
+    agent.status === "submitted" ||
+    (agent.status === "streaming" && !reachedTurnSettledEvent);
+  const composerStatus = isGenerating
+    ? agent.status
+    : agent.status === "error"
+      ? "error"
+      : "ready";
 
   const handleSubmit = () => {
     send(input);
@@ -32,7 +41,10 @@ export default function Page() {
     <div className="flex min-h-0 flex-1 flex-col">
       <Conversation>
         <ConversationContent>
-          <MessageList messages={agent.data.messages} isBusy={isBusy} />
+          <MessageList
+            messages={agent.data.messages}
+            isGenerating={isGenerating}
+          />
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -42,7 +54,7 @@ export default function Page() {
         onChange={setInput}
         onSubmit={handleSubmit}
         onStop={agent.stop}
-        status={agent.status}
+        status={composerStatus}
         notice={
           <ChatNotice
             status={agent.status}
