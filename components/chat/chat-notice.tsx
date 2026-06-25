@@ -26,8 +26,8 @@ function isRateLimited(error: Error | undefined): boolean {
 function RateLimitNotice() {
   return (
     <Notice icon={Clock} tone="amber">
-      You’re sending messages quickly. This public demo is limited.
-      Take a short break and try again in a moment.
+      You’re sending messages quickly. This public demo is limited. Take a short
+      break and try again in a moment.
     </Notice>
   );
 }
