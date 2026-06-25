@@ -11,7 +11,7 @@ function percent(value: number): number {
 }
 
 // Top likely teams for one side of a knockout slot, as chance percentages.
-function contenders(candidates: SlotCandidate[]) {
+function chances(candidates: SlotCandidate[]) {
   return candidates
     .filter((candidate) => candidate.probability > 0)
     .slice(0, 6)
@@ -40,14 +40,14 @@ export default defineTool({
       return {
         updatedAt,
         matchId: id,
-        error: "No contenders available for this match.",
+        error: "No prediction available for this match.",
       };
     }
     return {
       updatedAt,
       matchId: id,
-      home: contenders(slot.home),
-      away: contenders(slot.away),
+      home: chances(slot.home),
+      away: chances(slot.away),
       note: "Likely teams for each side, from the prediction model.",
     };
   },
