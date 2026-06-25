@@ -6,57 +6,7 @@ import {
   getPredictionSnapshot,
   type PredictionTeam,
 } from "@/agent/lib/predictions-snapshot";
-import scheduleData from "@/agent/lib/schedule";
-import { teams as tournamentTeams } from "@/lib/tournament";
-
-const extraAliases: Record<string, string> = {
-  bosnia: "BIH",
-  "bosnia and herzegovina": "BIH",
-  "cabo verde": "CPV",
-  "cape verde": "CPV",
-  "cote divoire": "CIV",
-  curacao: "CUW",
-  "czech republic": "CZE",
-  "democratic republic of congo": "COD",
-  "dr congo": "COD",
-  holland: "NED",
-  "ivory coast": "CIV",
-  korea: "KOR",
-  mexico: "MEX",
-  "south korea": "KOR",
-  turkey: "TUR",
-  turkiye: "TUR",
-  "u s": "USA",
-  "u s a": "USA",
-  "united states": "USA",
-  "united states of america": "USA",
-  usa: "USA",
-};
-
-function lookupKey(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-// Alias key → FIFA code. Team names and codes are static (from the tournament
-// module); only the probabilities, fetched per request, change.
-const codeByAlias = new Map<string, string>();
-for (const team of tournamentTeams) {
-  codeByAlias.set(lookupKey(team.id), team.id);
-  codeByAlias.set(lookupKey(team.name), team.id);
-}
-for (const [alias, code] of Object.entries(extraAliases)) {
-  codeByAlias.set(lookupKey(alias), code);
-}
-
-function codeFor(value?: string | null): string | undefined {
-  return value ? codeByAlias.get(lookupKey(value)) : undefined;
-}
+import { codeFor } from "@/agent/lib/team-aliases";
 
 function percent(value: number): number {
   return Math.round(value * 1000) / 10;
@@ -82,53 +32,6 @@ function compactTeam(team: PredictionTeam) {
   };
 }
 
-function predictionScore(team: PredictionTeam): number {
-  return (
-    team.groupStage.advance * 0.4 +
-    team.groupStage.first * 0.7 +
-    team.groupStage.second * 0.35 +
-    team.knockout.roundOf16 +
-    team.knockout.quarterfinal * 1.5 +
-    team.knockout.semifinal * 2.2 +
-    team.knockout.final * 3 +
-    team.champion * 5
-  );
-}
-
-function confidenceLabel(probability: number): string {
-  const gap = Math.abs(probability - 0.5);
-  if (gap < 0.06) return "toss-up";
-  if (gap < 0.15) return "slight favorite";
-  if (gap < 0.3) return "clear favorite";
-  return "strong favorite";
-}
-
-function compareTeams(teamA: PredictionTeam, teamB: PredictionTeam) {
-  const scoreA = predictionScore(teamA);
-  const scoreB = predictionScore(teamB);
-  const probabilityA = scoreA + scoreB === 0 ? 0.5 : scoreA / (scoreA + scoreB);
-  const probabilityB = 1 - probabilityA;
-  const favorite = probabilityA >= probabilityB ? teamA : teamB;
-  const favoriteProbability =
-    favorite.code === teamA.code ? probabilityA : probabilityB;
-
-  return {
-    favorite: compactTeam(favorite),
-    confidence: confidenceLabel(favoriteProbability),
-    teams: [
-      {
-        ...compactTeam(teamA),
-        estimatedWinPercent: percent(probabilityA),
-      },
-      {
-        ...compactTeam(teamB),
-        estimatedWinPercent: percent(probabilityB),
-      },
-    ],
-    note: "Directional estimate from market-derived predictions.",
-  };
-}
-
 function topTeams(teams: PredictionTeam[], limit: number) {
   return [...teams]
     .sort((a, b) => b.champion - a.champion)
@@ -149,94 +52,43 @@ function groupTeams(teams: PredictionTeam[], group: GroupLetter) {
 
 export default defineTool({
   description:
-    "World Cup prediction estimates for likely winners, favorites, title chances, and group advancement.",
+    "World Cup prediction estimates: a single team's run (advance, reach by round, title odds), a group's advancement odds, or the title favorites. For a specific match's score/odds use get_match_forecast; for an undecided knockout matchup use get_knockout_forecast.",
   inputSchema: z.object({
-    matchId: z
-      .number()
-      .int()
-      .min(1)
-      .max(104)
-      .optional()
-      .describe("World Cup match id, when the user asks about a known match."),
-    teamA: z
-      .string()
-      .optional()
-      .describe("First country name or code for a matchup comparison."),
-    teamB: z
-      .string()
-      .optional()
-      .describe("Second country name or code for a matchup comparison."),
     team: z
       .string()
       .optional()
-      .describe("One country name or code for a single-team prediction."),
-    group: groupLetter.optional().describe("Group letter, A-L."),
+      .describe("A country name or code, for that team's outlook."),
+    group: groupLetter
+      .optional()
+      .describe("Group letter, A-L, for its advancement odds."),
     limit: z
       .number()
       .int()
       .min(1)
       .max(12)
       .optional()
-      .describe("Maximum teams to return for title rankings."),
+      .describe("Maximum teams for the title ranking."),
   }),
-  async execute({ matchId, teamA, teamB, team, group, limit }) {
+  async execute({ team, group, limit }) {
     const snapshot = await getPredictionSnapshot();
-    const teamByCode = new Map(snapshot.teams.map((t) => [t.code, t]));
-    const teamFor = (value?: string | null): PredictionTeam | undefined => {
-      const code = codeFor(value);
-      return code ? teamByCode.get(code) : undefined;
-    };
 
-    const match = matchId
-      ? scheduleData.find((match) => match.number === matchId)
-      : undefined;
-
-    if (matchId && !match) {
-      return {
-        updatedAt: snapshot.updatedAt,
-        error: "Match not found.",
-        requested: { matchId },
-      };
-    }
-
-    if (matchId && (!match?.teamA || !match.teamB)) {
-      return {
-        updatedAt: snapshot.updatedAt,
-        type: "matchup",
-        matchId,
-        error: "Match teams are not known yet.",
-      };
-    }
-
-    const firstTeamInput = match?.teamA ?? teamA;
-    const secondTeamInput = match?.teamB ?? teamB;
-    const firstTeam = teamFor(firstTeamInput);
-    const secondTeam = teamFor(secondTeamInput);
-
-    if (firstTeamInput && secondTeamInput) {
-      if (!firstTeam || !secondTeam) {
+    if (team) {
+      const code = codeFor(team);
+      const found = code
+        ? snapshot.teams.find((t) => t.code === code)
+        : undefined;
+      if (!found) {
         return {
           updatedAt: snapshot.updatedAt,
-          error: "Unknown team in matchup.",
-          requested: { matchId, teamA: firstTeamInput, teamB: secondTeamInput },
+          error: "Unknown team.",
+          requested: { team },
           knownTeams: snapshot.teams.map(({ code, name }) => ({ code, name })),
         };
       }
-
-      return {
-        updatedAt: snapshot.updatedAt,
-        type: "matchup",
-        matchId,
-        ...compareTeams(firstTeam, secondTeam),
-      };
-    }
-
-    const singleTeam = teamFor(team ?? teamA);
-    if (singleTeam) {
       return {
         updatedAt: snapshot.updatedAt,
         type: "team",
-        team: compactTeam(singleTeam),
+        team: compactTeam(found),
       };
     }
 

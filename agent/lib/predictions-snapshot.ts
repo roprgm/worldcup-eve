@@ -1,10 +1,11 @@
 // The agent-facing projections of the shared cached predictions snapshot (one
-// build serves the page and the agent): the flat per-team odds the prediction
-// tool reads, and the per-knockout-slot contenders the slot tool reads.
+// build serves the page and the agent): flat per-team odds (prediction tool),
+// per-knockout-slot contenders (knockout-forecast tool), and per-group-fixture
+// score + win odds (match-forecast tool).
 
 import { getCachedPredictions } from "@/lib/cached-predictions";
 import type { Predictions } from "@/lib/predictions";
-import { teamById } from "@/lib/tournament";
+import { groupMatches, teamById } from "@/lib/tournament";
 
 export interface PredictionTeam {
   code: string;
@@ -89,4 +90,57 @@ export async function getPredictionSnapshot(): Promise<PredictionSnapshot> {
 export async function getKnockoutSlots(): Promise<KnockoutSlots> {
   const snapshot = await getCachedPredictions();
   return { updatedAt: snapshot.updatedAt, slots: projectSlots(snapshot) };
+}
+
+export interface MatchForecast {
+  fixture: string; // group fixture id, e.g. "C1"
+  home: string; // FIFA code
+  away: string;
+  predictedScore?: { home: number; away: number };
+  homeWinProbability?: number;
+  awayWinProbability?: number;
+}
+
+const fixtureById = new Map(groupMatches.map((match) => [match.id, match]));
+
+// Per unplayed group fixture: the most-likely scoreline and the two-way win
+// odds, keyed by fixture id.
+function projectForecasts(
+  snapshot: Predictions,
+): Record<string, MatchForecast> {
+  const oddsById = new Map(
+    snapshot.matchOdds.map((odds) => [odds.matchId, odds]),
+  );
+  const ids = new Set<string>([
+    ...Object.keys(snapshot.groupScores),
+    ...snapshot.matchOdds.map((odds) => odds.matchId),
+  ]);
+
+  const out: Record<string, MatchForecast> = {};
+  for (const id of ids) {
+    const fixture = fixtureById.get(id);
+    if (!fixture) continue;
+    const score = snapshot.groupScores[id];
+    const odds = oddsById.get(id);
+    out[id] = {
+      fixture: id,
+      home: fixture.homeId,
+      away: fixture.awayId,
+      predictedScore: score ? { home: score.h, away: score.a } : undefined,
+      homeWinProbability: odds?.homeWin,
+      awayWinProbability: odds?.awayWin,
+    };
+  }
+  return out;
+}
+
+export async function getGroupForecasts(): Promise<{
+  updatedAt: string;
+  forecasts: Record<string, MatchForecast>;
+}> {
+  const snapshot = await getCachedPredictions();
+  return {
+    updatedAt: snapshot.updatedAt,
+    forecasts: projectForecasts(snapshot),
+  };
 }
