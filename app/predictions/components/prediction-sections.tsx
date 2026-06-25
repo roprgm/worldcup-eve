@@ -53,7 +53,7 @@ export function PredictionSection({
 
   return (
     <section className="space-y-2">
-      <CardGridFrame className="sticky top-14 z-20">
+      <CardGridFrame className="sticky top-0 z-20">
         <button
           type="button"
           aria-expanded={open}

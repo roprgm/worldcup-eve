@@ -174,7 +174,7 @@ function SkeletonCard({ match }: { match: KnockoutMatch }) {
 
 function SkeletonSectionHeader() {
   return (
-    <CardGridFrame className="sticky top-14 z-20">
+    <CardGridFrame className="sticky top-0 z-20">
       <div className="relative grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 bg-background/90 pt-3 pb-2 backdrop-blur">
         <span className="h-px bg-border" />
         <span className="rounded-sm px-2">
