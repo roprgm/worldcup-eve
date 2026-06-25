@@ -1,4 +1,4 @@
-import type { EveMessage, EveMessageInputRequest } from "eve/react";
+import type { EveDynamicToolPart, EveMessage } from "eve/react";
 import { Loader } from "@/components/ai-elements/loader";
 import {
   Message,
@@ -8,7 +8,7 @@ import {
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
-import { messageText, pendingQuestion } from "@/components/chat/messages";
+import { messageText, questionPart } from "@/components/chat/messages";
 
 export function MessageRow({
   message,
@@ -54,19 +54,36 @@ export function ActivityRow({ label }: { label: string }) {
 }
 
 function AssistantBody({ message }: { message: EveMessage }) {
-  const question = pendingQuestion(message);
-  if (question) return <QuestionPrompt request={question} />;
-  return <Response>{messageText(message)}</Response>;
+  const question = questionPart(message);
+  const text = messageText(message);
+  return (
+    <div className="flex flex-col gap-3">
+      {question ? <QuestionPrompt part={question} /> : null}
+      {text ? <Response>{text}</Response> : null}
+    </div>
+  );
 }
 
-function QuestionPrompt({ request }: { request: EveMessageInputRequest }) {
+function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
   const { agent } = useChat();
-  const busy = agent.status === "submitted" || agent.status === "streaming";
+  const request = part.toolMetadata?.eve?.inputRequest;
+  if (!request) return null;
+  const response = part.toolMetadata?.eve?.inputResponse;
   const options = request.options ?? [];
+  const chosen = response?.optionId
+    ? (options.find((o) => o.id === response.optionId)?.label ??
+      response.optionId)
+    : response?.text;
+  const busy = agent.status === "submitted" || agent.status === "streaming";
+
   return (
     <div className="flex flex-col gap-2.5">
       <Response>{request.prompt}</Response>
-      {options.length > 0 ? (
+      {chosen ? (
+        <span className="w-fit rounded-full border border-border bg-surface px-3 py-1.5 text-[0.8125rem] text-muted-foreground">
+          {chosen}
+        </span>
+      ) : options.length > 0 ? (
         <Suggestions>
           {options.map((option) => (
             <Suggestion
@@ -85,11 +102,7 @@ function QuestionPrompt({ request }: { request: EveMessageInputRequest }) {
             />
           ))}
         </Suggestions>
-      ) : (
-        <p className="text-[0.8125rem] text-subtle-foreground">
-          Reply below to continue.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

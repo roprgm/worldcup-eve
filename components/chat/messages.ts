@@ -18,28 +18,29 @@ export function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-export function pendingQuestion(
+export function questionPart(
   message: EveMessage,
-): EveMessageInputRequest | undefined {
-  const part = message.parts.findLast(
+): EveDynamicToolPart | undefined {
+  return message.parts.findLast(
     (p): p is EveDynamicToolPart =>
-      p.type === "dynamic-tool" && p.state === "approval-requested",
+      p.type === "dynamic-tool" &&
+      p.toolMetadata?.eve?.inputRequest !== undefined,
   );
-  return part?.toolMetadata?.eve?.inputRequest;
 }
 
 export function isRenderableMessage(message: EveMessage): boolean {
-  return (
-    messageText(message).length > 0 || pendingQuestion(message) !== undefined
-  );
+  return messageText(message).length > 0 || questionPart(message) !== undefined;
 }
 
 export function activeQuestion(
   messages: readonly EveMessage[],
 ): EveMessageInputRequest | undefined {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const question = pendingQuestion(messages[i]);
-    if (question) return question;
+    const part = questionPart(messages[i]);
+    if (part)
+      return part.state === "approval-requested"
+        ? part.toolMetadata?.eve?.inputRequest
+        : undefined;
   }
 }
 

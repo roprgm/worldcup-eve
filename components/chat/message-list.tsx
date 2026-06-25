@@ -4,6 +4,7 @@ import {
   assistantActivityLabel,
   isRenderableMessage,
   messageKey,
+  messageText,
 } from "@/components/chat/messages";
 
 export function MessageList({
@@ -13,11 +14,12 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  // A text-less in-flight turn shows the one trailing ActivityRow, not a loader
-  // inside a bubble — so only one progress indicator can ever show at a time.
   const bubbles = messages.filter(isRenderableMessage);
-  const replying = isBusy && bubbles.at(-1)?.role !== "assistant";
   const latestAssistant = messages.findLast((m) => m.role === "assistant");
+  // The reply is in flight until its text starts streaming. Until then the one
+  // trailing ActivityRow stands in for it — so only one loader can ever show.
+  const replying =
+    isBusy && (!latestAssistant || messageText(latestAssistant).length === 0);
 
   return (
     <div className="flex flex-col gap-6">
