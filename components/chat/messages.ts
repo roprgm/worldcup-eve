@@ -18,16 +18,6 @@ export function messageKey(message: EveMessage, index: number): string {
   return `${message.role}-${index}`;
 }
 
-/**
- * True when an assistant message carries no renderable text. It may still be
- * mid-stream (about to produce text), or it may have settled with only tool
- * calls — e.g. a turn that parks on `ask_question` ends with `metadata.status`
- * already `"complete"` and no text at all.
- */
-export function isContentlessAssistantMessage(message: EveMessage): boolean {
-  return message.role === "assistant" && messageText(message).length === 0;
-}
-
 /** The `ask_question` prompt awaiting an answer on this message, if any. */
 export function pendingQuestion(
   message: EveMessage,
@@ -37,6 +27,13 @@ export function pendingQuestion(
       p.type === "dynamic-tool" && p.state === "approval-requested",
   );
   return part?.toolMetadata?.eve?.inputRequest;
+}
+
+/** A message worth rendering as a bubble: visible text or a pending question. */
+export function isRenderableMessage(message: EveMessage): boolean {
+  return (
+    messageText(message).length > 0 || pendingQuestion(message) !== undefined
+  );
 }
 
 const toolActivityLabels: Record<string, string> = {
@@ -83,13 +80,4 @@ export function assistantActivityLabel(message: EveMessage): string {
   }
 
   return "Thinking";
-}
-
-export function latestUserTurnId(
-  messages: readonly EveMessage[],
-): string | undefined {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message?.role === "user") return message.metadata?.turnId;
-  }
 }

@@ -1,10 +1,9 @@
 import type { EveMessage } from "eve/react";
-import { MessageRow, PendingRow } from "@/components/chat/message-row";
+import { ActivityRow, MessageRow } from "@/components/chat/message-row";
 import {
-  isContentlessAssistantMessage,
-  latestUserTurnId,
+  assistantActivityLabel,
+  isRenderableMessage,
   messageKey,
-  pendingQuestion,
 } from "@/components/chat/messages";
 
 export function MessageList({
@@ -14,40 +13,32 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  // A contentless assistant bubble is only a live progress placeholder while its
-  // turn is actually in flight. Once idle — settled, errored, timed out, or
-  // restored from storage mid-stream — drop it so it can't strand a loader that
-  // never resolves. (Progress is driven by `isBusy`, never by "the text is still
-  // empty".)
-  const visible = isBusy
-    ? messages
-    : messages.filter(
-        // Keep a parked `ask_question`: it's text-less but carries a prompt.
-        (m) => !isContentlessAssistantMessage(m) || pendingQuestion(m),
-      );
-
-  const activeTurnId = latestUserTurnId(messages);
-  const hasAssistantReply = messages.some(
-    (message) =>
-      message.role === "assistant" && message.metadata?.turnId === activeTurnId,
-  );
-  const showPending =
-    isBusy &&
-    visible.at(-1)?.role !== "assistant" &&
-    (activeTurnId === undefined || !hasAssistantReply);
+  // Only messages with visible content are bubbles. A text-less, in-flight turn
+  // is represented by the single trailing ActivityRow below — never by a loader
+  // inside a bubble — so exactly one progress indicator can ever show.
+  const bubbles = messages.filter(isRenderableMessage);
+  const replying = isBusy && bubbles.at(-1)?.role !== "assistant";
+  const latestAssistant = messages.findLast((m) => m.role === "assistant");
 
   return (
     <div className="flex flex-col gap-6">
-      {visible.map((message, index) => (
+      {bubbles.map((message, index) => (
         <MessageRow
           key={messageKey(message, index)}
           message={message}
           index={index}
-          animate={!isContentlessAssistantMessage(message)}
-          streaming={message.metadata?.status === "streaming" && isBusy}
+          streaming={isBusy && message.metadata?.status === "streaming"}
         />
       ))}
-      {showPending && <PendingRow key="pending-assistant" />}
+      {replying && (
+        <ActivityRow
+          label={
+            latestAssistant
+              ? assistantActivityLabel(latestAssistant)
+              : "Thinking"
+          }
+        />
+      )}
     </div>
   );
 }
