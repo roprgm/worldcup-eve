@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import type { EveMessage } from "eve/react";
+import type { EveMessage, EveMessageInputRequest } from "eve/react";
 import { Loader } from "@/components/ai-elements/loader";
 import {
   Message,
@@ -7,9 +7,12 @@ import {
   MessageContent,
 } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { useChat } from "@/components/chat/chat-context";
 import {
   assistantActivityLabel,
   messageText,
+  pendingQuestion,
 } from "@/components/chat/messages";
 
 /** A loader with an inline status label, for in-progress activity. */
@@ -81,10 +84,9 @@ function AssistantMessage({
 }
 
 /**
- * Streamed answer text once it arrives, otherwise a live activity label — but
- * the loader shows only while the turn is in flight. A settled assistant message
- * with no text (e.g. one parked on `ask_question`) is filtered out upstream, so
- * it never reaches a loader that would never resolve.
+ * A pending question, the streamed answer text, or — only while the turn is in
+ * flight — a live activity label. A settled, text-less message is filtered out
+ * upstream, so the loader never strands.
  */
 function AssistantBody({
   message,
@@ -93,9 +95,47 @@ function AssistantBody({
   message: EveMessage;
   streaming: boolean;
 }) {
+  const question = pendingQuestion(message);
+  if (question) return <QuestionPrompt request={question} />;
   const text = messageText(message);
   if (text) return <Response>{text}</Response>;
   if (streaming)
     return <ActivityStatus label={assistantActivityLabel(message)} />;
   return null;
+}
+
+/** An `ask_question` prompt: the question plus its options as answer chips. */
+function QuestionPrompt({ request }: { request: EveMessageInputRequest }) {
+  const { agent } = useChat();
+  const busy = agent.status === "submitted" || agent.status === "streaming";
+  const options = request.options ?? [];
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Response>{request.prompt}</Response>
+      {options.length > 0 ? (
+        <Suggestions>
+          {options.map((option) => (
+            <Suggestion
+              key={option.id}
+              suggestion={option.label}
+              onSelect={() => {
+                if (busy) return;
+                void agent
+                  .send({
+                    inputResponses: [
+                      { requestId: request.requestId, optionId: option.id },
+                    ],
+                  })
+                  .catch(() => {});
+              }}
+            />
+          ))}
+        </Suggestions>
+      ) : (
+        <p className="text-[0.8125rem] text-subtle-foreground">
+          Reply below to continue.
+        </p>
+      )}
+    </div>
+  );
 }

@@ -4,6 +4,7 @@ import {
   isContentlessAssistantMessage,
   latestUserTurnId,
   messageKey,
+  pendingQuestion,
 } from "@/components/chat/messages";
 
 export function MessageList({
@@ -20,7 +21,10 @@ export function MessageList({
   // empty".)
   const visible = isBusy
     ? messages
-    : messages.filter((message) => !isContentlessAssistantMessage(message));
+    : messages.filter(
+        // Keep a parked `ask_question`: it's text-less but carries a prompt.
+        (m) => !isContentlessAssistantMessage(m) || pendingQuestion(m),
+      );
 
   const activeTurnId = latestUserTurnId(messages);
   const hasAssistantReply = messages.some(

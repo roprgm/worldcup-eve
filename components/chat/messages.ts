@@ -1,4 +1,8 @@
-import type { EveMessage } from "eve/react";
+import type {
+  EveDynamicToolPart,
+  EveMessage,
+  EveMessageInputRequest,
+} from "eve/react";
 
 /** Concatenate the renderable text parts of an Eve message. */
 export function messageText(message: EveMessage): string {
@@ -22,6 +26,17 @@ export function messageKey(message: EveMessage, index: number): string {
  */
 export function isContentlessAssistantMessage(message: EveMessage): boolean {
   return message.role === "assistant" && messageText(message).length === 0;
+}
+
+/** The `ask_question` prompt awaiting an answer on this message, if any. */
+export function pendingQuestion(
+  message: EveMessage,
+): EveMessageInputRequest | undefined {
+  const part = message.parts.findLast(
+    (p): p is EveDynamicToolPart =>
+      p.type === "dynamic-tool" && p.state === "approval-requested",
+  );
+  return part?.toolMetadata?.eve?.inputRequest;
 }
 
 const toolActivityLabels: Record<string, string> = {
