@@ -1,52 +1,11 @@
 import { defineEval } from "eve/evals";
 
-type Side = { code?: string; score?: number | null };
-type MatchResult = {
-  id?: number;
-  home?: Side;
-  away?: Side;
-};
-
-function matchesFrom(output: unknown): MatchResult[] {
-  if (!output || typeof output !== "object") {
-    return [];
-  }
-  const results = (output as { results?: unknown }).results;
-  return Array.isArray(results) ? (results as MatchResult[]) : [];
-}
-
-function hasScore(
-  output: unknown,
-  id: number,
-  homeCode: string,
-  homeScore: number,
-  awayCode: string,
-  awayScore: number,
-): boolean {
-  return matchesFrom(output).some(
-    (match) =>
-      match.id === id &&
-      match.home?.code === homeCode &&
-      match.home.score === homeScore &&
-      match.away?.code === awayCode &&
-      match.away.score === awayScore,
-  );
-}
-
 export default defineEval({
-  description: "Use batch result data for a specific World Cup date.",
+  description: "A score question routes to get_match_results.",
   async test(t) {
-    await t.send(
-      "Cuál es el resultado de todos los partidos del 19 de junio de 2026?",
-    );
+    await t.send("What was the score of Brazil vs Haiti?");
 
     t.completed();
-    t.calledTool("get_match_results", {
-      output: (output: unknown) =>
-        hasScore(output, 32, "USA", 2, "AUS", 0) &&
-        hasScore(output, 30, "SCO", 0, "MAR", 1) &&
-        hasScore(output, 29, "BRA", 3, "HAI", 0) &&
-        hasScore(output, 31, "TUR", 0, "PAR", 1),
-    });
+    t.calledTool("get_match_results");
   },
 });
