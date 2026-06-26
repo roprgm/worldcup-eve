@@ -68,10 +68,10 @@ function LiveBadge() {
 
 function PredictedBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-foreground/70">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-foreground/45">
       <span
         aria-hidden
-        className="size-1.5 shrink-0 rounded-full bg-foreground/70"
+        className="size-1.5 shrink-0 rounded-full bg-foreground/45"
       />
       Predicted
     </span>
@@ -85,9 +85,9 @@ function ResultCell({ result }: { result: GroupCardResult }) {
     <div
       className={cn(
         "w-full rounded px-0.5 py-1.5 text-center text-[11px] font-semibold leading-none tabular-nums whitespace-nowrap select-none",
-        // Speculative scorelines are a soft grey; confirmed and live ones stay white.
+        // Speculative scorelines are a faint grey; confirmed and live ones stay white.
         result.status === "predicted"
-          ? "text-foreground/70"
+          ? "text-foreground/45"
           : "text-foreground",
       )}
       title={result.title}
