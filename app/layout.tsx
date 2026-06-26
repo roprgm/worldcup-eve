@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { Providers } from "@/app/providers";
 import { ChatProvider } from "@/components/chat/chat-context";
 import { Header } from "@/components/header";
 import "./globals.css";
@@ -57,12 +58,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={cn("dark", GeistSans.variable, GeistMono.variable)}
     >
       <body>
-        <ChatProvider>
-          <div className="flex h-dvh flex-col overflow-hidden">
-            <Header />
-            {children}
-          </div>
-        </ChatProvider>
+        <Providers>
+          <ChatProvider>
+            <div className="flex h-dvh flex-col overflow-hidden">
+              <Header />
+              {children}
+            </div>
+          </ChatProvider>
+        </Providers>
         <Analytics />
       </body>
     </html>
