@@ -7,6 +7,7 @@ import type { ComponentProps } from "react";
 export function Bubble({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
+      data-slot="bubble"
       className={cn(
         "w-fit max-w-[80%] overflow-hidden rounded-2xl bg-surface-2",
         className,
@@ -19,6 +20,7 @@ export function Bubble({ className, ...props }: ComponentProps<"div">) {
 export function BubbleContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
+      data-slot="bubble-content"
       className={cn(
         "px-3 py-2 text-base leading-relaxed whitespace-pre-wrap break-words text-foreground",
         className,

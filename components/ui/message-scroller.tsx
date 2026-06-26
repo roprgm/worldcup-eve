@@ -14,6 +14,7 @@ import type { ComponentProps, ReactNode } from "react";
 function JumpToLatestButton() {
   return (
     <MessageScroller.Button
+      data-slot="message-scroller-button"
       direction="end"
       aria-label="Scroll to latest"
       className="absolute bottom-4 left-1/2 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border-strong bg-surface/90 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:bg-surface-2 data-[active=false]:pointer-events-none data-[active=false]:translate-y-full data-[active=false]:opacity-0"
@@ -30,12 +31,19 @@ export function Conversation({ children }: { children: ReactNode }) {
       defaultScrollPosition="last-anchor"
       scrollPreviousItemPeek={64}
     >
-      <MessageScroller.Root className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <MessageScroller.Root
+        data-slot="message-scroller"
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+      >
         <MessageScroller.Viewport
+          data-slot="message-scroller-viewport"
           role="log"
           className="wc-scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain"
         >
-          <MessageScroller.Content className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+          <MessageScroller.Content
+            data-slot="message-scroller-content"
+            className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6"
+          >
             {children}
           </MessageScroller.Content>
         </MessageScroller.Viewport>
@@ -54,6 +62,7 @@ export function ConversationItem({
 }: ComponentProps<typeof MessageScroller.Item> & { anchor?: boolean }) {
   return (
     <MessageScroller.Item
+      data-slot="message-scroller-item"
       scrollAnchor={anchor}
       className={cn("pb-8", className)}
       {...props}

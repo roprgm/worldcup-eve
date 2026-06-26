@@ -236,21 +236,18 @@
   }
 }
 
-/* scroll-fade — soften the transcript's top/bottom edges so content arrives and
-   leaves out of view rather than being clipped hard. */
+/* scroll-fade — soften the transcript's bottom edge (toward the composer) so
+   content leaves out of view rather than being clipped hard. Mirrors shadcn's
+   scroll-fade-b. */
 .wc-scroll-fade {
   --wc-fade: 22px;
   -webkit-mask-image: linear-gradient(
     to bottom,
-    transparent 0,
-    #000 var(--wc-fade),
     #000 calc(100% - var(--wc-fade)),
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
-    transparent 0,
-    #000 var(--wc-fade),
     #000 calc(100% - var(--wc-fade)),
     transparent 100%
   );
