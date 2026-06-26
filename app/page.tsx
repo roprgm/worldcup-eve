@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useCallback, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
+import { ChatView } from "@/components/chat/chat-view";
 import { Composer } from "@/components/composer";
 import { EveAttribution } from "@/components/eve";
 import { BallIcon } from "@/components/icons";
@@ -77,18 +78,17 @@ function EmptyState() {
 
 export default function Page() {
   const { start } = useChat();
-  const router = useRouter();
+  const pathname = usePathname();
   const [input, setInput] = useState("");
-
-  // Warm the chat route so starting a chat navigates without a chunk-load flash.
-  useEffect(() => {
-    router.prefetch("/chat/new");
-  }, [router]);
 
   const handleSubmit = useCallback(() => {
     start(input);
     setInput("");
   }, [start, input]);
+
+  // `start()` swaps in a `/chat/<id>` URL with history.pushState (no route
+  // change), so the chat shows here instantly; render it off that URL.
+  if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
