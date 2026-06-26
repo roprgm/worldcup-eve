@@ -15,6 +15,7 @@ interface PromptInputProps {
   onStop: () => void;
   status: UseEveAgentStatus;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export function PromptInput({
@@ -24,6 +25,7 @@ export function PromptInput({
   onStop,
   status,
   placeholder = "Ask about the 2026 World Cup…",
+  autoFocus = true,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const launchTimer = useRef<number | null>(null);
@@ -75,10 +77,13 @@ export function PromptInput({
     [],
   );
 
-  // Focus the input on mount so you can start typing right away.
+  // Focus on mount — but only on fine-pointer devices; on touch, focusing pops
+  // the keyboard and scrolls the page.
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+    if (autoFocus && window.matchMedia("(pointer: fine)").matches) {
+      textareaRef.current?.focus();
+    }
+  }, [autoFocus]);
 
   // Send the message and fire the submit-button launch animation (click or Enter).
   const submit = useCallback(() => {
@@ -117,7 +122,7 @@ export function PromptInput({
         placeholder={placeholder}
         aria-label="Message WC26.chat"
         enterKeyHint="send"
-        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[1rem] leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
+        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-[1rem] leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
       />
 
       <SubmitButton

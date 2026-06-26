@@ -25,6 +25,8 @@ the relevant guide before changing agent code.
 - Don't over-comment. When names are clear and a function is small with a single responsibility,
   the code is its own explanation — add a comment only to capture the non-obvious _why_ (a subtle
   invariant, a workaround, an intentional edge case), never to restate _what_ the code does.
+- Keep comments short — a line or two. If a comment needs a paragraph, the naming or structure
+  probably needs the work instead.
 - Import local modules through the `@/*` path alias.
 - Merge `className` values with `cn` from [`cnfast`](https://github.com/aidenybai/cnfast) (a fast
   drop-in for `clsx` + `tailwind-merge`). Use it for any conditional or combined class names instead

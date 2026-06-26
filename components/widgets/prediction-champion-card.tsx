@@ -1,8 +1,8 @@
+import { cn } from "cnfast";
 import { Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
-
-import { cn } from "cnfast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MIN_PROBABILITY = 0.01;
 
@@ -13,17 +13,31 @@ interface ChampionCandidate {
 }
 
 interface PredictionChampionCardProps {
-  candidates: ChampionCandidate[];
+  /** `undefined` while the predictions load — the card shows its own skeleton. */
+  candidates?: ChampionCandidate[];
 }
 
 function formatPct(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
 
+function LeaderSkeleton() {
+  return (
+    <div className="flex animate-pulse items-center gap-2" aria-hidden>
+      <Skeleton className="h-[15px] w-5 rounded-sm" />
+      <Skeleton className="h-5 w-28" />
+      <Skeleton className="h-4 w-10" />
+    </div>
+  );
+}
+
 export function PredictionChampionCard({
   candidates,
 }: PredictionChampionCardProps) {
-  const champ = candidates.filter((c) => c.probability >= MIN_PROBABILITY);
+  const loading = candidates === undefined;
+  const champ = (candidates ?? []).filter(
+    (c) => c.probability >= MIN_PROBABILITY,
+  );
   const leader = champ[0];
 
   return (
@@ -39,7 +53,9 @@ export function PredictionChampionCard({
         <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           Most likely champion
         </span>
-        {leader ? (
+        {loading ? (
+          <LeaderSkeleton />
+        ) : leader ? (
           <div className="flex items-center gap-2">
             <Flag code={leader.code} size={20} />
             <span className="text-base font-semibold text-pick">

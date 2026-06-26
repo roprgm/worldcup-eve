@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { cn } from "cnfast";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const LAST_CHAT_KEY = "wc26:last-chat-path";
 
-const isChatPath = (path: string) => path === "/" || path.startsWith("/chat/");
-
-/**
- * The Chat link returns to the chat you were last in (`/` or `/chat/<id>`).
- */
-function useLastChatHref(pathname: string) {
+// The Chat link points at the chat you were last in: the current `/chat/<id>`,
+// or the one remembered across reloads, falling back to `/`.
+function useChatHref(pathname: string) {
   const [href, setHref] = useState("/");
 
   useEffect(() => {
-    if (isChatPath(pathname)) {
+    if (pathname.startsWith("/chat/")) {
       sessionStorage.setItem(LAST_CHAT_KEY, pathname);
       setHref(pathname);
     } else {
@@ -26,36 +24,29 @@ function useLastChatHref(pathname: string) {
   return href;
 }
 
+const linkClass = (active: boolean) =>
+  cn(
+    "rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-surface",
+    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+  );
+
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
   const pathname = usePathname();
-  const chatHref = useLastChatHref(pathname);
-
-  const links = [
-    { href: chatHref, label: "Chat", active: isChatPath(pathname) },
-    {
-      href: "/predictions",
-      label: "Predictions",
-      active: pathname === "/predictions",
-    },
-  ];
+  const chatHref = useChatHref(pathname);
+  const onChat = pathname === "/" || pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">
-      {links.map((l) => (
-        <a
-          key={l.label}
-          href={l.href}
-          className={cn(
-            "rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-surface",
-            l.active
-              ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {l.label}
-        </a>
-      ))}
+      <Link href={chatHref} className={linkClass(onChat)}>
+        Chat
+      </Link>
+      <Link
+        href="/predictions"
+        className={linkClass(pathname.startsWith("/predictions"))}
+      >
+        Predictions
+      </Link>
     </nav>
   );
 }
