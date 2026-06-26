@@ -22,7 +22,6 @@ export interface ThirdRankingRow {
   group: string; // group letter
   code: string; // team code
   name?: string;
-  rank: number;
   points: number;
   goalDiff: string; // pre-formatted, e.g. "+2" / "-1"
   goalsFor: number;
@@ -88,11 +87,11 @@ function ColumnLabel({
   );
 }
 
-// rank · team · group · Pts · GD · GF · chance · disclosure — shared by the
-// header, every row and the expanded breakdown so they all line up. The
-// fixed-width code keeps the chance bars starting at one x.
+// team · group · Pts · GD · GF · chance · disclosure — shared by the header,
+// every row and the expanded breakdown so they all line up. The fixed-width
+// code keeps the chance bars starting at one x.
 const RANKING_GRID =
-  "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_0.75rem] items-center gap-x-1.5";
+  "grid grid-cols-[3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_0.75rem] items-center gap-x-1.5";
 
 function RankingGrid({
   className,
@@ -130,7 +129,7 @@ function ChanceBar({
 }
 
 // Tree guide on the left of a breakdown row: a vertical spine dropping from the
-// flag's centre (29px in) plus a horizontal tick into the row. The last child
+// flag's centre (7px in) plus a horizontal tick into the row. The last child
 // caps the spine at its centre (└), earlier ones run it past the gap (├).
 function TreeConnector({ last }: { last: boolean }) {
   return (
@@ -138,13 +137,13 @@ function TreeConnector({ last }: { last: boolean }) {
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute left-[29px] top-0 w-px bg-white/10",
+          "pointer-events-none absolute left-[7px] top-0 w-px bg-white/10",
           last ? "h-1/2" : "h-[calc(100%+0.25rem)]",
         )}
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute left-[29px] top-1/2 h-px w-[14px] -translate-y-1/2 bg-white/10"
+        className="pointer-events-none absolute left-[7px] top-1/2 h-px w-[14px] -translate-y-1/2 bg-white/10"
       />
     </>
   );
@@ -159,7 +158,6 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
       {segments.map((s, i) => (
         <div key={s.match} className={cn(RANKING_GRID, "relative h-[18px]")}>
           <TreeConnector last={i === segments.length - 1} />
-          <span />
           <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
             Match {s.match} - Winner {s.host}
           </span>
@@ -200,9 +198,6 @@ function RankingRow({
             : "cursor-default",
         )}
       >
-        <span className="text-right text-[11px] text-muted-foreground">
-          {row.rank}
-        </span>
         <span className="flex items-center gap-1.5">
           <Flag code={row.code} size={14} />
           <span
@@ -260,7 +255,6 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
     <Card title="Best thirds" hint="as things stand">
       <div className="flex flex-col gap-1 px-2 py-2">
         <RankingGrid>
-          <span />
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-center">Grp</ColumnLabel>
           <ColumnLabel className="text-right">Pts</ColumnLabel>
