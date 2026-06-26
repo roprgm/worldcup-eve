@@ -3,10 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
-import {
-  CardGrid,
-  CardGridFrame,
-} from "@/app/predictions/components/card-grid";
+import { CardGrid, CardGridFrame } from "@/components/widgets/card-grid";
 import { PredictionMatchCard } from "@/components/widgets/prediction-match-card";
 
 import { cn } from "cnfast";

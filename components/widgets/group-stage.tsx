@@ -1,4 +1,4 @@
-import { CardGrid } from "@/app/predictions/components/card-grid";
+import { CardGrid } from "@/components/widgets/card-grid";
 import { GroupCard } from "@/components/widgets/group-card";
 import { groupMatches, teamById } from "@/lib/tournament";
 import type { MatchStatus } from "@/lib/results";
