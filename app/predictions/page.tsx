@@ -9,13 +9,9 @@ import { Section } from "@/components/ui/section";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
-import { groupLetters, type KnockoutMatch } from "@/lib/tournament";
+import { groupLetters } from "@/lib/tournament";
 
-const KNOCKOUT_SECTIONS: {
-  id: string;
-  title: string;
-  matches: KnockoutMatch[];
-}[] = [
+const knockoutSections = [
   { id: "R32", title: roundLabel.R32, matches: roundMatches("R32") },
   { id: "R16", title: roundLabel.R16, matches: roundMatches("R16") },
   { id: "QF", title: roundLabel.QF, matches: roundMatches("QF") },
@@ -38,7 +34,7 @@ export default function PredictionsPage() {
           </CardGrid>
         </Section>
 
-        {KNOCKOUT_SECTIONS.map((section) => (
+        {knockoutSections.map((section) => (
           <Section key={section.id} title={section.title}>
             <CardGrid>
               {section.matches.map((match) => (
