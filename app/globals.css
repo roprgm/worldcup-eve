@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* shadcn utilities (shimmer, scroll-fade, …) — used via their classes, no CSS
+   of ours. https://ui.shadcn.com/docs/utils/shimmer */
+@import "shadcn/tailwind.css";
 
 /* Let Tailwind pick up the classes Streamdown renders markdown with. */
 @source "../node_modules/streamdown/dist/index.js";
@@ -221,29 +224,6 @@
   z-index: 0;
 }
 
-/* shimmer — moving sheen for live-status text (the activity label). */
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--subtle-foreground) 0%,
-    var(--foreground) 25%,
-    var(--subtle-foreground) 50%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shimmer 2.4s linear infinite;
-}
-@keyframes shimmer {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -200% 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -252,10 +232,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
-  }
-  /* Keep live-status text legible once the sheen is frozen. */
-  .shimmer {
-    background: none;
-    color: var(--muted-foreground);
   }
 }
