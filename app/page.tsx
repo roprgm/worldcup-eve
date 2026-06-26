@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
@@ -76,7 +77,8 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { agent, start } = useChat();
+  const { start } = useChat();
+  const pathname = usePathname();
   const [input, setInput] = useState("");
 
   const handleSubmit = useCallback(() => {
@@ -84,9 +86,8 @@ export default function Page() {
     setInput("");
   }, [start, input]);
 
-  // Once a chat starts the conversation renders here immediately, so the user
-  // sees their message without waiting for the `/chat/[id]` navigation.
-  if (agent.data.messages.length > 0) return <ChatView />;
+  // Drive the view off the URL, not agent state, so Back returns to the chat.
+  if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

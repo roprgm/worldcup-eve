@@ -1,23 +1,15 @@
-"use client";
-
 import Link from "next/link";
 import { MessageSquarePlus } from "lucide-react";
-import { useChat } from "@/components/chat/chat-context";
 import { BallIcon, GitHubIcon } from "@/components/icons";
 import { SiteNav } from "@/components/site-nav";
 
 export function Header() {
-  const { agent } = useChat();
-  // Going home starts a fresh chat; clear the agent as we navigate (a real
-  // reload, if JS hasn't loaded, lands on the empty home too).
-  const newChat = () => agent.reset();
-
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-6">
+        {/* Home is the empty prompt — the new-chat screen. */}
         <Link
           href="/"
-          onNavigate={newChat}
           aria-label="New chat"
           title="New chat"
           className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
@@ -35,7 +27,6 @@ export function Header() {
         <div className="ml-auto flex items-center gap-1.5">
           <Link
             href="/"
-            onNavigate={newChat}
             aria-label="New chat"
             title="New chat"
             className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-surface text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground sm:w-auto sm:gap-1.5 sm:px-2.5"
