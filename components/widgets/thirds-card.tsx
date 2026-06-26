@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Stable keys for the skeleton placeholder rows (one per ranked third / slot).
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
-const ODDS_SKELETON = Array.from({ length: 4 }, (_, i) => `odds-${i}`);
+const ODDS_SKELETON = Array.from({ length: 5 }, (_, i) => `odds-${i}`);
 
 export interface ThirdRankingRow {
   group: string; // group letter

@@ -8,13 +8,21 @@ import {
   ThirdsRankingCard,
 } from "@/components/widgets/thirds-card";
 import type { Results } from "@/lib/results";
-import { teamById } from "@/lib/tournament";
+import { type GroupLetter, matchByNumber, teamById } from "@/lib/tournament";
 import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 const WINNER_BY_MATCH = new Map(
   thirdPlaceSlots.map((s) => [s.match, s.winner]),
 );
+
+// The five groups whose third can structurally fill a slot (FIFA's allowed set),
+// kept as candidates even once a group is mathematically out (shown at 0%).
+function slotGroups(match: number): GroupLetter[] {
+  const m = matchByNumber[match];
+  const ref = m.home.kind === "third" ? m.home : m.away;
+  return ref.kind === "third" ? ref.groups : [];
+}
 
 function rankingRows(results: Results): ThirdRankingRow[] {
   return results.bestThirds.map((t) => ({
@@ -34,13 +42,14 @@ function oddsCandidates(match: number, results: Results): ThirdOddsCandidate[] {
   const teamByGroup = new Map<string, string>(
     results.bestThirds.map((t) => [t.group, t.teamId]),
   );
-  return Object.entries(results.thirdOdds[match] ?? {})
-    .map(([group, probability]) => {
+  const odds = results.thirdOdds[match] ?? {};
+  return slotGroups(match)
+    .map((group) => {
       const code = teamByGroup.get(group) ?? group;
       return {
         code,
         name: teamById[code]?.name,
-        probability: probability ?? 0,
+        probability: odds[group] ?? 0,
       };
     })
     .sort((a, b) => b.probability - a.probability);
