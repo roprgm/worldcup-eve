@@ -161,7 +161,7 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
           <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
             Match {s.match} - Winner {s.host}
           </span>
-          <ChanceBar value={s.prob} className="bg-pick/70" />
+          <ChanceBar value={s.prob} className="bg-pick/55" />
           <span />
         </div>
       ))}
