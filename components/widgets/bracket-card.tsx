@@ -81,15 +81,19 @@ function PctCell({
   slot,
   lead,
   champion,
+  mirror,
 }: {
   slot: BracketSlot | undefined;
   lead: boolean;
   champion?: boolean;
+  mirror?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "flex items-center justify-center text-[9px] leading-none tabular-nums sm:text-[11px] lg:text-[12px]",
+        "flex items-center text-[8px] leading-none tabular-nums sm:text-[10px] lg:text-[11px]",
+        // aligned against the flag, not centered
+        mirror ? "justify-end" : "justify-start",
         champion
           ? "font-semibold text-pick"
           : lead
@@ -105,17 +109,15 @@ function PctCell({
 function FlagCell({
   slot,
   dim,
-  corner,
 }: {
   slot: BracketSlot | undefined;
   dim: boolean;
-  corner: string;
 }) {
   return (
     <Flag
       code={slot?.code}
       size={VAR.flag}
-      className={cn("block rounded-none ring-0", corner, dim && "opacity-55")}
+      className={cn("block rounded-[3px] ring-0", dim && "opacity-55")}
     />
   );
 }
@@ -141,24 +143,26 @@ function MatchCard({
     championCode != null && slot?.code === championCode;
 
   const flagHome = (
-    <FlagCell
-      slot={home}
-      dim={!homeLeads && !isChampion(home)}
-      corner={mirror ? "rounded-tr-[4px]" : "rounded-tl-[4px]"}
-    />
+    <FlagCell slot={home} dim={!homeLeads && !isChampion(home)} />
   );
   const pctHome = (
-    <PctCell slot={home} lead={homeLeads} champion={isChampion(home)} />
-  );
-  const flagAway = (
-    <FlagCell
-      slot={away}
-      dim={homeLeads && !isChampion(away)}
-      corner={mirror ? "rounded-br-[4px]" : "rounded-bl-[4px]"}
+    <PctCell
+      slot={home}
+      lead={homeLeads}
+      champion={isChampion(home)}
+      mirror={mirror}
     />
   );
+  const flagAway = (
+    <FlagCell slot={away} dim={homeLeads && !isChampion(away)} />
+  );
   const pctAway = (
-    <PctCell slot={away} lead={!homeLeads} champion={isChampion(away)} />
+    <PctCell
+      slot={away}
+      lead={!homeLeads}
+      champion={isChampion(away)}
+      mirror={mirror}
+    />
   );
 
   return (
@@ -333,7 +337,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:32px] [--pct:24px] sm:[--flag:17px] sm:[--leaf:38px] sm:[--pct:34px] lg:[--flag:20px] lg:[--leaf:44px] lg:[--pct:42px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:32px] [--pct:23px] sm:[--flag:17px] sm:[--leaf:38px] sm:[--pct:30px] lg:[--flag:20px] lg:[--leaf:44px] lg:[--pct:38px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
