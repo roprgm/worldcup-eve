@@ -2,6 +2,7 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -36,6 +37,7 @@ function loadChat(): SavedChat | null {
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [restored] = useState(loadChat);
 
   const agent = useEveAgent({
@@ -71,11 +73,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!text.trim()) return;
       agent.reset(); // start fresh even if a previous chat is still in context
       send(text); // optimistic message lands before the view swaps in
-      // Update the URL without a route navigation: the conversation already
-      // renders from shared context, so a real navigation only adds a flicker.
-      window.history.pushState(null, "", `/chat/${newChatId()}`);
+      router.push(`/chat/${newChatId()}`);
     },
-    [agent, send],
+    [agent, send, router],
   );
 
   return (
