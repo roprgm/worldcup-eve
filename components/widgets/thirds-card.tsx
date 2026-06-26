@@ -256,7 +256,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
 
   return (
     <Card title="Best thirds" hint="ranked by chance">
-      <div className="flex flex-col gap-1 px-2 py-2">
+      <div className="flex flex-col gap-1 py-2 pr-2 pl-2.5">
         <RankingGrid>
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-center">Grp</ColumnLabel>
@@ -333,7 +333,7 @@ function OddsRow({
 export function ThirdOddsCard(props: ThirdOddsCardProps) {
   return (
     <Card title={`Winner ${props.host}`} hint={`#${props.match}`}>
-      <div className="flex flex-col gap-1 px-2 py-2">
+      <div className="flex flex-col gap-1 py-2 pr-2 pl-2.5">
         {props.loading
           ? ODDS_SKELETON.map((key) => (
               <div key={key} className="py-0.5">
