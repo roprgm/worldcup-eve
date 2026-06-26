@@ -2,17 +2,25 @@
 
 import { useResults } from "@/components/widgets/queries";
 import {
-  ThirdsRankingCard,
-  ThirdsSlotsCard,
+  type ThirdOddsCandidate,
+  ThirdOddsCard,
   type ThirdRankingRow,
-  type ThirdSlotRow,
+  ThirdsRankingCard,
 } from "@/components/widgets/thirds-card";
-import { teamById } from "@/lib/tournament";
-import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 import type { Results } from "@/lib/results";
+import { teamById } from "@/lib/tournament";
+import {
+  thirdPlaceSlots,
+  uniformThirdSlotOdds,
+} from "@/lib/tournament/third-place";
 
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
-const winnerByMatch = new Map(thirdPlaceSlots.map((s) => [s.match, s.winner]));
+
+// Static baseline odds (uniform over all 495 combinations) and slot hosts.
+const ODDS = uniformThirdSlotOdds();
+const WINNER_BY_MATCH = new Map(
+  thirdPlaceSlots.map((s) => [s.match, s.winner]),
+);
 
 function rankingRows(results: Results): ThirdRankingRow[] {
   return results.bestThirds.map((t) => ({
@@ -27,15 +35,17 @@ function rankingRows(results: Results): ThirdRankingRow[] {
   }));
 }
 
-function slotRows(results: Results): ThirdSlotRow[] {
-  return [...results.thirdSlots]
-    .sort((a, b) => a.match - b.match)
-    .map((s) => ({
-      match: s.match,
-      winner: winnerByMatch.get(s.match) ?? "?",
-      code: s.teamId,
-      name: teamById[s.teamId]?.name,
-    }));
+// Map each slot's per-group odds onto the group's current third-placed team.
+function oddsCandidates(match: number, results: Results): ThirdOddsCandidate[] {
+  const teamByGroup = new Map<string, string>(
+    results.bestThirds.map((t) => [t.group, t.teamId]),
+  );
+  return Object.entries(ODDS[match] ?? {})
+    .map(([group, probability]) => {
+      const code = teamByGroup.get(group) ?? group;
+      return { code, name: teamById[code]?.name, probability };
+    })
+    .sort((a, b) => b.probability - a.probability);
 }
 
 /** The twelve third-placed teams ranked as things stand. */
@@ -48,8 +58,13 @@ export function ThirdsRankingWidget() {
   );
 }
 
-/** The eight Round-of-32 third-place matchups those qualifiers imply. */
-export function ThirdsSlotsWidget() {
-  const rows = useResults(slotRows);
-  return rows ? <ThirdsSlotsCard rows={rows} /> : <ThirdsSlotsCard loading />;
+/** One Round-of-32 third slot with each candidate team's chance (uniform prior). */
+export function ThirdOddsWidget({ match }: { match: number }) {
+  const candidates = useResults((results) => oddsCandidates(match, results));
+  const host = WINNER_BY_MATCH.get(match) ?? "?";
+  return candidates ? (
+    <ThirdOddsCard host={host} match={match} candidates={candidates} />
+  ) : (
+    <ThirdOddsCard host={host} match={match} loading />
+  );
 }

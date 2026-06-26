@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Stable keys for the skeleton placeholder rows (one per ranked third / slot).
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
-const SLOT_SKELETON = Array.from({ length: 8 }, (_, i) => `slot-${i}`);
+const ODDS_SKELETON = Array.from({ length: 4 }, (_, i) => `odds-${i}`);
 
 export interface ThirdRankingRow {
   group: string; // group letter
@@ -20,19 +20,19 @@ export interface ThirdRankingRow {
   qualifies: boolean;
 }
 
-export interface ThirdSlotRow {
-  match: number; // Round-of-32 match number
-  winner: string; // group whose winner hosts this slot
-  code: string; // third-placed team code
+export interface ThirdOddsCandidate {
+  code: string; // team code (a group's current third-placed team)
   name?: string;
+  probability: number; // 0–1, chance this team fills the slot
 }
 
 type ThirdsRankingCardProps =
   | { loading: true }
   | { loading?: false; rows: ThirdRankingRow[] };
-type ThirdsSlotsCardProps =
-  | { loading: true }
-  | { loading?: false; rows: ThirdSlotRow[] };
+type ThirdOddsCardProps = {
+  host: string; // group whose winner hosts the slot
+  match: number;
+} & ({ loading: true } | { loading?: false; candidates: ThirdOddsCandidate[] });
 
 function Card({
   title,
@@ -156,36 +156,66 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   );
 }
 
-function SlotRow({ row }: { row: ThirdSlotRow }) {
+function OddsRow({
+  candidate,
+  lead,
+}: {
+  candidate: ThirdOddsCandidate;
+  lead: boolean;
+}) {
+  const pct = `${Math.round(candidate.probability * 100)}%`;
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 text-[12px]">
-      <span className="w-16 shrink-0 text-muted-foreground">
-        Winner {row.winner}
+    <div className="flex h-5 items-center gap-1.5">
+      <Flag code={candidate.code} size={14} />
+      <span
+        title={candidate.name}
+        className={cn(
+          "w-9 shrink-0 text-[12px] font-semibold tracking-wide",
+          lead ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {candidate.code}
       </span>
-      <span className="shrink-0 text-muted-foreground/50">vs</span>
-      <Flag code={row.code} size={14} />
-      <span className="font-semibold tracking-wide">{row.code}</span>
-      <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-        {row.name}
+      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+        <span
+          className={cn(
+            "h-full rounded-[1px]",
+            lead ? "bg-pick" : "bg-muted-foreground/30",
+          )}
+          style={{ width: pct }}
+        />
       </span>
-      <span className="ml-auto shrink-0 text-[11px] text-muted-foreground/60 tabular-nums">
-        #{row.match}
+      <span
+        className={cn(
+          "w-9 text-right text-[12px] tabular-nums",
+          lead ? "font-semibold text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {pct}
       </span>
     </div>
   );
 }
 
-export function ThirdsSlotsCard(props: ThirdsSlotsCardProps) {
+/** One Round-of-32 third slot: which team fills it, with each candidate's
+ *  chance. The header names the group winner that hosts it. */
+export function ThirdOddsCard(props: ThirdOddsCardProps) {
   return (
-    <Card title="Round of 32" hint="third-place slots">
-      <div className="flex flex-col py-1">
+    <Card title={`Winner ${props.host}`} hint={`#${props.match}`}>
+      <div className="flex flex-col gap-1 px-2 py-2">
         {props.loading
-          ? SLOT_SKELETON.map((key) => (
-              <div key={key} className="px-2 py-1.5">
+          ? ODDS_SKELETON.map((key) => (
+              <div key={key} className="py-0.5">
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
-          : props.rows.map((row) => <SlotRow key={row.match} row={row} />)}
+          : props.candidates.map((candidate, i) => (
+              <OddsRow
+                key={candidate.code}
+                candidate={candidate}
+                lead={i === 0}
+              />
+            ))}
       </div>
     </Card>
   );
