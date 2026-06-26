@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { cachedSnapshot } from "@/app/predictions/cached-snapshot";
-import { buildResults } from "@/lib/results";
+import { getMatchResults } from "@/lib/results";
 
 export const dynamic = "force-dynamic";
 
-// The ESPN scoreboard is reused for 10s so polling clients don't hit ESPN every request.
-const snapshot = cachedSnapshot(10_000, buildResults);
-
 export async function GET() {
   try {
-    return NextResponse.json(await snapshot());
+    return NextResponse.json(await getMatchResults());
   } catch {
     return NextResponse.json(
       {
