@@ -93,7 +93,7 @@ function groupTeams(teams: PredictionTeam[], group: GroupLetter) {
 
 export default defineTool({
   description:
-    "World Cup prediction estimates: a single team's run (advance, reach by round, title odds), a group's advancement odds, or the title favorites. For a specific match's score/odds use get_match_forecast; for an undecided knockout matchup use get_knockout_forecast.",
+    "World Cup prediction estimates: a single team's run (advance, reach by round, title odds), a group's advancement odds, or the title favorites. For a specific match's score/odds use get_match_forecast; for an undecided knockout matchup use show_knockout_match.",
   inputSchema: z.object({
     team: z
       .string()
@@ -142,6 +142,41 @@ export default defineTool({
       updatedAt,
       type: "title_ranking",
       teams: topTeams(teams, limit ?? 8),
+    };
+  },
+  // The title-ranking view renders the champion widget, so the model only frames
+  // it. Team and group views have no widget — the model answers from the numbers.
+  toModelOutput(output) {
+    if ("error" in output) {
+      const known = (output.knownTeams ?? [])
+        .slice(0, 8)
+        .map((t) => t.name)
+        .join(", ");
+      return {
+        type: "text",
+        value: `Unknown team. Known teams include: ${known}.`,
+      };
+    }
+    if (output.type === "team" && output.team) {
+      const t = output.team;
+      return {
+        type: "text",
+        value: `${t.name} (Group ${t.group}): advance ${t.groupStage.advancePercent}%, reach the final ${t.knockout.reachFinalPercent}%, win it all ${t.championPercent}%.`,
+      };
+    }
+    if (output.type === "group") {
+      const order = (output.teams ?? [])
+        .map((t) => `${t.name} (advance ${t.groupStage.advancePercent}%)`)
+        .join(", ");
+      return { type: "text", value: `Group ${output.group}: ${order}.` };
+    }
+    const top = (output.teams ?? [])
+      .slice(0, 5)
+      .map((t) => `${t.name} ${t.championPercent}%`)
+      .join(", ");
+    return {
+      type: "text",
+      value: `A widget with the title favorites is already displayed to the user. Top: ${top}. Frame it briefly; do not list them all again.`,
     };
   },
 });

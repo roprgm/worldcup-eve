@@ -33,7 +33,7 @@ function compactEntry(entry: StandingEntry) {
 
 export default defineTool({
   description:
-    "Current World Cup group standings and teams already qualified for the knockout stage.",
+    "Group standings and already-qualified teams as data only, without putting a widget on screen. To show a group's table to the user, prefer show_group_standings. Use this for a who-has-qualified check or as input to a larger answer.",
   inputSchema: z.object({
     group: groupLetter.optional().describe("Optional group letter, A-L."),
     qualifiedOnly: z
