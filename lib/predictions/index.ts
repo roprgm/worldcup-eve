@@ -111,6 +111,11 @@ export async function buildPredictions(
   ]);
 
   const r32Slots = buildR32Slots(prices);
+  // Replace the market's third-place slots with the results-based distribution
+  // (when given) before the fit and simulation, so the whole bracket — not just
+  // the R32 display — propagates from the sharper thirds. R16+ stay consistent.
+  if (thirdSlotDists)
+    for (const [key, dist] of thirdSlotDists) r32Slots.set(key, dist);
   const reachObs: ReachObs = new Map(
     teamCodes.map((t) => [t, reachObsFor(prices, t)]),
   );
@@ -144,7 +149,7 @@ export async function buildPredictions(
       const key = `${m.number}:${side}`;
       const dist =
         m.round === "R32"
-          ? (thirdSlotDists?.get(key) ?? r32Slots.get(key) ?? new Map())
+          ? (r32Slots.get(key) ?? new Map())
           : ref.kind === "match"
             ? (winners.get(ref.match) ?? new Map())
             : ref.kind === "loser"
