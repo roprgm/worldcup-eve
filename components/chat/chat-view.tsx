@@ -19,14 +19,6 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
 
-  // Only autofocus on fine-pointer devices; on touch it pops the keyboard and
-  // scrolls (e.g. when opening from a suggestion tap).
-  const [autoFocus] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(pointer: fine)").matches,
-  );
-
   const handleSubmit = () => {
     send(input);
     setInput("");
@@ -47,7 +39,6 @@ export function ChatView() {
         onSubmit={handleSubmit}
         onStop={agent.stop}
         status={agent.status}
-        autoFocus={autoFocus}
         notice={
           <ChatNotice
             status={agent.status}

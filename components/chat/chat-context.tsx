@@ -19,20 +19,35 @@ type ChatContextValue = {
   start: (message: string) => void;
 };
 
-type SavedChat = { session?: Agent["session"]; events?: Agent["events"] };
+type SavedChat = {
+  id: string;
+  session?: Agent["session"];
+  events?: Agent["events"];
+};
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 const STORAGE_KEY = "wc26-chat";
 const newChatId = () => Math.random().toString(36).slice(2, 10);
+const chatIdFromPath = (path: string) =>
+  path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-// Restore the last chat everywhere except `/`, which is always a fresh prompt.
+// Restore the saved chat — but only under its own `/chat/<id>` (a fresh id stays
+// empty) or on a non-chat page (so the Chat link can return to it). `/` is fresh.
 function loadChat(): SavedChat | null {
-  if (typeof window === "undefined" || window.location.pathname === "/") {
+  if (typeof window === "undefined") return null;
+  const path = window.location.pathname;
+  if (path === "/") return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  let saved: SavedChat;
+  try {
+    saved = JSON.parse(raw) as SavedChat;
+  } catch {
     return null;
   }
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as SavedChat) : null;
+  const urlId = chatIdFromPath(path);
+  return urlId && urlId !== saved.id ? null : saved;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -47,8 +62,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
-    onFinish: ({ session, events }) =>
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ session, events })),
+    // Persist when a turn settles, keyed by the chat in the URL. Skip empty
+    // turns so a failed first message can't clobber the saved chat.
+    onFinish: ({ session, events }) => {
+      const id = chatIdFromPath(window.location.pathname);
+      if (id && events.length > 0) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ id, session, events }),
+        );
+      }
+    },
   });
 
   const send = useCallback(

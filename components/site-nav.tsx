@@ -34,14 +34,17 @@ const linkClass = (active: boolean) =>
 export function SiteNav() {
   const pathname = usePathname();
   const chatHref = useChatHref(pathname);
-  const onPredictions = pathname.startsWith("/predictions");
+  const onChat = pathname === "/" || pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">
-      <Link href={chatHref} className={linkClass(!onPredictions)}>
+      <Link href={chatHref} className={linkClass(onChat)}>
         Chat
       </Link>
-      <Link href="/predictions" className={linkClass(onPredictions)}>
+      <Link
+        href="/predictions"
+        className={linkClass(pathname.startsWith("/predictions"))}
+      >
         Predictions
       </Link>
     </nav>

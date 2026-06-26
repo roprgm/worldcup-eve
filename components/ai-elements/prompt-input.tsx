@@ -77,9 +77,12 @@ export function PromptInput({
     [],
   );
 
-  // Focus the input on mount so you can start typing right away.
+  // Focus on mount — but only on fine-pointer devices; on touch, focusing pops
+  // the keyboard and scrolls the page.
   useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
+    if (autoFocus && window.matchMedia("(pointer: fine)").matches) {
+      textareaRef.current?.focus();
+    }
   }, [autoFocus]);
 
   // Send the message and fire the submit-button launch animation (click or Enter).
