@@ -152,12 +152,12 @@ function TreeConnector({ last }: { last: boolean }) {
 
 // The expanded view: one bar per Round-of-32 slot the team could fill, each
 // aligned under the row's chance bar so the parts visibly add up to the whole.
-// Same row height and gap as the main rows so every bar stays equidistant.
+// Rows are a touch shorter than the main rows so the slot bars sit a bit tighter.
 function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
   return (
     <div className="flex flex-col gap-1 pt-1">
       {segments.map((s, i) => (
-        <div key={s.match} className={cn(RANKING_GRID, "relative h-5")}>
+        <div key={s.match} className={cn(RANKING_GRID, "relative h-[18px]")}>
           <TreeConnector last={i === segments.length - 1} />
           <span />
           <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
@@ -180,8 +180,9 @@ function RankingRow({
   open: boolean;
   onToggle: () => void;
 }) {
-  // Only worth expanding when the chance is split across more than one slot.
-  const expandable = row.segments.length > 1;
+  // Expandable whenever there's a reachable slot — even a single-destination
+  // team (e.g. a locked-in 100%) can reveal which slot it would fill.
+  const expandable = row.segments.length > 0;
   const isOpen = expandable && open;
 
   return (
