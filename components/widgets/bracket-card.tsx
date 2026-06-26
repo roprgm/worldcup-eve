@@ -8,34 +8,32 @@ import {
 } from "@/lib/tournament";
 
 // Geometry is driven by CSS variables set on the root (see BracketCard), so the
-// whole bracket scales with the breakpoint: dense on a phone, larger on the web.
-// --chip is a column width, --conn a connector length, --leaf the vertical slot
-// a Round-of-32 match reserves, --flag the flag width.
+// whole bracket scales with the breakpoint. --flag is the flag column width,
+// --pct the (wider) probability column, --leaf the vertical slot a Round-of-32
+// match reserves. Connectors flex to fill the rest of the widget width.
 const VAR = {
-  chip: "var(--chip)",
-  conn: "var(--conn)",
-  leaf: "var(--leaf)",
   flag: "var(--flag)",
-  link: "var(--link)",
+  pct: "var(--pct)",
+  leaf: "var(--leaf)",
 };
 
-// The two semi-final roots and the final. The halves hang off the semis (the
-// right one mirrored), with the final dropped into the center between them.
 const LEFT_ROOT = 101;
 const RIGHT_ROOT = 102;
 const FINAL = 104;
 
-const ROUND_LABELS: Record<Round, string> = {
-  R32: "R32",
-  R16: "R16",
-  QF: "QF",
-  SF: "SF",
-  TP: "3rd",
-  FINAL: "Final",
-};
-
-// Outer→inner round order of one half, left column first.
-const HALF_ROUNDS: Round[] = ["R32", "R16", "QF", "SF"];
+// Columns, left to right: the left half (R32→SF), the final, then the mirrored
+// right half (SF→R32). Used for the round-label strip above the bracket.
+const COLUMN_LABELS = [
+  "R32",
+  "R16",
+  "QF",
+  "SF",
+  "Final",
+  "SF",
+  "QF",
+  "R16",
+  "R32",
+];
 
 export interface BracketSlot {
   code?: string;
@@ -44,7 +42,7 @@ export interface BracketSlot {
 }
 
 /** Looks up the predicted team for a match side. Returns `undefined` while the
- *  market is still loading so the chip can placeholder just that slot. */
+ *  market is still loading so the cell can placeholder just that slot. */
 export type SlotLookup = (
   match: number,
   side: "home" | "away",
@@ -69,9 +67,24 @@ function childMatches(match: KnockoutMatch): [number, number] | null {
   return null;
 }
 
-/** A team on one line: flag on the outer edge, probability toward the center.
- *  No country code — the flag carries the identity (full name on hover). */
-function SlotRow({
+/** Each round's match numbers under a half-root, ordered top→bottom so a flat
+ *  column lines up with the connectors (the order a DFS visits the leaves). */
+function orderedRounds(root: number): Record<string, number[]> {
+  const out: Record<string, number[]> = { R32: [], R16: [], QF: [], SF: [] };
+  const visit = (n: number) => {
+    const match = matchByNumber[n];
+    const kids = childMatches(match);
+    if (kids) {
+      visit(kids[0]);
+      visit(kids[1]);
+    }
+    out[match.round]?.push(n);
+  };
+  visit(root);
+  return out;
+}
+
+function PctCell({
   slot,
   lead,
   champion,
@@ -82,37 +95,45 @@ function SlotRow({
   champion?: boolean;
   mirror?: boolean;
 }) {
-  const dim = !lead && !champion;
   return (
-    <div
+    <span
       className={cn(
-        "flex items-center justify-between gap-1",
-        mirror && "flex-row-reverse",
+        "flex items-center justify-center text-[9px] leading-none tabular-nums sm:text-[11px] lg:text-[12px]",
+        // hairline between the flag (outer) and the probability (inner)
+        mirror
+          ? "border-r border-surface-border"
+          : "border-l border-surface-border",
+        champion
+          ? "font-semibold text-pick"
+          : lead
+            ? "font-semibold text-foreground"
+            : "text-muted-foreground",
       )}
-      title={slot?.name}
     >
-      <Flag
-        code={slot?.code}
-        size={VAR.flag}
-        className={cn(dim && "opacity-55")}
-      />
-      <span
-        className={cn(
-          "text-[9px] tabular-nums sm:text-[11px] lg:text-[12px]",
-          champion
-            ? "font-semibold text-pick"
-            : dim
-              ? "text-muted-foreground/55"
-              : "font-medium text-foreground/85",
-        )}
-      >
-        {formatPct(slot?.probability)}
-      </span>
-    </div>
+      {formatPct(slot?.probability)}
+    </span>
   );
 }
 
-function MatchNode({
+function FlagCell({
+  slot,
+  dim,
+}: {
+  slot: BracketSlot | undefined;
+  dim: boolean;
+}) {
+  return (
+    <Flag
+      code={slot?.code}
+      size={VAR.flag}
+      className={cn("block rounded-none ring-0", dim && "opacity-55")}
+    />
+  );
+}
+
+/** One match as a bordered card split into four: the two flags stacked flush on
+ *  the outer side, their probabilities on the (wider) inner side. */
+function MatchCard({
   number,
   getSlot,
   championCode,
@@ -129,32 +150,65 @@ function MatchNode({
   const isChampion = (slot?: BracketSlot) =>
     championCode != null && slot?.code === championCode;
 
+  const flagHome = (
+    <FlagCell slot={home} dim={!homeLeads && !isChampion(home)} />
+  );
+  const pctHome = (
+    <PctCell
+      slot={home}
+      lead={homeLeads}
+      champion={isChampion(home)}
+      mirror={mirror}
+    />
+  );
+  const flagAway = (
+    <FlagCell slot={away} dim={homeLeads && !isChampion(away)} />
+  );
+  const pctAway = (
+    <PctCell
+      slot={away}
+      lead={!homeLeads}
+      champion={isChampion(away)}
+      mirror={mirror}
+    />
+  );
+
   return (
-    <div className="flex flex-col gap-0.5" style={{ width: VAR.chip }}>
-      <SlotRow
-        slot={home}
-        lead={homeLeads}
-        champion={isChampion(home)}
-        mirror={mirror}
-      />
-      <SlotRow
-        slot={away}
-        lead={!homeLeads}
-        champion={isChampion(away)}
-        mirror={mirror}
-      />
+    <div
+      className="grid overflow-hidden rounded-md border border-surface-border bg-surface-2/40"
+      style={{
+        gridTemplateColumns: mirror
+          ? `${VAR.pct} ${VAR.flag}`
+          : `${VAR.flag} ${VAR.pct}`,
+      }}
+    >
+      {mirror ? (
+        <>
+          {pctHome}
+          {flagHome}
+          {pctAway}
+          {flagAway}
+        </>
+      ) : (
+        <>
+          {flagHome}
+          {pctHome}
+          {flagAway}
+          {pctAway}
+        </>
+      )}
     </div>
   );
 }
 
-/** ⊢ (⊣ when mirrored) joining a node's two children to the node. Ticks at
- *  25%/75% are the children's centers; the 50% tick points at the node. */
+/** ⊢ (⊣ when mirrored) filling its slot: ticks at 25%/75% reach the two children
+ *  and the 50% tick the parent. */
 function Connector({ mirror }: { mirror?: boolean }) {
   const tick = "absolute h-px bg-border-strong";
   const childX = mirror ? "right-0 left-1/2" : "left-0 right-1/2";
   const nodeX = mirror ? "left-0 right-1/2" : "right-0 left-1/2";
   return (
-    <div style={{ width: VAR.conn }} className="relative shrink-0 self-stretch">
+    <div className="relative h-full w-full">
       <span className={cn(tick, childX, "top-1/4")} />
       <span className={cn(tick, childX, "top-3/4")} />
       <span className="absolute top-1/4 bottom-1/4 left-1/2 w-px bg-border-strong" />
@@ -163,143 +217,121 @@ function Connector({ mirror }: { mirror?: boolean }) {
   );
 }
 
-/** A plain horizontal line — joins each semi to the final in the center. Wider
- *  than a round connector so the final and the semis don't crowd each other. */
-function Link() {
+/** A flex column of `pairs` connectors — one per parent match in the next round.
+ *  Grows to share the leftover width, so the bracket fills the widget. */
+function ConnectorColumn({
+  pairs,
+  mirror,
+}: {
+  pairs: number;
+  mirror?: boolean;
+}) {
   return (
-    <div style={{ width: VAR.link }} className="relative shrink-0 self-stretch">
-      <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
+    <div className="flex flex-1 flex-col">
+      {Array.from({ length: pairs }, (_, i) => (
+        <div key={i} className="flex-1">
+          <Connector mirror={mirror} />
+        </div>
+      ))}
     </div>
   );
 }
 
-/** One node and its whole subtree. Earlier rounds sit on the outer side (left,
- *  or right when mirrored), recursing until a Round-of-32 leaf. */
-function BracketTree({
-  number,
+/** Plain horizontal line joining a semi to the final in the center. */
+function LinkColumn() {
+  return (
+    <div className="flex flex-1 items-center">
+      <span className="h-px w-full bg-border-strong" />
+    </div>
+  );
+}
+
+function RoundColumn({
+  matches,
   getSlot,
   championCode,
   mirror,
 }: {
-  number: number;
+  matches: number[];
   getSlot: SlotLookup;
   championCode?: string;
   mirror?: boolean;
 }) {
-  const kids = childMatches(matchByNumber[number]);
-  const node = (
-    <MatchNode
-      number={number}
+  return (
+    <div className="flex shrink-0 flex-col justify-around">
+      {matches.map((n) => (
+        <MatchCard
+          key={n}
+          number={n}
+          getSlot={getSlot}
+          championCode={championCode}
+          mirror={mirror}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RoundLabels() {
+  const cells = COLUMN_LABELS.flatMap((label, i) => {
+    const spacer = i > 0 ? [<div key={`s${i}`} className="flex-1" />] : [];
+    return [
+      ...spacer,
+      <span
+        key={`l${i}`}
+        className="shrink-0 text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
+        style={{ width: `calc(${VAR.flag} + ${VAR.pct} + 2px)` }}
+      >
+        {label}
+      </span>,
+    ];
+  });
+  return <div className="flex w-full">{cells}</div>;
+}
+
+/** The knockout bracket as predicted: each match is a four-quadrant card (flags
+ *  stacked on the outer side, probabilities inner). The two halves and the
+ *  center final span the full widget width, the connectors stretching to fill. */
+export function BracketCard({ getSlot, championCode }: BracketCardProps) {
+  const left = orderedRounds(LEFT_ROOT);
+  const right = orderedRounds(RIGHT_ROOT);
+  const col = (matches: number[], mirror?: boolean) => (
+    <RoundColumn
+      matches={matches}
       getSlot={getSlot}
       championCode={championCode}
       mirror={mirror}
     />
   );
 
-  if (!kids) {
-    return (
-      <div style={{ height: VAR.leaf }} className="flex items-center">
-        {node}
-      </div>
-    );
-  }
-
-  const children = (
-    <div className="flex flex-col">
-      {kids.map((kid) => (
-        <div key={kid} className="flex flex-1 items-center">
-          <BracketTree
-            number={kid}
-            getSlot={getSlot}
-            championCode={championCode}
-            mirror={mirror}
-          />
-        </div>
-      ))}
-    </div>
-  );
-  const nodeWrap = <div className="flex items-center">{node}</div>;
-
-  return (
-    <div className="flex items-stretch">
-      {mirror ? (
-        <>
-          {nodeWrap}
-          <Connector mirror />
-          {children}
-        </>
-      ) : (
-        <>
-          {children}
-          <Connector />
-          {nodeWrap}
-        </>
-      )}
-    </div>
-  );
-}
-
-function RoundLabels({ mirror }: { mirror?: boolean }) {
-  const rounds = mirror ? [...HALF_ROUNDS].reverse() : HALF_ROUNDS;
-  return (
-    <div className="flex" style={{ gap: VAR.conn }}>
-      {rounds.map((round) => (
-        <span
-          key={round}
-          style={{ width: VAR.chip }}
-          className="text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
-        >
-          {ROUND_LABELS[round]}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** The knockout bracket as predicted: each slot is a flag and its probability on
- *  one line, no country code. The two halves sit side by side (the right one
- *  mirrored) and the final lands in the center between them — using the vertical
- *  room that would otherwise sit empty around the semis. */
-export function BracketCard({ getSlot, championCode }: BracketCardProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--chip:28px] [--conn:7px] [--flag:12px] [--leaf:34px] [--link:20px] sm:[--chip:46px] sm:[--conn:18px] sm:[--flag:18px] sm:[--leaf:44px] sm:[--link:32px] lg:[--chip:56px] lg:[--conn:32px] lg:[--flag:22px] lg:[--leaf:52px] lg:[--link:46px]">
-        <div className="mx-auto flex w-fit flex-col items-center">
-          {/* Labels strip above the bracket, aligned to the columns. */}
-          <div className="flex">
-            <RoundLabels />
-            <span
-              className="flex items-center justify-center text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
-              style={{ width: "calc(var(--chip) + var(--link) * 2)" }}
-            >
-              Final
-            </span>
-            <RoundLabels mirror />
-          </div>
-
-          <div className="mt-1.5 flex items-center">
-            <BracketTree
-              number={LEFT_ROOT}
-              getSlot={getSlot}
-              championCode={championCode}
-            />
-            <Link />
-            <MatchNode
-              number={FINAL}
-              getSlot={getSlot}
-              championCode={championCode}
-            />
-            <Link />
-            <BracketTree
-              number={RIGHT_ROOT}
-              getSlot={getSlot}
-              championCode={championCode}
-              mirror
-            />
-          </div>
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:28px] [--pct:26px] sm:[--flag:16px] sm:[--leaf:32px] sm:[--pct:31px] lg:[--flag:18px] lg:[--leaf:38px] lg:[--pct:34px]">
+        <RoundLabels />
+        <div
+          className="mt-1.5 flex w-full items-stretch"
+          style={{ height: `calc(${VAR.leaf} * 8)` }}
+        >
+          {col(left.R32)}
+          <ConnectorColumn pairs={4} />
+          {col(left.R16)}
+          <ConnectorColumn pairs={2} />
+          {col(left.QF)}
+          <ConnectorColumn pairs={1} />
+          {col(left.SF)}
+          <LinkColumn />
+          {col([FINAL])}
+          <LinkColumn />
+          {col(right.SF, true)}
+          <ConnectorColumn pairs={1} mirror />
+          {col(right.QF, true)}
+          <ConnectorColumn pairs={2} mirror />
+          {col(right.R16, true)}
+          <ConnectorColumn pairs={4} mirror />
+          {col(right.R32, true)}
         </div>
       </div>
     </div>
