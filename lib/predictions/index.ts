@@ -36,6 +36,7 @@ import {
   type MatchOdds,
   type Scoreline,
 } from "./group-markets";
+import { getMatchResults, type Results } from "../results";
 
 export interface Candidate {
   code: string;
@@ -99,6 +100,10 @@ export interface PredictionCache {
 
 export async function buildPredictions(
   cache: PredictionCache = {},
+  // Optional override for the Round-of-32 third-place slots, keyed "match:side"
+  // → team distribution. When given (from real results), it replaces the market
+  // heuristic for those slots; other slots are untouched.
+  thirdSlotDists?: Map<string, Dist>,
 ): Promise<Predictions> {
   const [prices, groupMarkets] = await Promise.all([
     fetchPrices(),
@@ -136,9 +141,10 @@ export async function buildPredictions(
   for (const m of knockoutMatches)
     for (const side of ["home", "away"] as const) {
       const ref = m[side];
+      const key = `${m.number}:${side}`;
       const dist =
         m.round === "R32"
-          ? (r32Slots.get(`${m.number}:${side}`) ?? new Map())
+          ? (thirdSlotDists?.get(key) ?? r32Slots.get(key) ?? new Map())
           : ref.kind === "match"
             ? (winners.get(ref.match) ?? new Map())
             : ref.kind === "loser"
@@ -213,10 +219,40 @@ const PREDICTIONS_TTL = 60; // tune later (KV / longer partial caches) to optimi
 const anchor: PredictionCache = {};
 const predictionsCache = getCache({ namespace: "predictions" });
 
+// Real results turn each Round-of-32 third-place slot into a team distribution —
+// uniform over the still-reachable FIFA combinations — sharper than the market
+// heuristic. Keyed "match:side"; empty slots are skipped so they fall back.
+function thirdSlotDistsFromResults(results: Results): Map<string, Dist> {
+  const teamByGroup = new Map(
+    results.bestThirds.map((t) => [t.group, t.teamId]),
+  );
+  const dists = new Map<string, Dist>();
+  for (const m of knockoutMatches) {
+    if (m.round !== "R32") continue;
+    for (const side of ["home", "away"] as const) {
+      if (m[side].kind !== "third") continue;
+      const dist: Dist = new Map();
+      for (const [group, p] of Object.entries(
+        results.thirdOdds[m.number] ?? {},
+      )) {
+        const team = teamByGroup.get(group as GroupLetter);
+        if (team && p) dist.set(team, p);
+      }
+      if (dist.size > 0) dists.set(`${m.number}:${side}`, dist);
+    }
+  }
+  return dists;
+}
+
 export async function getPredictions(): Promise<Predictions> {
   const hit = await predictionsCache.get("snapshot");
   if (hit != null) return hit as Predictions;
-  const data = await buildPredictions(anchor);
+  // Real results sharpen the Round-of-32 third-place slots; fall back to the
+  // market heuristic if the results feed is unavailable.
+  const thirdSlotDists = await getMatchResults()
+    .then(thirdSlotDistsFromResults)
+    .catch(() => undefined);
+  const data = await buildPredictions(anchor, thirdSlotDists);
   await predictionsCache.set("snapshot", data, {
     ttl: PREDICTIONS_TTL,
     tags: ["predictions"],
