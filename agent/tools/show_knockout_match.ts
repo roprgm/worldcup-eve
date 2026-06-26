@@ -1,7 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { WIDGET_NOTE } from "@/agent/lib/widget-note";
 import { getPredictions } from "@/lib/predictions";
 import { matchByNumber, type SlotRef, teamById } from "@/lib/tournament";
 
@@ -56,7 +55,7 @@ export default defineTool({
     };
 
     return {
-      shownAsWidget: WIDGET_NOTE,
+      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
       matchId: id,
       round: bracket.round,
       venue: bracket.venue,

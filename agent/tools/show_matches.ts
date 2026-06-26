@@ -1,7 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { WIDGET_NOTE } from "@/agent/lib/widget-note";
 import { todayMatchViews } from "@/components/widgets/match-view";
 import { getMatchResults, type MatchResult } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
@@ -63,6 +62,9 @@ export default defineTool({
       };
     }
 
-    return { shownAsWidget: WIDGET_NOTE, matches: selected.map(card) };
+    return {
+      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
+      matches: selected.map(card),
+    };
   },
 });

@@ -1,7 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { WIDGET_NOTE } from "@/agent/lib/widget-note";
 import { fetchStandings, type StandingEntry } from "@/lib/results/standings";
 import { type GroupLetter, groupLetters } from "@/lib/tournament";
 
@@ -25,6 +24,10 @@ export default defineTool({
       points: stat(entry, "points"),
       goalDifference: stat(entry, "pointDifferential"),
     }));
-    return { shownAsWidget: WIDGET_NOTE, group: `Group ${group}`, table };
+    return {
+      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
+      group: `Group ${group}`,
+      table,
+    };
   },
 });

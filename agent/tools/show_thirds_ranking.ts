@@ -1,7 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { WIDGET_NOTE } from "@/agent/lib/widget-note";
 import { getMatchResults } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
 
@@ -32,6 +31,9 @@ export default defineTool({
       }))
       .sort((a, b) => b.chancePercent - a.chancePercent);
 
-    return { shownAsWidget: WIDGET_NOTE, ranking };
+    return {
+      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
+      ranking,
+    };
   },
 });
