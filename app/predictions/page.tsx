@@ -1,8 +1,9 @@
-import { CardGrid } from "@/components/ui/card-grid";
+import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
 import {
   groupLetters,
   knockoutMatches,
@@ -41,6 +42,12 @@ export default function PredictionsPage() {
               <PredictionGroupWidget key={letter} letter={letter} />
             ))}
           </CardGrid>
+        </Section>
+
+        <Section title="Best thirds">
+          <CardGridFrame className="max-w-xl">
+            <ThirdsRankingWidget />
+          </CardGridFrame>
         </Section>
 
         {knockoutSections.map((section) => (
