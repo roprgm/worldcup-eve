@@ -144,8 +144,8 @@ export default defineTool({
       teams: topTeams(teams, limit ?? 8),
     };
   },
-  // The title-ranking view renders the champion widget, so the model only frames
-  // it. Team and group views have no widget — the model answers from the numbers.
+  // No view has a widget — the model answers from these numbers. Kept compact so
+  // a title ranking doesn't dump the full per-team breakdown into the reply.
   toModelOutput(output) {
     if ("error" in output) {
       const known = (output.knownTeams ?? [])
@@ -174,9 +174,6 @@ export default defineTool({
       .slice(0, 5)
       .map((t) => `${t.name} ${t.championPercent}%`)
       .join(", ");
-    return {
-      type: "text",
-      value: `A widget with the title favorites is already displayed to the user. Top: ${top}. Frame it briefly; do not list them all again.`,
-    };
+    return { type: "text", value: `Title favorites: ${top}.` };
   },
 });

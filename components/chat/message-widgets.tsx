@@ -3,7 +3,10 @@
 import type { EveMessage, EveMessagePart } from "eve/react";
 import type { ReactNode } from "react";
 
-import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
+import {
+  ChatMatches,
+  type MatchesScope,
+} from "@/components/chat/chat-matches-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
@@ -15,6 +18,9 @@ import {
 
 // At most a few widgets per reply, so a tool-heavy turn can't bury the text.
 const MAX_WIDGETS = 3;
+// A match card per fixture is fine for a day's slate, but a full week would
+// bury the reply — past this we leave the answer to text.
+const MAX_MATCH_CARDS = 6;
 
 type WidgetSpec = { key: string; render: () => ReactNode };
 
@@ -38,9 +44,8 @@ function groupSpec(letter: GroupLetter): WidgetSpec {
 }
 
 // One tool call → at most one widget, decided from the call's input alone (the
-// widgets self-fetch their data, so they only need an identifier). The `show_*`
-// tools are the model's deliberate "draw this widget" calls; `get_match_prediction`
-// still backs the champion card until it gets its own `show_*` tool.
+// widgets self-fetch their data, so they only need an identifier). Every entry
+// is a `show_*` tool — the model's deliberate "draw this widget" calls.
 function specForTool(toolName: string, input: unknown): WidgetSpec | null {
   const args = asRecord(input);
   switch (toolName) {
@@ -58,11 +63,23 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
       return isGroupLetter(args.group) ? groupSpec(args.group) : null;
     case "show_thirds_ranking":
       return { key: "thirds", render: () => <ThirdsRankingWidget /> };
-    case "get_match_prediction":
-      // The title favorites still render a widget; team/group views do not.
-      return typeof args.team === "string" || isGroupLetter(args.group)
-        ? null
-        : { key: "champion", render: () => <PredictionChampionWidget /> };
+    case "show_matches": {
+      const numbers = Array.isArray(args.matches)
+        ? args.matches.filter((n): n is number => typeof n === "number")
+        : [];
+      if (numbers.length >= 1 && numbers.length <= MAX_MATCH_CARDS)
+        return {
+          key: "matches",
+          render: () => <ChatMatches numbers={numbers} />,
+        };
+      // The widget enforces the cap for a scope (it knows the resolved count).
+      return args.scope === "today" || args.scope === "live"
+        ? {
+            key: "matches",
+            render: () => <ChatMatches scope={args.scope as MatchesScope} />,
+          }
+        : null;
+    }
     default:
       return null;
   }

@@ -56,6 +56,7 @@ const toolActivityLabels: Record<string, string> = {
   show_thirds_ranking: "Pulling up the third-place table",
   show_knockout_match: "Pulling up the match prediction",
   show_group_standings: "Pulling up the group table",
+  show_matches: "Pulling up the matches",
 };
 
 function getToolActivityLabel(toolName: string): string | undefined {
