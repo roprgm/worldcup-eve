@@ -100,7 +100,7 @@ function RankingGrid({
 function RankingRow({ row }: { row: ThirdRankingRow }) {
   return (
     <RankingGrid
-      className={cn("py-1 tabular-nums", !row.qualifies && "opacity-45")}
+      className={cn("h-5 tabular-nums", !row.qualifies && "opacity-45")}
     >
       <span className="text-right text-[11px] text-muted-foreground">
         {row.rank}
@@ -135,8 +135,8 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
 export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   return (
     <Card title="Best thirds" hint="as things stand">
-      <div className="flex flex-col px-2 py-1.5">
-        <RankingGrid className="pb-1">
+      <div className="flex flex-col gap-1 px-2 py-2">
+        <RankingGrid>
           <span />
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-right">Pts</ColumnLabel>
@@ -146,7 +146,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
         </RankingGrid>
         {props.loading
           ? RANKING_SKELETON.map((key) => (
-              <div key={key} className="py-1">
+              <div key={key} className="flex h-5 items-center">
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
