@@ -9,14 +9,14 @@ import type { ComponentProps, ReactNode } from "react";
 // owns the scroll behavior — anchored turns, follow-while-at-edge, restore at
 // the last user turn, jump-to-latest; we bring the layout and styles.
 
-/** Jump-to-latest control. The primitive renders nothing while already at the
- *  live edge, so there's no separate visibility check to wire up. */
+/** Jump-to-latest control. The primitive always renders the button and toggles
+ *  `data-active`; we slide+fade it out while already at the live edge. */
 function JumpToLatestButton() {
   return (
     <MessageScroller.Button
       direction="end"
       aria-label="Scroll to latest"
-      className="absolute bottom-4 left-1/2 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border-strong bg-surface/90 text-foreground shadow-lg backdrop-blur transition-colors hover:bg-surface-2"
+      className="absolute bottom-4 left-1/2 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border-strong bg-surface/90 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:bg-surface-2 data-[active=false]:pointer-events-none data-[active=false]:translate-y-full data-[active=false]:opacity-0"
     >
       <ArrowDown className="size-4" />
     </MessageScroller.Button>
@@ -30,7 +30,7 @@ export function Conversation({ children }: { children: ReactNode }) {
       defaultScrollPosition="last-anchor"
       scrollPreviousItemPeek={64}
     >
-      <MessageScroller.Root className="relative flex min-h-0 flex-1 flex-col">
+      <MessageScroller.Root className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <MessageScroller.Viewport
           role="log"
           className="wc-scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain"
