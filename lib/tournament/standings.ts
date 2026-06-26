@@ -249,8 +249,8 @@ function groupThirdRange(
 
 /**
  * Round-of-32 third-slot odds with every still-reachable combination treated as
- * equally likely — a purely mathematical narrowing of `uniformThirdSlotOdds`, no
- * market. A combination (eight qualifying groups) is reachable when the four
+ * equally likely — a purely mathematical narrowing of the 495, no market. A
+ * combination (eight qualifying groups) is reachable when the four
  * left out can all finish below the eight kept: push the kept groups to their
  * strongest possible third and the dropped groups to their weakest, and check
  * the best dropped third still ranks below the worst kept one. Locked outcomes

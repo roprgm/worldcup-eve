@@ -191,12 +191,3 @@ export function thirdSlotOdds(
   }
   return { possible, odds: counts };
 }
-
-/**
- * The third-slot odds with every one of the 495 combinations treated as equally
- * likely. Purely combinatorial baseline — no results, no model — that a real
- * model (or a feasibility filter) would later narrow.
- */
-export function uniformThirdSlotOdds(): ThirdSlotOddsResult {
-  return thirdSlotOdds(() => true);
-}

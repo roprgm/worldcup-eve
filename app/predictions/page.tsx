@@ -1,26 +1,36 @@
-import {
-  finalMatch,
-  roundLabel,
-  roundMatches,
-  thirdPlaceMatch,
-} from "@/app/predictions/bracket";
 import { CardGrid } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
-import { groupLetters, type KnockoutMatch } from "@/lib/tournament";
+import {
+  groupLetters,
+  type KnockoutMatch,
+  knockoutMatches,
+  matchByNumber,
+  type Round,
+} from "@/lib/tournament";
+
+/** A round's matches, ordered by match number. */
+const roundMatches = (round: Round): KnockoutMatch[] =>
+  knockoutMatches
+    .filter((m) => m.round === round)
+    .sort((a, b) => a.number - b.number);
 
 const KNOCKOUT_SECTIONS: {
   id: string;
   title: string;
   matches: KnockoutMatch[];
 }[] = [
-  { id: "R32", title: roundLabel.R32, matches: roundMatches("R32") },
-  { id: "R16", title: roundLabel.R16, matches: roundMatches("R16") },
-  { id: "QF", title: roundLabel.QF, matches: roundMatches("QF") },
-  { id: "SF", title: roundLabel.SF, matches: roundMatches("SF") },
-  { id: "FINALS", title: "Finals", matches: [thirdPlaceMatch, finalMatch] },
+  { id: "R32", title: "Round of 32", matches: roundMatches("R32") },
+  { id: "R16", title: "Round of 16", matches: roundMatches("R16") },
+  { id: "QF", title: "Quarter-finals", matches: roundMatches("QF") },
+  { id: "SF", title: "Semi-finals", matches: roundMatches("SF") },
+  {
+    id: "FINALS",
+    title: "Finals",
+    matches: [matchByNumber[103], matchByNumber[104]],
+  },
 ];
 
 // This page owns the whole layout: it lays out the sections and places the
