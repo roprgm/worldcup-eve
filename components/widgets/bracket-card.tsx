@@ -81,21 +81,15 @@ function PctCell({
   slot,
   lead,
   champion,
-  mirror,
 }: {
   slot: BracketSlot | undefined;
   lead: boolean;
   champion?: boolean;
-  mirror?: boolean;
 }) {
   return (
     <span
       className={cn(
         "flex items-center justify-center text-[9px] leading-none tabular-nums sm:text-[11px] lg:text-[12px]",
-        // hairline between the flag (outer) and the probability (inner)
-        mirror
-          ? "border-r border-surface-border"
-          : "border-l border-surface-border",
         champion
           ? "font-semibold text-pick"
           : lead
@@ -111,21 +105,24 @@ function PctCell({
 function FlagCell({
   slot,
   dim,
+  corner,
 }: {
   slot: BracketSlot | undefined;
   dim: boolean;
+  corner: string;
 }) {
   return (
     <Flag
       code={slot?.code}
       size={VAR.flag}
-      className={cn("block rounded-none ring-0", dim && "opacity-55")}
+      className={cn("block rounded-none ring-0", corner, dim && "opacity-55")}
     />
   );
 }
 
-/** One match as a bordered card split into four: the two flags stacked flush on
- *  the outer side, their probabilities on the (wider) inner side. */
+/** One match as a bordered card split into four: the two flags stacked on the
+ *  outer side, their probabilities on the (wider) inner side. 2px gaps separate
+ *  the quadrants; each flag rounds only the corner it shares with the card. */
 function MatchCard({
   number,
   getSlot,
@@ -144,52 +141,52 @@ function MatchCard({
     championCode != null && slot?.code === championCode;
 
   const flagHome = (
-    <FlagCell slot={home} dim={!homeLeads && !isChampion(home)} />
+    <FlagCell
+      slot={home}
+      dim={!homeLeads && !isChampion(home)}
+      corner={mirror ? "rounded-tr-[4px]" : "rounded-tl-[4px]"}
+    />
   );
   const pctHome = (
-    <PctCell
-      slot={home}
-      lead={homeLeads}
-      champion={isChampion(home)}
-      mirror={mirror}
-    />
+    <PctCell slot={home} lead={homeLeads} champion={isChampion(home)} />
   );
   const flagAway = (
-    <FlagCell slot={away} dim={homeLeads && !isChampion(away)} />
+    <FlagCell
+      slot={away}
+      dim={homeLeads && !isChampion(away)}
+      corner={mirror ? "rounded-br-[4px]" : "rounded-bl-[4px]"}
+    />
   );
   const pctAway = (
-    <PctCell
-      slot={away}
-      lead={!homeLeads}
-      champion={isChampion(away)}
-      mirror={mirror}
-    />
+    <PctCell slot={away} lead={!homeLeads} champion={isChampion(away)} />
   );
 
   return (
-    <div
-      className="grid overflow-hidden rounded-md border border-surface-border bg-surface-2/40"
-      style={{
-        gridTemplateColumns: mirror
-          ? `${VAR.pct} ${VAR.flag}`
-          : `${VAR.flag} ${VAR.pct}`,
-      }}
-    >
-      {mirror ? (
-        <>
-          {pctHome}
-          {flagHome}
-          {pctAway}
-          {flagAway}
-        </>
-      ) : (
-        <>
-          {flagHome}
-          {pctHome}
-          {flagAway}
-          {pctAway}
-        </>
-      )}
+    <div className="rounded-md border border-surface-border bg-surface-2/40 p-0.5">
+      <div
+        className="grid gap-0.5"
+        style={{
+          gridTemplateColumns: mirror
+            ? `${VAR.pct} ${VAR.flag}`
+            : `${VAR.flag} ${VAR.pct}`,
+        }}
+      >
+        {mirror ? (
+          <>
+            {pctHome}
+            {flagHome}
+            {pctAway}
+            {flagAway}
+          </>
+        ) : (
+          <>
+            {flagHome}
+            {pctHome}
+            {flagAway}
+            {pctAway}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -336,7 +333,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:30px] [--pct:26px] sm:[--flag:17px] sm:[--leaf:36px] sm:[--pct:36px] lg:[--flag:20px] lg:[--leaf:42px] lg:[--pct:44px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:32px] [--pct:24px] sm:[--flag:17px] sm:[--leaf:38px] sm:[--pct:34px] lg:[--flag:20px] lg:[--leaf:44px] lg:[--pct:42px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
