@@ -1,15 +1,17 @@
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
-import { Loader } from "@/components/ai-elements/loader";
+import { useChat } from "@/components/chat/chat-context";
+import { MessageWidgets } from "@/components/chat/message-widgets";
+import { messageText, questionPart } from "@/components/chat/messages";
+import { BallIcon } from "@/components/icons";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Loader } from "@/components/ui/loader";
 import {
   Message,
   MessageAvatar,
   MessageContent,
-} from "@/components/ai-elements/message";
-import { Response } from "@/components/ai-elements/response";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { useChat } from "@/components/chat/chat-context";
-import { MessageWidgets } from "@/components/chat/message-widgets";
-import { messageText, questionPart } from "@/components/chat/messages";
+} from "@/components/ui/message";
+import { Response } from "@/components/ui/response";
+import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
 export function MessageRow({
   message,
@@ -27,11 +29,15 @@ export function MessageRow({
       style={{ animationDelay: `${Math.min(index, 6) * 30}ms` }}
     >
       {message.role === "user" ? (
-        <MessageContent from="user">{messageText(message)}</MessageContent>
+        <Bubble>
+          <BubbleContent>{messageText(message)}</BubbleContent>
+        </Bubble>
       ) : (
         <>
-          <MessageAvatar streaming={streaming} />
-          <MessageContent from="assistant">
+          <MessageAvatar streaming={streaming}>
+            <BallIcon className="size-[15px]" />
+          </MessageAvatar>
+          <MessageContent>
             <AssistantBody message={message} />
           </MessageContent>
         </>
@@ -43,10 +49,12 @@ export function MessageRow({
 export function ActivityRow({ label }: { label: string }) {
   return (
     <Message from="assistant">
-      <MessageAvatar streaming />
-      <MessageContent from="assistant">
-        <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
-          <span>{label}</span>
+      <MessageAvatar streaming>
+        <BallIcon className="size-[15px]" />
+      </MessageAvatar>
+      <MessageContent>
+        <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug">
+          <span className="wc-shimmer">{label}</span>
           <Loader className="shrink-0" />
         </div>
       </MessageContent>

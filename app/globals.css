@@ -6,7 +6,7 @@
 :root {
   color-scheme: dark;
   --background: oklch(0.12 0 0);
-  --surface: oklch(0.20 0 0); /* origin --card */
+  --surface: oklch(0.2 0 0); /* origin --card */
   --surface-2: oklch(0.28 0 0); /* origin --muted / --secondary */
   --foreground: oklch(0.985 0 0);
   --muted-foreground: oklch(0.708 0 0);
@@ -263,6 +263,49 @@
   }
 }
 
+/* scroll-fade — soften the transcript's top/bottom edges so content arrives and
+   leaves out of view rather than being clipped hard. */
+.wc-scroll-fade {
+  --wc-fade: 22px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--wc-fade),
+    #000 calc(100% - var(--wc-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--wc-fade),
+    #000 calc(100% - var(--wc-fade)),
+    transparent 100%
+  );
+}
+
+/* shimmer — a moving sheen for live status text (the activity label). */
+.wc-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--subtle-foreground) 0%,
+    var(--foreground) 25%,
+    var(--subtle-foreground) 50%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: wc-shimmer 2.4s linear infinite;
+}
+@keyframes wc-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -271,5 +314,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Keep live-status text legible once the sheen is frozen. */
+  .wc-shimmer {
+    background: none;
+    color: var(--muted-foreground);
   }
 }

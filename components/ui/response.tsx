@@ -2,7 +2,8 @@ import { cn } from "cnfast";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
 
-// AI Elements–style Response: streams markdown safely via Streamdown.
+// Streams markdown safely via Streamdown. Not part of the shadcn chat set, so
+// it stays our own thin wrapper.
 export const Response = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown

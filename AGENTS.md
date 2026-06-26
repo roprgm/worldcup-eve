@@ -6,11 +6,12 @@ the relevant guide before changing agent code.
 
 ## Component organization
 
-- `components/ai-elements/` — vendored primitives from the
-  [AI SDK Elements](https://vercel.com/academy/ai-sdk/ai-elements) library. Treat these as
-  upstream: only put components that come from there here.
-- `components/ui/` — our own generic, shadcn-like primitives with no domain knowledge (e.g.
-  `Notice`, `ActivityStatus`).
+- `components/ui/` — generic, shadcn-style primitives with no domain knowledge. This holds our own
+  (e.g. `Notice`) and our restyled copies of shadcn's chat components (`message`, `bubble`,
+  `message-scroller`, …). Keep them domain-free: pass brand marks and content in as children.
+- The conversation's scroll behavior comes from the headless
+  [`@shadcn/react`](https://ui.shadcn.com) `MessageScroller`; `ui/message-scroller.tsx` is our
+  styled wrapper over it. Read its types before changing scroll/anchoring logic.
 - `components/` — higher level, app-specific components (e.g. `chat.tsx`, `header.tsx`).
 - `components/<domain>/` — group components under a domain folder when one is important enough to
   warrant it.

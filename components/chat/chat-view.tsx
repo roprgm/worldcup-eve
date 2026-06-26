@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { MessageList } from "@/components/chat/message-list";
 import { Composer } from "@/components/composer";
+import { Conversation } from "@/components/ui/message-scroller";
 
 /** The active conversation: message list plus composer. Shared by the home
  *  route (once a chat starts) and the `/chat/[id]` route, so starting a chat
@@ -27,10 +23,7 @@ export function ChatView() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Conversation>
-        <ConversationContent>
-          <MessageList messages={agent.data.messages} isBusy={isBusy} />
-        </ConversationContent>
-        <ConversationScrollButton />
+        <MessageList messages={agent.data.messages} isBusy={isBusy} />
       </Conversation>
 
       <Composer

@@ -6,6 +6,7 @@ import {
   messageKey,
   messageText,
 } from "@/components/chat/messages";
+import { ConversationItem } from "@/components/ui/message-scroller";
 
 export function MessageList({
   messages,
@@ -22,24 +23,34 @@ export function MessageList({
     isBusy && (!latestAssistant || messageText(latestAssistant).length === 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      {bubbles.map((message, index) => (
-        <MessageRow
-          key={messageKey(message, index)}
-          message={message}
-          index={index}
-          streaming={isBusy && message.metadata?.status === "streaming"}
-        />
-      ))}
+    <>
+      {bubbles.map((message, index) => {
+        const key = messageKey(message, index);
+        return (
+          <ConversationItem
+            key={key}
+            messageId={key}
+            anchor={message.role === "user"}
+          >
+            <MessageRow
+              message={message}
+              index={index}
+              streaming={isBusy && message.metadata?.status === "streaming"}
+            />
+          </ConversationItem>
+        );
+      })}
       {replying && (
-        <ActivityRow
-          label={
-            latestAssistant
-              ? assistantActivityLabel(latestAssistant)
-              : "Thinking"
-          }
-        />
+        <ConversationItem messageId="activity">
+          <ActivityRow
+            label={
+              latestAssistant
+                ? assistantActivityLabel(latestAssistant)
+                : "Thinking"
+            }
+          />
+        </ConversationItem>
       )}
-    </div>
+    </>
   );
 }

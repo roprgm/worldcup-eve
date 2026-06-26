@@ -1,6 +1,6 @@
 import type { UseEveAgentStatus } from "eve/react";
 import type { ReactNode } from "react";
-import { PromptInput } from "@/components/ai-elements/prompt-input";
+import { PromptInput } from "@/components/composer/prompt-input";
 import { EveAttribution } from "@/components/eve";
 
 /** The pinned bottom bar: an optional notice, the prompt input, and the footer. */
