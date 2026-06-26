@@ -8,9 +8,10 @@
 // Once you know which eight groups produced a qualifying third, the bracket is
 // fully determined; the ranking (points → goal difference → goals for → fair play
 // → drawing of lots) only decides which eight groups make the cut, and this table
-// does the placement. Every row keeps two FIFA invariants: a winner never faces a
-// third from its own group, and each slot only draws from a fixed set of groups
-// (the `groups` lists on the R32 `third` slot refs in `index.ts`).
+// does the placement. The allocation is not derivable from a rule: each slot only
+// draws from a fixed set of groups (the `groups` lists on the R32 `third` refs in
+// `index.ts`), but those constraints leave many valid pairings per combination —
+// FIFA picks one, published as a fixed table, so we store it verbatim.
 
 import type { GroupLetter } from "./index";
 
@@ -33,85 +34,112 @@ export const thirdPlaceSlots: ThirdPlaceSlot[] = [
   { match: 80, winner: "L" },
 ];
 
-// The 495 combinations (= C(12, 8)). Each string is eight group letters: the
-// group whose third-placed team fills each slot, in `thirdPlaceSlots` order. The
-// set of eight letters is the combination of groups whose thirds qualified; their
-// order is the allocation. Listed sorted by that group set, for stable diffs.
+// The 495 combinations (= C(12, 8)), in FIFA's official "No." order: ALLOCATIONS[n - 1]
+// is combination n (see `combinationNumber`). Each string is eight group letters —
+// the group whose third-placed team fills each slot, in `thirdPlaceSlots` order.
+// The set of eight letters is the combination of groups whose thirds qualified.
 // prettier-ignore
 const ALLOCATIONS: string[] = [
-  "HGBCAFDE", "CGBDAFEI", "CGBDAFEJ", "CGBDAFEK", "CGBDAFLE", "HEBCAFDI", "HJBCAFDE", "HEBCAFDK", "HFBCADLE",
-  "CJBDAFEI", "CEBDAFIK", "CEBDAFLI", "CJBDAFEK", "CJBDAFLE", "CEBDAFLK", "HGBCADEI", "HGBCADEJ", "HGBCADEK",
-  "HGBCADLE", "EGBCADIJ", "EGBCADIK", "EGBCADLI", "EGBCADJK", "EGBCADLJ", "EGBCADLK", "HJBCADEI", "HEBCADIK",
-  "HEBCADLI", "HJBCADEK", "HJBCADLE", "HEBCADLK", "EJBCADIK", "EJBCADLI", "EIBCADLK", "EJBCADLK", "HGBCAFDI",
-  "HGBCAFDJ", "HGBCAFDK", "CGBDAFLH", "CGBDAFIJ", "CGBDAFIK", "CGBDAFLI", "CGBDAFJK", "CGBDAFLJ", "CGBDAFLK",
-  "HJBCAFDI", "HFBCADIK", "HFBCADLI", "HJBCAFDK", "CJBDAFLH", "HFBCADLK", "CJBDAFIK", "CJBDAFLI", "CIBDAFLK",
-  "CJBDAFLK", "HGBCADIJ", "HGBCADIK", "HGBCADLI", "HGBCADJK", "HGBCADLJ", "HGBCADLK", "CJBDAGIK", "CJBDAGLI",
-  "IGBCADLK", "CJBDAGLK", "HJBCADIK", "HJBCADLI", "HIBCADLK", "HJBCADLK", "IJBCADLK", "HGBCAFEI", "HGBCAFEJ",
-  "HGBCAFEK", "HGBCAFLE", "EGBCAFIJ", "EGBCAFIK", "EGBCAFLI", "EGBCAFJK", "EGBCAFLJ", "EGBCAFLK", "HJBCAFEI",
-  "HEBCAFIK", "HEBCAFLI", "HJBCAFEK", "HJBCAFLE", "HEBCAFLK", "EJBCAFIK", "EJBCAFLI", "EIBCAFLK", "EJBCAFLK",
-  "HJBCAGEI", "EGBCAHIK", "EGBCAHLI", "HJBCAGEK", "HJBCAGLE", "EGBCAHLK", "EJBCAGIK", "EJBCAGLI", "EGBAICLK",
-  "EJBCAGLK", "EJBCAHIK", "EJBCAHLI", "EIBCAHLK", "EJBCAHLK", "EJBAICLK", "HGBCAFIJ", "HGBCAFIK", "HGBCAFLI",
-  "HGBCAFJK", "HGBCAFLJ", "HGBCAFLK", "CJBFAGIK", "CJBFAGLI", "IGBCAFLK", "CJBFAGLK", "HJBCAFIK", "HJBCAFLI",
-  "HIBCAFLK", "HJBCAFLK", "IJBCAFLK", "HJBCAGIK", "HJBCAGLI", "IGBCAHLK", "HJBCAGLK", "IJBCAGLK", "IJBCAHLK",
-  "HGBDAFEI", "HGBDAFEJ", "HGBDAFEK", "HGBDAFLE", "EGBDAFIJ", "EGBDAFIK", "EGBDAFLI", "EGBDAFJK", "EGBDAFLJ",
-  "EGBDAFLK", "HJBDAFEI", "HEBDAFIK", "HEBDAFLI", "HJBDAFEK", "HJBDAFLE", "HEBDAFLK", "EJBDAFIK", "EJBDAFLI",
-  "EIBDAFLK", "EJBDAFLK", "HJBDAGEI", "EGBDAHIK", "EGBDAHLI", "HJBDAGEK", "HJBDAGLE", "EGBDAHLK", "EJBDAGIK",
-  "EJBDAGLI", "EGBAIDLK", "EJBDAGLK", "EJBDAHIK", "EJBDAHLI", "EIBDAHLK", "EJBDAHLK", "EJBAIDLK", "HGBDAFIJ",
-  "HGBDAFIK", "HGBDAFLI", "HGBDAFJK", "HGBDAFLJ", "HGBDAFLK", "FJBDAGIK", "FJBDAGLI", "IGBDAFLK", "FJBDAGLK",
-  "HJBDAFIK", "HJBDAFLI", "HIBDAFLK", "HJBDAFLK", "IJBDAFLK", "HJBDAGIK", "HJBDAGLI", "IGBDAHLK", "HJBDAGLK",
-  "IJBDAGLK", "IJBDAHLK", "HJBFAGEI", "EGBFAHIK", "EGBFAHLI", "HJBFAGEK", "HJBFAGLE", "EGBFAHLK", "EJBFAGIK",
-  "EJBFAGLI", "EGBAIFLK", "EJBFAGLK", "EJBFAHIK", "EJBFAHLI", "EIBFAHLK", "EJBFAHLK", "EJBAIFLK", "EJBAHGIK",
-  "EJBAHGLI", "EGBAIHLK", "EJBAHGLK", "EJBAIGLK", "EJBAIHLK", "HJBFAGIK", "HJBFAGLI", "HGBAIFLK", "HJBFAGLK",
-  "IJBFAGLK", "HJBAIFLK", "HJBAIGLK", "HGECAFDI", "HGJCAFDE", "HGECAFDK", "HGFCADLE", "CGJDAFEI", "CGEDAFIK",
-  "CGEDAFLI", "CGJDAFEK", "CGJDAFLE", "CGEDAFLK", "HJECAFDI", "HEFCADIK", "HEFCADLI", "HJECAFDK", "HJFCADLE",
-  "HEFCADLK", "CJEDAFIK", "CJEDAFLI", "CEIDAFLK", "CJEDAFLK", "HGJCADEI", "HGECADIK", "HGECADLI", "HGJCADEK",
-  "HGJCADLE", "HGECADLK", "EGJCADIK", "EGJCADLI", "EGICADLK", "EGJCADLK", "HJECADIK", "HJECADLI", "HEICADLK",
-  "HJECADLK", "EJICADLK", "HGJCAFDI", "HGFCADIK", "HGFCADLI", "HGJCAFDK", "CGJDAFLH", "HGFCADLK", "CGJDAFIK",
-  "CGJDAFLI", "CGIDAFLK", "CGJDAFLK", "HJFCADIK", "HJFCADLI", "HFICADLK", "HJFCADLK", "CJIDAFLK", "HGJCADIK",
-  "HGJCADLI", "HGICADLK", "HGJCADLK", "IGJCADLK", "HJICADLK", "HGJCAFEI", "HGECAFIK", "HGECAFLI", "HGJCAFEK",
-  "HGJCAFLE", "HGECAFLK", "EGJCAFIK", "EGJCAFLI", "EGICAFLK", "EGJCAFLK", "HJECAFIK", "HJECAFLI", "HEICAFLK",
-  "HJECAFLK", "EJICAFLK", "EGJCAHIK", "EGJCAHLI", "EGICAHLK", "EGJCAHLK", "EJICAGLK", "EJICAHLK", "HGJCAFIK",
-  "HGJCAFLI", "HGICAFLK", "HGJCAFLK", "IGJCAFLK", "HJICAFLK", "HJICAGLK", "HGJDAFEI", "HGEDAFIK", "HGEDAFLI",
-  "HGJDAFEK", "HGJDAFLE", "HGEDAFLK", "EGJDAFIK", "EGJDAFLI", "EGIDAFLK", "EGJDAFLK", "HJEDAFIK", "HJEDAFLI",
-  "HEIDAFLK", "HJEDAFLK", "EJIDAFLK", "EGJDAHIK", "EGJDAHLI", "EGIDAHLK", "EGJDAHLK", "EJIDAGLK", "EJIDAHLK",
-  "HGJDAFIK", "HGJDAFLI", "HGIDAFLK", "HGJDAFLK", "IGJDAFLK", "HJIDAFLK", "HJIDAGLK", "EGJFAHIK", "EGJFAHLI",
-  "EGIFAHLK", "EGJFAHLK", "EJIFAGLK", "EJIFAHLK", "EJIAHGLK", "HJIFAGLK", "CGBDHFEI", "HGBCJFDE", "CGBDHFEK",
-  "CGBDHFLE", "CGBDJFEI", "CGBDEFIK", "CGBDEFLI", "CGBDJFEK", "CGBDJFLE", "CGBDEFLK", "CJBDHFEI", "CEBDHFIK",
-  "CEBDHFLI", "CJBDHFEK", "CJBDHFLE", "CEBDHFLK", "CJBDEFIK", "CJBDEFLI", "CEBDIFLK", "CJBDEFLK", "HGBCJDEI",
-  "EGBCHDIK", "EGBCHDLI", "HGBCJDEK", "HGBCJDLE", "EGBCHDLK", "EGBCJDIK", "EGBCJDLI", "EGBCIDLK", "EGBCJDLK",
-  "EJBCHDIK", "EJBCHDLI", "EIBCHDLK", "EJBCHDLK", "EJBCIDLK", "HGBCJFDI", "CGBDHFIK", "CGBDHFLI", "HGBCJFDK",
-  "CGBDHFLJ", "CGBDHFLK", "CGBDJFIK", "CGBDJFLI", "CGBDIFLK", "CGBDJFLK", "CJBDHFIK", "CJBDHFLI", "CIBDHFLK",
-  "CJBDHFLK", "CJBDIFLK", "HGBCJDIK", "HGBCJDLI", "HGBCIDLK", "HGBCJDLK", "IGBCJDLK", "HJBCIDLK", "HGBCJFEI",
-  "EGBCHFIK", "EGBCHFLI", "HGBCJFEK", "HGBCJFLE", "EGBCHFLK", "EGBCJFIK", "EGBCJFLI", "EGBCIFLK", "EGBCJFLK",
-  "EJBCHFIK", "EJBCHFLI", "EIBCHFLK", "EJBCHFLK", "EJBCIFLK", "EJBCHGIK", "EJBCHGLI", "EGBCIHLK", "EJBCHGLK",
-  "EJBCIGLK", "EJBCIHLK", "HGBCJFIK", "HGBCJFLI", "HGBCIFLK", "HGBCJFLK", "IGBCJFLK", "HJBCIFLK", "HJBCIGLK",
-  "HGBDJFEI", "EGBDHFIK", "EGBDHFLI", "HGBDJFEK", "HGBDJFLE", "EGBDHFLK", "EGBDJFIK", "EGBDJFLI", "EGBDIFLK",
-  "EGBDJFLK", "EJBDHFIK", "EJBDHFLI", "EIBDHFLK", "EJBDHFLK", "EJBDIFLK", "EJBDHGIK", "EJBDHGLI", "EGBDIHLK",
-  "EJBDHGLK", "EJBDIGLK", "EJBDIHLK", "HGBDJFIK", "HGBDJFLI", "HGBDIFLK", "HGBDJFLK", "IGBDJFLK", "HJBDIFLK",
-  "HJBDIGLK", "EJBFHGIK", "EJBFHGLI", "EGBFIHLK", "EJBFHGLK", "EJBFIGLK", "EJBFIHLK", "EJIBHGLK", "HJBFIGLK",
-  "CGJDHFEI", "CGEDHFIK", "CGEDHFLI", "CGJDHFEK", "CGJDHFLE", "CGEDHFLK", "CGEDJFIK", "CGEDJFLI", "CGEDIFLK",
-  "CGEDJFLK", "CJEDHFIK", "CJEDHFLI", "CEIDHFLK", "CJEDHFLK", "CJEDIFLK", "EGJCHDIK", "EGJCHDLI", "EGICHDLK",
-  "EGJCHDLK", "EGICJDLK", "EJICHDLK", "CGJDHFIK", "CGJDHFLI", "CGIDHFLK", "CGJDHFLK", "CGIDJFLK", "CJIDHFLK",
-  "HGICJDLK", "EGJCHFIK", "EGJCHFLI", "EGICHFLK", "EGJCHFLK", "EGICJFLK", "EJICHFLK", "EJICHGLK", "HGICJFLK",
-  "EGJDHFIK", "EGJDHFLI", "EGIDHFLK", "EGJDHFLK", "EGIDJFLK", "EJIDHFLK", "EJIDHGLK", "HGIDJFLK", "EJIFHGLK",
+  "EJIFHGLK", "HGIDJFLK", "EJIDHGLK", "EJIDHFLK", "EGIDJFLK", "EGJDHFLK", "EGIDHFLK", "EGJDHFLI", "EGJDHFIK",
+  "HGICJFLK", "EJICHGLK", "EJICHFLK", "EGICJFLK", "EGJCHFLK", "EGICHFLK", "EGJCHFLI", "EGJCHFIK", "HGICJDLK",
+  "CJIDHFLK", "CGIDJFLK", "CGJDHFLK", "CGIDHFLK", "CGJDHFLI", "CGJDHFIK", "EJICHDLK", "EGICJDLK", "EGJCHDLK",
+  "EGICHDLK", "EGJCHDLI", "EGJCHDIK", "CJEDIFLK", "CJEDHFLK", "CEIDHFLK", "CJEDHFLI", "CJEDHFIK", "CGEDJFLK",
+  "CGEDIFLK", "CGEDJFLI", "CGEDJFIK", "CGEDHFLK", "CGJDHFLE", "CGJDHFEK", "CGEDHFLI", "CGEDHFIK", "CGJDHFEI",
+  "HJBFIGLK", "EJIBHGLK", "EJBFIHLK", "EJBFIGLK", "EJBFHGLK", "EGBFIHLK", "EJBFHGLI", "EJBFHGIK", "HJBDIGLK",
+  "HJBDIFLK", "IGBDJFLK", "HGBDJFLK", "HGBDIFLK", "HGBDJFLI", "HGBDJFIK", "EJBDIHLK", "EJBDIGLK", "EJBDHGLK",
+  "EGBDIHLK", "EJBDHGLI", "EJBDHGIK", "EJBDIFLK", "EJBDHFLK", "EIBDHFLK", "EJBDHFLI", "EJBDHFIK", "EGBDJFLK",
+  "EGBDIFLK", "EGBDJFLI", "EGBDJFIK", "EGBDHFLK", "HGBDJFLE", "HGBDJFEK", "EGBDHFLI", "EGBDHFIK", "HGBDJFEI",
+  "HJBCIGLK", "HJBCIFLK", "IGBCJFLK", "HGBCJFLK", "HGBCIFLK", "HGBCJFLI", "HGBCJFIK", "EJBCIHLK", "EJBCIGLK",
+  "EJBCHGLK", "EGBCIHLK", "EJBCHGLI", "EJBCHGIK", "EJBCIFLK", "EJBCHFLK", "EIBCHFLK", "EJBCHFLI", "EJBCHFIK",
+  "EGBCJFLK", "EGBCIFLK", "EGBCJFLI", "EGBCJFIK", "EGBCHFLK", "HGBCJFLE", "HGBCJFEK", "EGBCHFLI", "EGBCHFIK",
+  "HGBCJFEI", "HJBCIDLK", "IGBCJDLK", "HGBCJDLK", "HGBCIDLK", "HGBCJDLI", "HGBCJDIK", "CJBDIFLK", "CJBDHFLK",
+  "CIBDHFLK", "CJBDHFLI", "CJBDHFIK", "CGBDJFLK", "CGBDIFLK", "CGBDJFLI", "CGBDJFIK", "CGBDHFLK", "CGBDHFLJ",
+  "HGBCJFDK", "CGBDHFLI", "CGBDHFIK", "HGBCJFDI", "EJBCIDLK", "EJBCHDLK", "EIBCHDLK", "EJBCHDLI", "EJBCHDIK",
+  "EGBCJDLK", "EGBCIDLK", "EGBCJDLI", "EGBCJDIK", "EGBCHDLK", "HGBCJDLE", "HGBCJDEK", "EGBCHDLI", "EGBCHDIK",
+  "HGBCJDEI", "CJBDEFLK", "CEBDIFLK", "CJBDEFLI", "CJBDEFIK", "CEBDHFLK", "CJBDHFLE", "CJBDHFEK", "CEBDHFLI",
+  "CEBDHFIK", "CJBDHFEI", "CGBDEFLK", "CGBDJFLE", "CGBDJFEK", "CGBDEFLI", "CGBDEFIK", "CGBDJFEI", "CGBDHFLE",
+  "CGBDHFEK", "HGBCJFDE", "CGBDHFEI", "HJIFAGLK", "EJIAHGLK", "EJIFAHLK", "EJIFAGLK", "EGJFAHLK", "EGIFAHLK",
+  "EGJFAHLI", "EGJFAHIK", "HJIDAGLK", "HJIDAFLK", "IGJDAFLK", "HGJDAFLK", "HGIDAFLK", "HGJDAFLI", "HGJDAFIK",
+  "EJIDAHLK", "EJIDAGLK", "EGJDAHLK", "EGIDAHLK", "EGJDAHLI", "EGJDAHIK", "EJIDAFLK", "HJEDAFLK", "HEIDAFLK",
+  "HJEDAFLI", "HJEDAFIK", "EGJDAFLK", "EGIDAFLK", "EGJDAFLI", "EGJDAFIK", "HGEDAFLK", "HGJDAFLE", "HGJDAFEK",
+  "HGEDAFLI", "HGEDAFIK", "HGJDAFEI", "HJICAGLK", "HJICAFLK", "IGJCAFLK", "HGJCAFLK", "HGICAFLK", "HGJCAFLI",
+  "HGJCAFIK", "EJICAHLK", "EJICAGLK", "EGJCAHLK", "EGICAHLK", "EGJCAHLI", "EGJCAHIK", "EJICAFLK", "HJECAFLK",
+  "HEICAFLK", "HJECAFLI", "HJECAFIK", "EGJCAFLK", "EGICAFLK", "EGJCAFLI", "EGJCAFIK", "HGECAFLK", "HGJCAFLE",
+  "HGJCAFEK", "HGECAFLI", "HGECAFIK", "HGJCAFEI", "HJICADLK", "IGJCADLK", "HGJCADLK", "HGICADLK", "HGJCADLI",
+  "HGJCADIK", "CJIDAFLK", "HJFCADLK", "HFICADLK", "HJFCADLI", "HJFCADIK", "CGJDAFLK", "CGIDAFLK", "CGJDAFLI",
+  "CGJDAFIK", "HGFCADLK", "CGJDAFLH", "HGJCAFDK", "HGFCADLI", "HGFCADIK", "HGJCAFDI", "EJICADLK", "HJECADLK",
+  "HEICADLK", "HJECADLI", "HJECADIK", "EGJCADLK", "EGICADLK", "EGJCADLI", "EGJCADIK", "HGECADLK", "HGJCADLE",
+  "HGJCADEK", "HGECADLI", "HGECADIK", "HGJCADEI", "CJEDAFLK", "CEIDAFLK", "CJEDAFLI", "CJEDAFIK", "HEFCADLK",
+  "HJFCADLE", "HJECAFDK", "HEFCADLI", "HEFCADIK", "HJECAFDI", "CGEDAFLK", "CGJDAFLE", "CGJDAFEK", "CGEDAFLI",
+  "CGEDAFIK", "CGJDAFEI", "HGFCADLE", "HGECAFDK", "HGJCAFDE", "HGECAFDI", "HJBAIGLK", "HJBAIFLK", "IJBFAGLK",
+  "HJBFAGLK", "HGBAIFLK", "HJBFAGLI", "HJBFAGIK", "EJBAIHLK", "EJBAIGLK", "EJBAHGLK", "EGBAIHLK", "EJBAHGLI",
+  "EJBAHGIK", "EJBAIFLK", "EJBFAHLK", "EIBFAHLK", "EJBFAHLI", "EJBFAHIK", "EJBFAGLK", "EGBAIFLK", "EJBFAGLI",
+  "EJBFAGIK", "EGBFAHLK", "HJBFAGLE", "HJBFAGEK", "EGBFAHLI", "EGBFAHIK", "HJBFAGEI", "IJBDAHLK", "IJBDAGLK",
+  "HJBDAGLK", "IGBDAHLK", "HJBDAGLI", "HJBDAGIK", "IJBDAFLK", "HJBDAFLK", "HIBDAFLK", "HJBDAFLI", "HJBDAFIK",
+  "FJBDAGLK", "IGBDAFLK", "FJBDAGLI", "FJBDAGIK", "HGBDAFLK", "HGBDAFLJ", "HGBDAFJK", "HGBDAFLI", "HGBDAFIK",
+  "HGBDAFIJ", "EJBAIDLK", "EJBDAHLK", "EIBDAHLK", "EJBDAHLI", "EJBDAHIK", "EJBDAGLK", "EGBAIDLK", "EJBDAGLI",
+  "EJBDAGIK", "EGBDAHLK", "HJBDAGLE", "HJBDAGEK", "EGBDAHLI", "EGBDAHIK", "HJBDAGEI", "EJBDAFLK", "EIBDAFLK",
+  "EJBDAFLI", "EJBDAFIK", "HEBDAFLK", "HJBDAFLE", "HJBDAFEK", "HEBDAFLI", "HEBDAFIK", "HJBDAFEI", "EGBDAFLK",
+  "EGBDAFLJ", "EGBDAFJK", "EGBDAFLI", "EGBDAFIK", "EGBDAFIJ", "HGBDAFLE", "HGBDAFEK", "HGBDAFEJ", "HGBDAFEI",
+  "IJBCAHLK", "IJBCAGLK", "HJBCAGLK", "IGBCAHLK", "HJBCAGLI", "HJBCAGIK", "IJBCAFLK", "HJBCAFLK", "HIBCAFLK",
+  "HJBCAFLI", "HJBCAFIK", "CJBFAGLK", "IGBCAFLK", "CJBFAGLI", "CJBFAGIK", "HGBCAFLK", "HGBCAFLJ", "HGBCAFJK",
+  "HGBCAFLI", "HGBCAFIK", "HGBCAFIJ", "EJBAICLK", "EJBCAHLK", "EIBCAHLK", "EJBCAHLI", "EJBCAHIK", "EJBCAGLK",
+  "EGBAICLK", "EJBCAGLI", "EJBCAGIK", "EGBCAHLK", "HJBCAGLE", "HJBCAGEK", "EGBCAHLI", "EGBCAHIK", "HJBCAGEI",
+  "EJBCAFLK", "EIBCAFLK", "EJBCAFLI", "EJBCAFIK", "HEBCAFLK", "HJBCAFLE", "HJBCAFEK", "HEBCAFLI", "HEBCAFIK",
+  "HJBCAFEI", "EGBCAFLK", "EGBCAFLJ", "EGBCAFJK", "EGBCAFLI", "EGBCAFIK", "EGBCAFIJ", "HGBCAFLE", "HGBCAFEK",
+  "HGBCAFEJ", "HGBCAFEI", "IJBCADLK", "HJBCADLK", "HIBCADLK", "HJBCADLI", "HJBCADIK", "CJBDAGLK", "IGBCADLK",
+  "CJBDAGLI", "CJBDAGIK", "HGBCADLK", "HGBCADLJ", "HGBCADJK", "HGBCADLI", "HGBCADIK", "HGBCADIJ", "CJBDAFLK",
+  "CIBDAFLK", "CJBDAFLI", "CJBDAFIK", "HFBCADLK", "CJBDAFLH", "HJBCAFDK", "HFBCADLI", "HFBCADIK", "HJBCAFDI",
+  "CGBDAFLK", "CGBDAFLJ", "CGBDAFJK", "CGBDAFLI", "CGBDAFIK", "CGBDAFIJ", "CGBDAFLH", "HGBCAFDK", "HGBCAFDJ",
+  "HGBCAFDI", "EJBCADLK", "EIBCADLK", "EJBCADLI", "EJBCADIK", "HEBCADLK", "HJBCADLE", "HJBCADEK", "HEBCADLI",
+  "HEBCADIK", "HJBCADEI", "EGBCADLK", "EGBCADLJ", "EGBCADJK", "EGBCADLI", "EGBCADIK", "EGBCADIJ", "HGBCADLE",
+  "HGBCADEK", "HGBCADEJ", "HGBCADEI", "CEBDAFLK", "CJBDAFLE", "CJBDAFEK", "CEBDAFLI", "CEBDAFIK", "CJBDAFEI",
+  "HFBCADLE", "HEBCAFDK", "HJBCAFDE", "HEBCAFDI", "CGBDAFLE", "CGBDAFEK", "CGBDAFEJ", "CGBDAFEI", "HGBCAFDE"
 ];
 
-// Combination of eight qualifying groups (sorted letters) → allocation string.
-const allocationByGroups = new Map(
-  ALLOCATIONS.map((a) => [[...a].sort().join(""), a] as const),
-);
+const GROUP_ORDER = "ABCDEFGHIJKL"; // FIFA's group order; Annex C numbers combinations lexicographically in it.
+
+// FIFA numbers the 495 combinations (Annex C) by the lexicographic rank of the four
+// groups whose third did NOT qualify — equivalently, the index of those four groups
+// in `itertools.combinations("ABCDEFGHIJKL", 4)`. Enumerating that order here lets us
+// reproduce FIFA's "No." exactly (verified against all 495 published rows), so the
+// listing above can stay in the same order as the official document.
+const combinationNumberByEliminated = (() => {
+  const g = GROUP_ORDER;
+  const map = new Map<string, number>();
+  let n = 0;
+  for (let a = 0; a < g.length; a++)
+    for (let b = a + 1; b < g.length; b++)
+      for (let c = b + 1; c < g.length; c++)
+        for (let d = c + 1; d < g.length; d++) map.set(g[a] + g[b] + g[c] + g[d], ++n);
+  return map;
+})();
+
+/**
+ * FIFA combination number (1–495) for a set of four groups whose third-placed team
+ * did NOT qualify — the "No." column of Annex C. Throws if not four distinct groups.
+ */
+export function combinationNumber(eliminatedGroups: Iterable<GroupLetter>): number {
+  const key = [...new Set(eliminatedGroups)].sort().join("");
+  const n = combinationNumberByEliminated.get(key);
+  if (n == null) throw new Error(`expected four distinct group letters, got "${key}"`);
+  return n;
+}
 
 /**
  * Given the eight groups whose third-placed teams qualified, return which group's
- * third fills each Round-of-32 third slot, keyed by FIFA match number. Returns
- * null if the input is not a valid set of eight distinct groups.
+ * third fills each Round-of-32 third slot, keyed by FIFA match number. Returns null
+ * if the input is not a valid set of eight distinct groups.
  */
 export function thirdPlaceAllocation(
   qualifyingGroups: Iterable<GroupLetter>,
 ): Record<number, GroupLetter> | null {
-  const key = [...qualifyingGroups].sort().join("");
-  const alloc = allocationByGroups.get(key);
-  if (!alloc) return null;
+  const qualifying = new Set(qualifyingGroups);
+  const eliminated = [...GROUP_ORDER].filter(
+    (g) => !qualifying.has(g as GroupLetter),
+  ) as GroupLetter[];
+  if (qualifying.size !== 8 || eliminated.length !== 4) return null;
+  const alloc = ALLOCATIONS[combinationNumber(eliminated) - 1];
   const out: Record<number, GroupLetter> = {};
   thirdPlaceSlots.forEach((slot, i) => {
     out[slot.match] = alloc[i] as GroupLetter;
