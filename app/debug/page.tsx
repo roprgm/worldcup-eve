@@ -109,7 +109,7 @@ function buildGroup(group: FakeGroup) {
 }
 
 const NOT_STARTED: FakeGroup = {
-  title: "A — Sin jugar (todo predicho)",
+  title: "A — Not started (all predicted)",
   teams: [{ code: "ESP" }, { code: "CRO" }, { code: "MAR" }, { code: "JPN" }],
   matches: [
     { home: "ESP", away: "CRO", h: 2, a: 1, status: "predicted" },
@@ -122,7 +122,7 @@ const NOT_STARTED: FakeGroup = {
 };
 
 const MATCHDAY_ONE: FakeGroup = {
-  title: "B — Jornada 1 jugada, resto predicho",
+  title: "B — Matchday 1 played, rest predicted",
   teams: [{ code: "GER" }, { code: "BEL" }, { code: "SUI" }, { code: "USA" }],
   matches: [
     { home: "GER", away: "USA", h: 3, a: 1, status: "final" },
@@ -135,7 +135,7 @@ const MATCHDAY_ONE: FakeGroup = {
 };
 
 const HAS_LIVE: FakeGroup = {
-  title: "C — Con un partido en vivo",
+  title: "C — With a live match",
   teams: [{ code: "FRA" }, { code: "NOR" }, { code: "SEN" }, { code: "AUS" }],
   matches: [
     { home: "FRA", away: "AUS", h: 2, a: 0, status: "final" },
@@ -148,7 +148,7 @@ const HAS_LIVE: FakeGroup = {
 };
 
 const FINISHED: FakeGroup = {
-  title: "D — Grupo finalizado",
+  title: "D — Finished group",
   teams: [
     { code: "ARG", confirmed: true },
     { code: "MEX", confirmed: true },
@@ -166,7 +166,7 @@ const FINISHED: FakeGroup = {
 };
 
 const LEADER_PREDICTED_TO_FALL: FakeGroup = {
-  title: "E — Líder real, predicho a caer",
+  title: "E — Real leader, predicted to fall",
   teams: [{ code: "BRA" }, { code: "POR" }, { code: "NED" }, { code: "URU" }],
   matches: [
     { home: "BRA", away: "URU", h: 2, a: 0, status: "final" },
@@ -191,10 +191,10 @@ export default function DebugPage() {
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Notice icon={Info} tone="amber">
-          Página temporal de debug. Verde = confirmado (puntos y resultados
-          reales), rosa pulsante = en vivo, tenue = predicción de mercado.
+          Temporary debug page. Green = confirmed (real points and results), rose
+          pulse = live, dim = market prediction.
         </Notice>
-        <Section title="Group widget — situaciones">
+        <Section title="Group widget — situations">
           <CardGrid>
             {SCENARIOS.map((scenario) => {
               const { title, columns, rows } = buildGroup(scenario);
