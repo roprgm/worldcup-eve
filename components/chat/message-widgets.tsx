@@ -19,7 +19,7 @@ import {
 // At most a few widgets per reply, so a tool-heavy turn can't bury the text.
 const MAX_WIDGETS = 3;
 
-type WidgetSpec = { key: string; render: () => ReactNode };
+export type WidgetSpec = { key: string; render: () => ReactNode };
 
 function isGroupLetter(value: unknown): value is GroupLetter {
   return (
@@ -101,8 +101,7 @@ export function messageWidgets(message: EveMessage): WidgetSpec[] {
   return [...byKey.values()].slice(-MAX_WIDGETS);
 }
 
-export function MessageWidgets({ message }: { message: EveMessage }) {
-  const specs = messageWidgets(message);
+export function MessageWidgets({ specs }: { specs: WidgetSpec[] }) {
   if (specs.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
