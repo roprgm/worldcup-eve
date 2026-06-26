@@ -185,7 +185,7 @@ export default function DebugPage() {
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Notice icon={Info} tone="amber">
           Temporary debug page. White = confirmed (real points and results),
-          blue = predicted (speculative), live = white text with a red pulse.
+          indigo = predicted (speculative), live = white text with a red pulse.
         </Notice>
         <Section title="Group widget — situations">
           <CardGrid>
