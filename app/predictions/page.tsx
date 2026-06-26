@@ -5,23 +5,18 @@ import { PredictionGroupWidget } from "@/components/widgets/prediction-group-wid
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import {
   groupLetters,
-  type KnockoutMatch,
   knockoutMatches,
   matchByNumber,
   type Round,
 } from "@/lib/tournament";
 
 /** A round's matches, ordered by match number. */
-const roundMatches = (round: Round): KnockoutMatch[] =>
+const roundMatches = (round: Round) =>
   knockoutMatches
     .filter((m) => m.round === round)
     .sort((a, b) => a.number - b.number);
 
-const KNOCKOUT_SECTIONS: {
-  id: string;
-  title: string;
-  matches: KnockoutMatch[];
-}[] = [
+const knockoutSections = [
   { id: "R32", title: "Round of 32", matches: roundMatches("R32") },
   { id: "R16", title: "Round of 16", matches: roundMatches("R16") },
   { id: "QF", title: "Quarter-finals", matches: roundMatches("QF") },
@@ -48,7 +43,7 @@ export default function PredictionsPage() {
           </CardGrid>
         </Section>
 
-        {KNOCKOUT_SECTIONS.map((section) => (
+        {knockoutSections.map((section) => (
           <Section key={section.id} title={section.title}>
             <CardGrid>
               {section.matches.map((match) => (

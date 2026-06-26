@@ -7,10 +7,7 @@ import {
 } from "@/components/widgets/thirds-widget";
 import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 
-// Hidden page (not in the nav): the best third-placed teams as things stand, and
-// each Round-of-32 third slot's odds, uniform over the FIFA combinations still
-// mathematically reachable from the current results.
-const ODDS_SLOTS = [...thirdPlaceSlots].sort((a, b) => a.match - b.match);
+const oddSlots = [...thirdPlaceSlots].sort((a, b) => a.match - b.match);
 
 export default function ThirdsPage() {
   return (
@@ -25,7 +22,7 @@ export default function ThirdsPage() {
         <Section title="Third-place odds">
           <ThirdScenariosCaption />
           <CardGrid>
-            {ODDS_SLOTS.map((slot) => (
+            {oddSlots.map((slot) => (
               <ThirdOddsWidget key={slot.match} match={slot.match} />
             ))}
           </CardGrid>
