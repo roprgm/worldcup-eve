@@ -1,4 +1,5 @@
 import { cn } from "cnfast";
+import { Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
 import {
@@ -20,20 +21,12 @@ const VAR = {
 const LEFT_ROOT = 101;
 const RIGHT_ROOT = 102;
 const FINAL = 104;
+const THIRD = 103;
 
-// Columns, left to right: the left half (R32→SF), the final, then the mirrored
-// right half (SF→R32). Used for the round-label strip above the bracket.
-const COLUMN_LABELS = [
-  "R32",
-  "R16",
-  "QF",
-  "SF",
-  "Final",
-  "SF",
-  "QF",
-  "R16",
-  "R32",
-];
+// Round labels per column, left to right: the left half (R32→SF), then the
+// mirrored right half (SF→R32). The center holds the final/third cross instead
+// of a column, so it has no label.
+const COLUMN_LABELS = ["R32", "R16", "QF", "SF", "SF", "QF", "R16", "R32"];
 
 export interface BracketSlot {
   code?: string;
@@ -237,11 +230,45 @@ function ConnectorColumn({
   );
 }
 
-/** Plain horizontal line joining a semi to the final in the center. */
-function LinkColumn() {
+function CenterLabel({ text, trophy }: { text: string; trophy?: boolean }) {
   return (
-    <div className="flex flex-1 items-center">
-      <span className="h-px w-full bg-border-strong" />
+    <span className="flex items-center gap-1 text-[9px] font-medium tracking-widest text-muted-foreground/70 uppercase">
+      {trophy && <Trophy className="size-3 text-pick" />}
+      {text}
+    </span>
+  );
+}
+
+/** The center of the bracket: a cross of lines. The horizontal line joins the
+ *  two semis; the vertical line runs up to the final and down to the third-place
+ *  play-off, which float in the otherwise-empty middle so they cost no width. */
+function CenterCross({
+  getSlot,
+  championCode,
+}: {
+  getSlot: SlotLookup;
+  championCode?: string;
+}) {
+  return (
+    <div className="relative flex-1 self-stretch">
+      <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
+      <span className="absolute top-[31%] bottom-[31%] left-1/2 w-px bg-border-strong" />
+      <div className="absolute top-[26%] left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
+        <CenterLabel text="Final" trophy />
+        <MatchCard
+          number={FINAL}
+          getSlot={getSlot}
+          championCode={championCode}
+        />
+      </div>
+      <div className="absolute top-[74%] left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
+        <MatchCard
+          number={THIRD}
+          getSlot={getSlot}
+          championCode={championCode}
+        />
+        <CenterLabel text="3rd" />
+      </div>
     </div>
   );
 }
@@ -309,7 +336,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:28px] [--pct:26px] sm:[--flag:16px] sm:[--leaf:32px] sm:[--pct:31px] lg:[--flag:18px] lg:[--leaf:38px] lg:[--pct:34px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:30px] [--pct:26px] sm:[--flag:17px] sm:[--leaf:36px] sm:[--pct:36px] lg:[--flag:20px] lg:[--leaf:42px] lg:[--pct:44px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
@@ -322,9 +349,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
           {col(left.QF)}
           <ConnectorColumn pairs={1} />
           {col(left.SF)}
-          <LinkColumn />
-          {col([FINAL])}
-          <LinkColumn />
+          <CenterCross getSlot={getSlot} championCode={championCode} />
           {col(right.SF, true)}
           <ConnectorColumn pairs={1} mirror />
           {col(right.QF, true)}
