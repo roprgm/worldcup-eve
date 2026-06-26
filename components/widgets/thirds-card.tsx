@@ -17,6 +17,7 @@ export interface ThirdRankingRow {
   points: number;
   goalDiff: string; // pre-formatted, e.g. "+2" / "-1"
   goalsFor: number;
+  chance: number; // 0–1, probability of finishing among the best eight thirds
   qualifies: boolean;
 }
 
@@ -88,12 +89,28 @@ function RankingGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_1.25rem] items-center gap-x-1.5",
+        "grid grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_minmax(4.5rem,5.5rem)_1.25rem] items-center gap-x-1.5",
         className,
       )}
     >
       {children}
     </div>
+  );
+}
+
+// A proportional bar plus the rounded percentage — the same chance visual the
+// odds cards below use, compacted to a single ranking-row cell.
+function ChanceCell({ chance }: { chance: number }) {
+  const pct = `${Math.round(chance * 100)}%`;
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+        <span className="h-full rounded-[1px] bg-pick" style={{ width: pct }} />
+      </span>
+      <span className="w-7 shrink-0 text-right text-[11px] tabular-nums">
+        {pct}
+      </span>
+    </span>
   );
 }
 
@@ -121,6 +138,7 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
       <span className="text-right text-[11px] text-muted-foreground">
         {row.goalsFor}
       </span>
+      <ChanceCell chance={row.chance} />
       <span className="flex justify-center">
         {row.qualifies ? (
           <Check className="size-3 text-pick" strokeWidth={3} />
@@ -142,6 +160,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
           <ColumnLabel className="text-right">Pts</ColumnLabel>
           <ColumnLabel className="text-right">GD</ColumnLabel>
           <ColumnLabel className="text-right">GF</ColumnLabel>
+          <ColumnLabel className="text-right">Chance</ColumnLabel>
           <span />
         </RankingGrid>
         {props.loading

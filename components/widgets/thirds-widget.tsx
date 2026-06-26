@@ -24,7 +24,21 @@ function slotGroups(match: number): GroupLetter[] {
   return ref.kind === "third" ? ref.groups : [];
 }
 
+// Each group's third qualifies into exactly one slot when it makes the cut, so
+// its chance of finishing among the best eight is the sum of its per-slot odds.
+function qualifyChances(results: Results): Map<GroupLetter, number> {
+  const chance = new Map<GroupLetter, number>();
+  for (const slot of Object.values(results.thirdOdds)) {
+    for (const [group, p] of Object.entries(slot)) {
+      const g = group as GroupLetter;
+      chance.set(g, (chance.get(g) ?? 0) + (p ?? 0));
+    }
+  }
+  return chance;
+}
+
 function rankingRows(results: Results): ThirdRankingRow[] {
+  const chances = qualifyChances(results);
   return results.bestThirds.map((t) => ({
     group: t.group,
     code: t.teamId,
@@ -33,6 +47,7 @@ function rankingRows(results: Results): ThirdRankingRow[] {
     points: t.points,
     goalDiff: signed(t.goalDiff),
     goalsFor: t.goalsFor,
+    chance: chances.get(t.group) ?? 0,
     qualifies: t.qualifies,
   }));
 }
