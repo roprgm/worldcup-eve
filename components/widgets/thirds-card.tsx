@@ -130,22 +130,22 @@ function ChanceBar({
   );
 }
 
-// Tree guide on the left of a breakdown row: a vertical spine plus a horizontal
-// tick into the row. The last child caps the spine at its centre (└), earlier
-// ones run it past the gap into the next row (├).
+// Tree guide on the left of a breakdown row: a vertical spine dropping from the
+// flag's centre (29px in) plus a horizontal tick into the row. The last child
+// caps the spine at its centre (└), earlier ones run it past the gap (├).
 function TreeConnector({ last }: { last: boolean }) {
   return (
     <>
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute left-2 top-0 w-px bg-border-strong",
+          "pointer-events-none absolute left-[29px] top-0 w-px bg-white/10",
           last ? "h-1/2" : "h-[calc(100%+0.25rem)]",
         )}
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute left-2 top-1/2 h-px w-2 -translate-y-1/2 bg-border-strong"
+        className="pointer-events-none absolute left-[29px] top-1/2 h-px w-[14px] -translate-y-1/2 bg-white/10"
       />
     </>
   );
@@ -161,13 +161,8 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
         <div key={s.match} className={cn(RANKING_GRID, "relative h-5")}>
           <TreeConnector last={i === segments.length - 1} />
           <span />
-          <span className="col-span-5 flex items-baseline gap-1.5">
-            <span className="text-[11px] text-muted-foreground">
-              Winner {s.host}
-            </span>
-            <span className="text-[10px] tabular-nums text-muted-foreground/45">
-              #{s.match}
-            </span>
+          <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
+            Match {s.match} - Winner {s.host}
           </span>
           <ChanceBar value={s.prob} className="bg-pick/70" />
           <span />
