@@ -1,6 +1,8 @@
+"use client";
+
 import { cn } from "cnfast";
-import { Check, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { Check, ChevronRight, X } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,8 +89,12 @@ function ColumnLabel({
   );
 }
 
-// rank · team · group · Pts · GD · GF · chance · marker — shared by the header
-// and every row. Fixed-width code keeps the chance bars starting at one x.
+// rank · team · group · Pts · GD · GF · chance · marker · disclosure — shared by
+// the header, every row and the expanded breakdown so they all line up. The
+// fixed-width code keeps the chance bars starting at one x.
+const RANKING_GRID =
+  "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_1.25rem_0.75rem] items-center gap-x-1.5";
+
 function RankingGrid({
   className,
   children,
@@ -96,83 +102,124 @@ function RankingGrid({
   className?: string;
   children: ReactNode;
 }) {
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_1.25rem] items-center gap-x-1.5",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn(RANKING_GRID, className)}>{children}</div>;
 }
 
-// The qualify chance as a stacked bar: one segment per Round-of-32 slot the team
-// could fill, width ∝ its chance, split by hairline gaps. The filled length is
-// the total qualify chance; the rounded percentage sits alongside.
+// A proportional bar and its rounded percentage. `pl-1.5` gives the bar the same
+// breathing room from GF that the other columns have between each other.
 function ChanceBar({
-  segments,
-  chance,
+  value,
+  className,
 }: {
-  segments: ThirdSlotChance[];
-  chance: number;
+  value: number;
+  className?: string;
 }) {
+  const pct = `${Math.round(value * 100)}%`;
   return (
-    <span className="flex items-center gap-1.5">
-      <span className="flex h-1.5 flex-1 gap-px overflow-hidden rounded-[1px] bg-muted/50">
-        {segments.map((s) => (
-          <span
-            key={s.match}
-            title={`Winner ${s.host} · #${s.match} · ${Math.round(s.prob * 100)}%`}
-            className="h-full bg-pick"
-            style={{ width: `${s.prob * 100}%` }}
-          />
-        ))}
+    <span className="flex items-center gap-1.5 pl-1.5">
+      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+        <span
+          className={cn("h-full rounded-[1px] bg-pick", className)}
+          style={{ width: pct }}
+        />
       </span>
       <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
-        {`${Math.round(chance * 100)}%`}
+        {pct}
       </span>
     </span>
   );
 }
 
-function RankingRow({ row }: { row: ThirdRankingRow }) {
+// The expanded view: one bar per Round-of-32 slot the team could fill, each
+// aligned under the row's chance bar so the parts visibly add up to the whole.
+function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
   return (
-    <RankingGrid
-      className={cn("h-5 tabular-nums", !row.qualifies && "opacity-45")}
-    >
-      <span className="text-right text-[11px] text-muted-foreground">
-        {row.rank}
-      </span>
-      <span className="flex items-center gap-1.5">
-        <Flag code={row.code} size={14} />
-        <span
-          title={row.name}
-          className="w-9 shrink-0 truncate text-[12px] font-semibold tracking-wide"
-        >
-          {row.code}
-        </span>
-      </span>
-      <span className="text-center text-[11px] text-muted-foreground">
-        {row.group}
-      </span>
-      <span className="text-right text-[12px] font-semibold">{row.points}</span>
-      <span className="text-right text-[11px] text-muted-foreground">
-        {row.goalDiff}
-      </span>
-      <span className="text-right text-[11px] text-muted-foreground">
-        {row.goalsFor}
-      </span>
-      <ChanceBar segments={row.segments} chance={row.chance} />
-      <span className="flex justify-center">
-        {row.qualifies ? (
-          <Check className="size-3 text-pick" strokeWidth={3} />
-        ) : (
-          <X className="size-3 text-muted-foreground/45" />
+    <div className="mt-1 flex flex-col gap-1 rounded-[4px] bg-surface-2/25 py-1.5">
+      {segments.map((s) => (
+        <div key={s.match} className={cn(RANKING_GRID, "h-4")}>
+          <span />
+          <span className="col-span-5 flex items-baseline gap-1.5">
+            <span className="text-[11px] text-muted-foreground">
+              Winner {s.host}
+            </span>
+            <span className="text-[10px] tabular-nums text-muted-foreground/45">
+              #{s.match}
+            </span>
+          </span>
+          <ChanceBar value={s.prob} className="bg-pick/70" />
+          <span />
+          <span />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankingRow({ row }: { row: ThirdRankingRow }) {
+  const [open, setOpen] = useState(false);
+  // Only worth expanding when the chance is split across more than one slot.
+  const expandable = row.segments.length > 1;
+
+  return (
+    <div className={cn(!row.qualifies && "opacity-45")}>
+      <button
+        type="button"
+        disabled={!expandable}
+        aria-expanded={expandable ? open : undefined}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          RANKING_GRID,
+          "h-5 w-full rounded-[3px] text-left tabular-nums",
+          expandable
+            ? "cursor-pointer hover:bg-surface-2/40"
+            : "cursor-default",
         )}
-      </span>
-    </RankingGrid>
+      >
+        <span className="text-right text-[11px] text-muted-foreground">
+          {row.rank}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Flag code={row.code} size={14} />
+          <span
+            title={row.name}
+            className="w-9 shrink-0 truncate text-[12px] font-semibold tracking-wide"
+          >
+            {row.code}
+          </span>
+        </span>
+        <span className="text-center text-[11px] text-muted-foreground">
+          {row.group}
+        </span>
+        <span className="text-right text-[12px] font-semibold">
+          {row.points}
+        </span>
+        <span className="text-right text-[11px] text-muted-foreground">
+          {row.goalDiff}
+        </span>
+        <span className="text-right text-[11px] text-muted-foreground">
+          {row.goalsFor}
+        </span>
+        <ChanceBar value={row.chance} />
+        <span className="flex justify-center">
+          {row.qualifies ? (
+            <Check className="size-3 text-pick" strokeWidth={3} />
+          ) : (
+            <X className="size-3 text-muted-foreground/45" />
+          )}
+        </span>
+        <span className="flex justify-center">
+          {expandable && (
+            <ChevronRight
+              className={cn(
+                "size-3 text-muted-foreground/50 transition-transform",
+                open && "rotate-90",
+              )}
+            />
+          )}
+        </span>
+      </button>
+      {expandable && open && <SlotBreakdown segments={row.segments} />}
+    </div>
   );
 }
 
@@ -187,7 +234,8 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
           <ColumnLabel className="text-right">Pts</ColumnLabel>
           <ColumnLabel className="text-right">GD</ColumnLabel>
           <ColumnLabel className="text-right">GF</ColumnLabel>
-          <ColumnLabel>Chance</ColumnLabel>
+          <ColumnLabel className="pl-1.5">Chance</ColumnLabel>
+          <span />
           <span />
         </RankingGrid>
         {props.loading
