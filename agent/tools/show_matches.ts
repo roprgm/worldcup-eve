@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { todayMatchViews } from "@/components/widgets/match-view";
 import { getMatchResults, type MatchResult } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
@@ -55,12 +56,7 @@ export default defineTool({
     if (selected.length === 0)
       return { matches: [], note: "No matches found." };
 
-    return {
-      // The cards carry every detail, so the model should only top them with a
-      // one-line intro — listing the matches again is the common failure here.
-      shownAsWidget:
-        "The cards already show each match's teams, score and kickoff. Reply with just one short intro line (e.g. \"Here are today's matches\") — do not list them.",
-      matches: selected.map(card),
-    };
+    return { matches: selected.map(card) };
   },
+  toModelOutput: widgetModelOutput,
 });

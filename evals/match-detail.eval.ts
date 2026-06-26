@@ -8,6 +8,6 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_detail");
     t.noFailedActions();
-    t.messageIncludes(/Belgium|Iran/i);
+    t.messageIncludes(/Nathan|Ngoy|red card/i);
   },
 });
