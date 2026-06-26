@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// rank · team · Pts · GD · GF · marker
-const RANKING_COLUMNS = "1rem minmax(0,1fr) 1.75rem 1.75rem 1.75rem 1.25rem";
+// rank · team · Pts · GD · GF · marker. Shared so the header and rows align.
+const RANKING_GRID =
+  "grid items-center gap-x-1.5 grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_1.25rem]";
 
 // Stable keys for the skeleton placeholder rows (one per ranked third / slot).
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
@@ -84,10 +85,10 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
   return (
     <div
       className={cn(
-        "grid items-center gap-x-1.5 py-1 tabular-nums",
+        RANKING_GRID,
+        "py-1 tabular-nums",
         !row.qualifies && "opacity-45",
       )}
-      style={{ gridTemplateColumns: RANKING_COLUMNS }}
     >
       <span className="text-right text-[11px] text-muted-foreground">
         {row.rank}
@@ -123,10 +124,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   return (
     <Card title="Best thirds" hint="as things stand">
       <div className="flex flex-col px-2 py-1.5">
-        <div
-          className="grid items-center gap-x-1.5 pb-1"
-          style={{ gridTemplateColumns: RANKING_COLUMNS }}
-        >
+        <div className={cn(RANKING_GRID, "pb-1")}>
           <span />
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-right">Pts</ColumnLabel>
