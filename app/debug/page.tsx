@@ -191,8 +191,8 @@ export default function DebugPage() {
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Notice icon={Info} tone="amber">
-          Temporary debug page. Green = confirmed (real points and results),
-          rose pulse = live, dim = market prediction.
+          Temporary debug page. White = confirmed (real points and results),
+          amber = predicted (speculative), live = white text with a red pulse.
         </Notice>
         <Section title="Group widget — situations">
           <CardGrid>

@@ -67,18 +67,27 @@ function LiveBadge() {
   );
 }
 
+function PredictedBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-amber-400 uppercase">
+      <span
+        aria-hidden
+        className="size-1.5 shrink-0 rounded-full bg-amber-400"
+      />
+      Predicted
+    </span>
+  );
+}
+
 function ResultCell({ result }: { result: GroupCardResult }) {
   const live = result.status === "live";
 
   return (
     <div
       className={cn(
-        "w-full rounded px-0.5 py-1.5 text-center text-[11px] leading-none tabular-nums whitespace-nowrap select-none",
-        live
-          ? "font-semibold text-rose-400"
-          : result.status === "final"
-            ? "font-semibold text-pick"
-            : "font-semibold text-foreground/85",
+        "w-full rounded px-0.5 py-1.5 text-center text-[11px] font-semibold leading-none tabular-nums whitespace-nowrap select-none",
+        // Speculative scorelines are amber; confirmed and live ones stay white.
+        result.status === "predicted" ? "text-amber-400" : "text-foreground",
       )}
       title={result.title}
     >
@@ -117,17 +126,24 @@ function MarkerIcon({ marker }: { marker?: Marker }) {
 function GroupCardShell({
   title,
   live,
+  predicted,
   children,
 }: {
   title: string;
   live?: boolean;
+  predicted?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-6 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
-        {live && <LiveBadge />}
+        {(live || predicted) && (
+          <div className="flex shrink-0 items-center gap-2.5">
+            {predicted && <PredictedBadge />}
+            {live && <LiveBadge />}
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -161,9 +177,12 @@ export function GroupCard(props: GroupCardProps) {
   const live = rows.some((row) =>
     row.cells.some((cell) => cell?.status === "live"),
   );
+  const predicted = rows.some((row) =>
+    row.cells.some((cell) => cell?.status === "predicted"),
+  );
 
   return (
-    <GroupCardShell title={title} live={live}>
+    <GroupCardShell title={title} live={live} predicted={predicted}>
       <div
         className="grid auto-rows-[22px] items-center gap-x-1 gap-y-1 px-1.5 py-2"
         style={{
@@ -234,7 +253,7 @@ export function GroupCard(props: GroupCardProps) {
           <span
             key={`${row.team.code}:points`}
             className={cn(
-              "text-center text-[12px] font-semibold text-pick tabular-nums",
+              "text-center text-[12px] font-semibold text-foreground tabular-nums",
               row.dimmed && "opacity-60",
             )}
           >
