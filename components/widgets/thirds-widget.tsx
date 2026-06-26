@@ -6,6 +6,7 @@ import {
   ThirdOddsCard,
   type ThirdRankingRow,
   ThirdsRankingCard,
+  type ThirdSlotChance,
 } from "@/components/widgets/thirds-card";
 import type { Results } from "@/lib/results";
 import { type GroupLetter, matchByNumber, teamById } from "@/lib/tournament";
@@ -24,32 +25,44 @@ function slotGroups(match: number): GroupLetter[] {
   return ref.kind === "third" ? ref.groups : [];
 }
 
-// Each group's third qualifies into exactly one slot when it makes the cut, so
-// its chance of finishing among the best eight is the sum of its per-slot odds.
-function qualifyChances(results: Results): Map<GroupLetter, number> {
-  const chance = new Map<GroupLetter, number>();
-  for (const slot of Object.values(results.thirdOdds)) {
-    for (const [group, p] of Object.entries(slot)) {
+// Each group's third fills at most one Round-of-32 slot, so its per-slot odds are
+// disjoint outcomes: list them per group (biggest first) and their sum is the
+// chance of finishing among the best eight.
+function slotChancesByGroup(
+  results: Results,
+): Map<GroupLetter, ThirdSlotChance[]> {
+  const byGroup = new Map<GroupLetter, ThirdSlotChance[]>();
+  for (const [match, odds] of Object.entries(results.thirdOdds)) {
+    const host = WINNER_BY_MATCH.get(Number(match)) ?? "?";
+    for (const [group, prob] of Object.entries(odds)) {
+      if (!prob) continue;
       const g = group as GroupLetter;
-      chance.set(g, (chance.get(g) ?? 0) + (p ?? 0));
+      const list = byGroup.get(g) ?? [];
+      list.push({ match: Number(match), host, prob });
+      byGroup.set(g, list);
     }
   }
-  return chance;
+  for (const list of byGroup.values()) list.sort((a, b) => b.prob - a.prob);
+  return byGroup;
 }
 
 function rankingRows(results: Results): ThirdRankingRow[] {
-  const chances = qualifyChances(results);
-  return results.bestThirds.map((t) => ({
-    group: t.group,
-    code: t.teamId,
-    name: teamById[t.teamId]?.name,
-    rank: t.rank,
-    points: t.points,
-    goalDiff: signed(t.goalDiff),
-    goalsFor: t.goalsFor,
-    chance: chances.get(t.group) ?? 0,
-    qualifies: t.qualifies,
-  }));
+  const slots = slotChancesByGroup(results);
+  return results.bestThirds.map((t) => {
+    const segments = slots.get(t.group) ?? [];
+    return {
+      group: t.group,
+      code: t.teamId,
+      name: teamById[t.teamId]?.name,
+      rank: t.rank,
+      points: t.points,
+      goalDiff: signed(t.goalDiff),
+      goalsFor: t.goalsFor,
+      segments,
+      chance: segments.reduce((sum, s) => sum + s.prob, 0),
+      qualifies: t.qualifies,
+    };
+  });
 }
 
 // Map a slot's per-group odds onto each group's current third-placed team.

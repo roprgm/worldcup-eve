@@ -9,6 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
 const ODDS_SKELETON = Array.from({ length: 5 }, (_, i) => `odds-${i}`);
 
+// One Round-of-32 slot a third-placed team could fill, with its chance.
+export interface ThirdSlotChance {
+  match: number;
+  host: string; // group winner that hosts the slot
+  prob: number; // 0–1, chance this team fills it
+}
+
 export interface ThirdRankingRow {
   group: string; // group letter
   code: string; // team code
@@ -17,6 +24,8 @@ export interface ThirdRankingRow {
   points: number;
   goalDiff: string; // pre-formatted, e.g. "+2" / "-1"
   goalsFor: number;
+  // Per-slot chances (sorted, biggest first); their sum is the qualify chance.
+  segments: ThirdSlotChance[];
   chance: number; // 0–1, probability of finishing among the best eight thirds
   qualifies: boolean;
 }
@@ -78,7 +87,8 @@ function ColumnLabel({
   );
 }
 
-// rank · team · Pts · GD · GF · marker — shared by the header and every row.
+// rank · team · group · Pts · GD · GF · chance · marker — shared by the header
+// and every row. Fixed-width code keeps the chance bars starting at one x.
 function RankingGrid({
   className,
   children,
@@ -89,7 +99,7 @@ function RankingGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_minmax(4.5rem,5.5rem)_1.25rem] items-center gap-x-1.5",
+        "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_1.25rem] items-center gap-x-1.5",
         className,
       )}
     >
@@ -98,17 +108,30 @@ function RankingGrid({
   );
 }
 
-// A proportional bar plus the rounded percentage — the same chance visual the
-// odds cards below use, compacted to a single ranking-row cell.
-function ChanceCell({ chance }: { chance: number }) {
-  const pct = `${Math.round(chance * 100)}%`;
+// The qualify chance as a stacked bar: one segment per Round-of-32 slot the team
+// could fill, width ∝ its chance, split by hairline gaps. The filled length is
+// the total qualify chance; the rounded percentage sits alongside.
+function ChanceBar({
+  segments,
+  chance,
+}: {
+  segments: ThirdSlotChance[];
+  chance: number;
+}) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
-        <span className="h-full rounded-[1px] bg-pick" style={{ width: pct }} />
+      <span className="flex h-1.5 flex-1 gap-px overflow-hidden rounded-[1px] bg-muted/50">
+        {segments.map((s) => (
+          <span
+            key={s.match}
+            title={`Winner ${s.host} · #${s.match} · ${Math.round(s.prob * 100)}%`}
+            className="h-full bg-pick"
+            style={{ width: `${s.prob * 100}%` }}
+          />
+        ))}
       </span>
-      <span className="w-7 shrink-0 text-right text-[11px] tabular-nums">
-        {pct}
+      <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+        {`${Math.round(chance * 100)}%`}
       </span>
     </span>
   );
@@ -122,14 +145,17 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
       <span className="text-right text-[11px] text-muted-foreground">
         {row.rank}
       </span>
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex items-center gap-1.5">
         <Flag code={row.code} size={14} />
-        <span className="text-[12px] font-semibold tracking-wide">
+        <span
+          title={row.name}
+          className="w-9 shrink-0 truncate text-[12px] font-semibold tracking-wide"
+        >
           {row.code}
         </span>
-        <span className="truncate text-[11px] text-muted-foreground">
-          {row.name}
-        </span>
+      </span>
+      <span className="text-center text-[11px] text-muted-foreground">
+        {row.group}
       </span>
       <span className="text-right text-[12px] font-semibold">{row.points}</span>
       <span className="text-right text-[11px] text-muted-foreground">
@@ -138,7 +164,7 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
       <span className="text-right text-[11px] text-muted-foreground">
         {row.goalsFor}
       </span>
-      <ChanceCell chance={row.chance} />
+      <ChanceBar segments={row.segments} chance={row.chance} />
       <span className="flex justify-center">
         {row.qualifies ? (
           <Check className="size-3 text-pick" strokeWidth={3} />
@@ -157,10 +183,11 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
         <RankingGrid>
           <span />
           <ColumnLabel>Team</ColumnLabel>
+          <ColumnLabel className="text-center">Grp</ColumnLabel>
           <ColumnLabel className="text-right">Pts</ColumnLabel>
           <ColumnLabel className="text-right">GD</ColumnLabel>
           <ColumnLabel className="text-right">GF</ColumnLabel>
-          <ColumnLabel className="text-right">Chance</ColumnLabel>
+          <ColumnLabel>Chance</ColumnLabel>
           <span />
         </RankingGrid>
         {props.loading
