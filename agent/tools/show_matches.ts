@@ -5,7 +5,6 @@ import { todayMatchViews } from "@/components/widgets/match-view";
 import { getMatchResults, type MatchResult } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
 
-const MAX_CARDS = 6;
 const teamName = (code: string) => teamById[code]?.name ?? code;
 
 function card(match: MatchResult) {
@@ -24,7 +23,7 @@ function card(match: MatchResult) {
 
 export default defineTool({
   description:
-    "Show the user match cards (teams, score, live status or kickoff). Pass scope 'today' or 'live' for the day's slate or the matches in progress, or specific match numbers. The go-to for 'what's playing now / today'. More than 6 matches won't fit — list those in text with get_match_schedule.",
+    "Show the user match cards (teams, score, live status or kickoff). Pass scope 'today' or 'live' for the day's slate or the matches in progress, or specific match numbers. The go-to for 'what's playing now / today'. Best for a handful of matches; for a long fixture list use get_match_schedule instead.",
   inputSchema: z.object({
     scope: z
       .enum(["today", "live"])
@@ -55,12 +54,6 @@ export default defineTool({
 
     if (selected.length === 0)
       return { matches: [], note: "No matches found." };
-    if (selected.length > MAX_CARDS) {
-      return {
-        tooMany: selected.length,
-        note: "Too many matches for cards — list them in text instead (e.g. with get_match_schedule).",
-      };
-    }
 
     return {
       shownAsWidget: "Shown to the user as a widget — don't re-list it.",

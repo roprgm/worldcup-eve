@@ -18,9 +18,6 @@ import {
 
 // At most a few widgets per reply, so a tool-heavy turn can't bury the text.
 const MAX_WIDGETS = 3;
-// A match card per fixture is fine for a day's slate, but a full week would
-// bury the reply — past this we leave the answer to text.
-const MAX_MATCH_CARDS = 6;
 
 type WidgetSpec = { key: string; render: () => ReactNode };
 
@@ -67,12 +64,11 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
       const numbers = Array.isArray(args.matches)
         ? args.matches.filter((n): n is number => typeof n === "number")
         : [];
-      if (numbers.length >= 1 && numbers.length <= MAX_MATCH_CARDS)
+      if (numbers.length >= 1)
         return {
           key: "matches",
           render: () => <ChatMatches numbers={numbers} />,
         };
-      // The widget enforces the cap for a scope (it knows the resolved count).
       return args.scope === "today" || args.scope === "live"
         ? {
             key: "matches",

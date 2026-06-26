@@ -10,10 +10,6 @@ import { usePredictions, useResults } from "@/components/widgets/queries";
 
 export type MatchesScope = "today" | "live";
 
-// Past this a slate would bury the reply, so we render nothing and let the
-// model answer in text — matches the cap in show_matches.
-const MAX_CARDS = 6;
-
 /** Live cards for a set of matches — by explicit number, or all of today's /
  *  in-progress matches. Self-fetches results and odds so scores and clocks stay
  *  current, then renders one MatchWidget each. */
@@ -37,7 +33,7 @@ export function ChatMatches({
         ? todayMatchViews(results.matches, odds)
         : [];
 
-  if (views.length === 0 || views.length > MAX_CARDS) return null;
+  if (views.length === 0) return null;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
