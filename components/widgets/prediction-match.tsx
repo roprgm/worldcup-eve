@@ -1,9 +1,9 @@
 "use client";
 
 import { addMinutes, format } from "date-fns";
+import { useMemo } from "react";
 
-import { CardGrid } from "@/components/widgets/card-grid";
-import { PredictionMatchGrid } from "@/components/widgets/prediction-sections";
+import { PredictionMatchCard } from "@/components/widgets/prediction-match-card";
 import { usePredictions } from "@/components/widgets/queries";
 import { MatchCardSkeleton } from "@/components/widgets/widget-skeletons";
 import type { Predictions } from "@/lib/predictions";
@@ -11,7 +11,6 @@ import type { KnockoutMatch, Round, SlotRef } from "@/lib/tournament";
 import { teamById } from "@/lib/tournament";
 
 type Candidate = { code: string; probability: number };
-type Lookup = Map<string, Candidate[]>;
 
 const PHASE_LABEL: Record<Round, string> = {
   R32: "R32",
@@ -56,61 +55,50 @@ function kickoffLabel(kickoffAt: string): string {
   );
 }
 
-function sideFor(match: KnockoutMatch, side: "home" | "away", lookup: Lookup) {
+function sideFor(
+  match: KnockoutMatch,
+  side: "home" | "away",
+  predictions: Predictions,
+) {
   const ref = match[side];
+  const candidates =
+    predictions.slots.find((s) => s.match === match.number && s.side === side)
+      ?.candidates ?? [];
   return {
     label: slotLabel(ref),
-    candidates: (lookup.get(`${match.number}:${side}`) ?? []).map(
-      candidateView,
-    ),
+    candidates: candidates.map(candidateView),
     showAll: showAllCandidates(ref, match.round),
   };
 }
 
-function matchView(match: KnockoutMatch, lookup: Lookup) {
+function matchView(match: KnockoutMatch, predictions: Predictions) {
   return {
     number: match.number,
     phaseLabel: PHASE_LABEL[match.round],
     dateTime: kickoffLabel(match.kickoffAt),
     location: match.venue,
     title: match.venue,
-    home: sideFor(match, "home", lookup),
-    away: sideFor(match, "away", lookup),
+    home: sideFor(match, "home", predictions),
+    away: sideFor(match, "away", predictions),
   };
 }
 
-// Index every slot's candidates by `match:side` so a match can look up both of
-// its sides. Used as react-query `select`, so it recomputes only on new data.
-function buildLookup(predictions: Predictions): Lookup {
-  const lookup: Lookup = new Map();
-  for (const slot of predictions.slots) {
-    lookup.set(`${slot.match}:${slot.side}`, slot.candidates);
-  }
-  return lookup;
-}
+/** A single knockout fixture with each side's predicted qualifiers. Fetches the
+ *  shared predictions; renders its own skeleton while loading. */
+export function PredictionMatch({ match }: { match: KnockoutMatch }) {
+  const predictions = usePredictions();
+  const view = useMemo(
+    () => (predictions ? matchView(match, predictions) : null),
+    [match, predictions],
+  );
 
-/** Connected knockout round: takes the round's fixtures, fetches the shared
- *  predictions for each side's candidates, and renders the match grid. */
-export function PredictionKnockoutRound({
-  matches,
-}: {
-  matches: KnockoutMatch[];
-}) {
-  const lookup = usePredictions(buildLookup);
-
-  if (!lookup) {
+  if (!view) {
     return (
       <div className="animate-pulse" aria-hidden>
-        <CardGrid>
-          {matches.map((match) => (
-            <MatchCardSkeleton key={match.number} />
-          ))}
-        </CardGrid>
+        <MatchCardSkeleton />
       </div>
     );
   }
 
-  return (
-    <PredictionMatchGrid matches={matches.map((m) => matchView(m, lookup))} />
-  );
+  return <PredictionMatchCard {...view} />;
 }

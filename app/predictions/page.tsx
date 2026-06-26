@@ -4,11 +4,12 @@ import {
   roundMatches,
   thirdPlaceMatch,
 } from "@/app/predictions/bracket";
+import { CardGrid } from "@/components/ui/card-grid";
+import { Section } from "@/components/ui/section";
 import { PredictionChampion } from "@/components/widgets/prediction-champion";
-import { PredictionGroupStage } from "@/components/widgets/prediction-group-stage";
-import { PredictionKnockoutRound } from "@/components/widgets/prediction-knockouts";
-import { PredictionSection } from "@/components/widgets/prediction-sections";
-import type { KnockoutMatch } from "@/lib/tournament";
+import { PredictionGroup } from "@/components/widgets/prediction-group";
+import { PredictionMatch } from "@/components/widgets/prediction-match";
+import { groupLetters, type KnockoutMatch } from "@/lib/tournament";
 
 const KNOCKOUT_SECTIONS: {
   id: string;
@@ -22,25 +23,34 @@ const KNOCKOUT_SECTIONS: {
   { id: "FINALS", title: "Finals", matches: [thirdPlaceMatch, finalMatch] },
 ];
 
-// Static section headers render immediately; each section's content is a
-// self-contained widget that fetches its own data and shows its own skeleton.
+// This page owns the whole layout: it lays out the sections and places the
+// widgets it shows in a grid. Each widget fetches its own data and renders its
+// own skeleton, so the section headers and grid show immediately.
 export default function PredictionsPage() {
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
-        <PredictionSection title="Groups">
-          <PredictionGroupStage />
-        </PredictionSection>
+        <Section title="Groups">
+          <CardGrid>
+            {groupLetters.map((letter) => (
+              <PredictionGroup key={letter} letter={letter} />
+            ))}
+          </CardGrid>
+        </Section>
 
         {KNOCKOUT_SECTIONS.map((section) => (
-          <PredictionSection key={section.id} title={section.title}>
-            <PredictionKnockoutRound matches={section.matches} />
-          </PredictionSection>
+          <Section key={section.id} title={section.title}>
+            <CardGrid>
+              {section.matches.map((match) => (
+                <PredictionMatch key={match.number} match={match} />
+              ))}
+            </CardGrid>
+          </Section>
         ))}
 
-        <PredictionSection title="Champion">
+        <Section title="Champion">
           <PredictionChampion />
-        </PredictionSection>
+        </Section>
       </div>
     </main>
   );
