@@ -234,7 +234,7 @@ export function GroupCard(props: GroupCardProps) {
           <span
             key={`${row.team.code}:points`}
             className={cn(
-              "text-center text-[12px] font-semibold tabular-nums",
+              "text-center text-[12px] font-semibold text-pick tabular-nums",
               row.dimmed && "opacity-60",
             )}
           >

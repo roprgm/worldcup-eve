@@ -13,9 +13,9 @@ const QUALIFIED = 0.999;
 type GroupFixture = (typeof groupMatches)[number];
 type ResultStatus = "live" | "final" | "predicted";
 
-/** Per-fixture scoreline: a real result if the match has been played, else the
- *  market's most-likely exact score. */
-function resultsFor(
+/** Per-fixture scoreline for the result matrix: a real result if the match has
+ *  been played, else the market's most-likely exact score. */
+function displayScoresFor(
   letter: GroupLetter,
   predicted: Scores,
   real: Scores,
@@ -60,8 +60,13 @@ function resultFor({
 }
 
 function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
-  const results = resultsFor(group.letter, predicted, live.groupScores);
-  const standings = computeStandings(group.letter, results);
+  const displayScores = displayScoresFor(
+    group.letter,
+    predicted,
+    live.groupScores,
+  );
+  // Standings count real results only (live scores included), never predictions.
+  const standings = computeStandings(group.letter, live.groupScores);
   const columns = standings.map((s) => s.teamId);
   const fixtures = groupMatches.filter((m) => m.group === group.letter);
   const advanceOf = new Map(group.teams.map((t) => [t.code, t.advance]));
@@ -97,7 +102,7 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
           : resultFor({
               match: matchOf(standing.teamId, column),
               rowTeam: standing.teamId,
-              results,
+              results: displayScores,
               status: live.groupStatus,
             }),
       ),
