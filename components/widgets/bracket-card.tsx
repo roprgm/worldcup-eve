@@ -9,13 +9,14 @@ import {
 } from "@/lib/tournament";
 
 // Geometry is driven by CSS variables set on the root (see BracketCard), so the
-// whole bracket scales with the breakpoint: compact on a phone, spread out on
-// the web. --chip is a column width, --conn a connector length, --leaf the
-// vertical slot a Round-of-32 match reserves, --final the width of the final box.
+// whole bracket scales with the breakpoint: dense on a phone, larger on the web.
+// --chip is a column width, --conn a connector length, --leaf the vertical slot
+// a Round-of-32 match reserves, --flag the flag width, --final the final box.
 const VAR = {
   chip: "var(--chip)",
   conn: "var(--conn)",
   leaf: "var(--leaf)",
+  flag: "var(--flag)",
   final: "var(--final)",
 };
 
@@ -70,48 +71,44 @@ function childMatches(match: KnockoutMatch): [number, number] | null {
   return null;
 }
 
-/** Probability over flag over code, centered — one chip wide and borderless. The
- *  connectors and spacing carry the structure the card used to. */
-function SlotChip({
+/** A team on one line: flag on the outer edge, probability toward the center.
+ *  No country code — the flag carries the identity (full name on hover). */
+function SlotRow({
   slot,
   lead,
   champion,
+  mirror,
 }: {
   slot: BracketSlot | undefined;
   lead: boolean;
   champion?: boolean;
+  mirror?: boolean;
 }) {
   const dim = !lead && !champion;
   return (
     <div
-      className="flex flex-col items-center gap-px leading-none"
-      style={{ width: VAR.chip }}
+      className={cn(
+        "flex items-center justify-between gap-1",
+        mirror && "flex-row-reverse",
+      )}
       title={slot?.name}
     >
+      <Flag
+        code={slot?.code}
+        size={VAR.flag}
+        className={cn(dim && "opacity-55")}
+      />
       <span
         className={cn(
-          "text-[9px] tabular-nums",
+          "text-[9px] tabular-nums sm:text-[11px] lg:text-[12px]",
           champion
             ? "font-semibold text-pick"
             : dim
               ? "text-muted-foreground/55"
-              : "text-foreground/80",
+              : "font-medium text-foreground/85",
         )}
       >
         {formatPct(slot?.probability)}
-      </span>
-      <Flag code={slot?.code} size={18} className={cn(dim && "opacity-70")} />
-      <span
-        className={cn(
-          "text-[9px] font-semibold tracking-tight",
-          champion
-            ? "text-pick"
-            : dim
-              ? "text-muted-foreground"
-              : "text-foreground",
-        )}
-      >
-        {slot?.code ?? "—"}
       </span>
     </div>
   );
@@ -121,10 +118,12 @@ function MatchNode({
   number,
   getSlot,
   championCode,
+  mirror,
 }: {
   number: number;
   getSlot: SlotLookup;
   championCode?: string;
+  mirror?: boolean;
 }) {
   const home = getSlot(number, "home");
   const away = getSlot(number, "away");
@@ -133,9 +132,19 @@ function MatchNode({
     championCode != null && slot?.code === championCode;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <SlotChip slot={home} lead={homeLeads} champion={isChampion(home)} />
-      <SlotChip slot={away} lead={!homeLeads} champion={isChampion(away)} />
+    <div className="flex flex-col gap-0.5" style={{ width: VAR.chip }}>
+      <SlotRow
+        slot={home}
+        lead={homeLeads}
+        champion={isChampion(home)}
+        mirror={mirror}
+      />
+      <SlotRow
+        slot={away}
+        lead={!homeLeads}
+        champion={isChampion(away)}
+        mirror={mirror}
+      />
     </div>
   );
 }
@@ -171,7 +180,12 @@ function BracketTree({
 }) {
   const kids = childMatches(matchByNumber[number]);
   const node = (
-    <MatchNode number={number} getSlot={getSlot} championCode={championCode} />
+    <MatchNode
+      number={number}
+      getSlot={getSlot}
+      championCode={championCode}
+      mirror={mirror}
+    />
   );
 
   if (!kids) {
@@ -243,28 +257,27 @@ function FinalSlot({
 }) {
   const champion = championCode != null && slot?.code === championCode;
   return (
-    <div
-      className="flex flex-col items-center gap-1 leading-none"
-      title={slot?.name}
-    >
-      <span
-        className={cn(
-          "flex items-center gap-1 text-[11px] tabular-nums",
-          champion ? "font-semibold text-pick" : "text-muted-foreground",
-        )}
-      >
-        {champion && <Trophy className="size-3 shrink-0" />}
-        {formatPct(slot?.probability)}
-      </span>
+    <div className="flex items-center gap-2" title={slot?.name}>
       <Flag code={slot?.code} size={26} />
-      <span
-        className={cn(
-          "text-[12px] font-semibold tracking-wide",
-          champion ? "text-pick" : "text-foreground",
-        )}
-      >
-        {slot?.code ?? "—"}
-      </span>
+      <div className="flex flex-col leading-tight">
+        <span
+          className={cn(
+            "text-[12px] font-semibold tracking-wide",
+            champion ? "text-pick" : "text-foreground",
+          )}
+        >
+          {slot?.code ?? "—"}
+        </span>
+        <span
+          className={cn(
+            "flex items-center gap-1 text-[11px] tabular-nums",
+            champion ? "font-semibold text-pick" : "text-muted-foreground",
+          )}
+        >
+          {champion && <Trophy className="size-3 shrink-0" />}
+          {formatPct(slot?.probability)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -286,7 +299,7 @@ function FinalBox({
       <span className="text-[9px] font-medium tracking-widest text-muted-foreground uppercase">
         Final
       </span>
-      <div className="flex items-start justify-center gap-5">
+      <div className="flex flex-col gap-2">
         <FinalSlot slot={getSlot(FINAL, "home")} championCode={championCode} />
         <FinalSlot slot={getSlot(FINAL, "away")} championCode={championCode} />
       </div>
@@ -321,28 +334,28 @@ function FinalBelow({
   championCode?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 pt-2 lg:hidden">
+    <div className="flex flex-col items-center gap-2 pt-3 lg:hidden">
       <span className="h-4 w-px bg-border-strong" />
       <FinalBox getSlot={getSlot} championCode={championCode} />
     </div>
   );
 }
 
-/** The knockout bracket as predicted: each slot's most-likely team shown as a
- *  borderless probability-over-flag-over-code chip. Both halves sit side by side
- *  (the right one mirrored); the final lands between them on the web and drops
- *  below on a phone. Geometry scales with the breakpoint via CSS variables. */
+/** The knockout bracket as predicted: each slot is a flag and its probability on
+ *  one line. Both halves sit side by side (the right one mirrored); the final
+ *  lands between them on the web and drops below on a phone. Geometry scales with
+ *  the breakpoint via CSS variables. */
 export function BracketCard({ getSlot, championCode }: BracketCardProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-3 py-4 [--chip:30px] [--conn:12px] [--final:180px] [--leaf:92px] sm:[--chip:36px] sm:[--conn:26px] sm:[--leaf:100px] lg:[--chip:42px] lg:[--conn:40px] lg:[--final:168px] lg:[--leaf:104px]">
+      <div className="overflow-x-auto px-3 py-4 [--chip:32px] [--conn:8px] [--final:160px] [--flag:13px] [--leaf:38px] sm:[--chip:46px] sm:[--conn:20px] sm:[--final:184px] sm:[--flag:18px] sm:[--leaf:46px] lg:[--chip:52px] lg:[--conn:26px] lg:[--final:196px] lg:[--flag:22px] lg:[--leaf:52px]">
         <div className="mx-auto flex w-fit flex-col items-center">
           {/* Labels strip above the bracket, aligned to the columns. On the web
               the center gap matches the final box so the right labels line up. */}
-          <div className="flex gap-[var(--conn)] lg:gap-0">
+          <div className="flex gap-5 sm:gap-7 lg:gap-0">
             <RoundLabels />
             <div
               className="hidden shrink-0 lg:block"
@@ -351,7 +364,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
             <RoundLabels mirror />
           </div>
 
-          <div className="mt-1.5 flex items-center gap-[var(--conn)] lg:gap-0">
+          <div className="mt-1.5 flex items-center gap-5 sm:gap-7 lg:gap-0">
             <BracketTree
               number={LEFT_ROOT}
               getSlot={getSlot}

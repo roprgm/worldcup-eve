@@ -29,20 +29,43 @@ const cellByCode = new Map<string, number>(
 interface FlagProps {
   /** FIFA 3-letter team code, e.g. "MEX" — selects the cell in the sprite. */
   code?: string;
-  /** width in px; height is derived at a 4:3 ratio */
-  size?: number;
+  /** Width: a px number, or any CSS length (e.g. a `var(--flag)`) to size the
+   *  flag responsively. Height is derived at a 4:3 ratio. */
+  size?: number | string;
   className?: string;
+}
+
+// Express the cell geometry in terms of the (possibly CSS-var) width so the
+// sprite scales with it. A number stays exact px; a string goes through calc().
+function flagMetrics(size: number | string) {
+  if (typeof size === "number") {
+    const height = Math.round((size * 3) / 4);
+    return {
+      width: `${size}px`,
+      height: `${height}px`,
+      bgSize: `${COLS * size}px ${ROWS * height}px`,
+      pos: (col: number, row: number) => `-${col * size}px -${row * height}px`,
+    };
+  }
+  const h = `calc(${size} * 3 / 4)`;
+  return {
+    width: size,
+    height: h,
+    bgSize: `calc(${size} * ${COLS}) calc(${h} * ${ROWS})`,
+    pos: (col: number, row: number) =>
+      `calc(${size} * ${-col}) calc(${h} * ${-row})`,
+  };
 }
 
 /**
  * Small country flag rendered from the shared spritesheet. Instance it with a
  * team's FIFA code — no per-flag asset wiring at the call site. Flags only
- * render at <=20px, so the 64x48 cells stay crisp at 3x retina while the whole
+ * render at <=24px, so the 64x48 cells stay crisp at retina while the whole
  * tournament costs one request. Falls back to a muted box for undetermined
  * slots or codes missing from the sheet.
  */
 export function Flag({ code, size = 18, className }: FlagProps) {
-  const height = Math.round((size * 3) / 4);
+  const { width, height, bgSize, pos } = flagMetrics(size);
   const base = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
 
   const index = code ? cellByCode.get(code.toLowerCase()) : undefined;
@@ -50,7 +73,7 @@ export function Flag({ code, size = 18, className }: FlagProps) {
     return (
       <span
         aria-hidden
-        style={{ width: size, height }}
+        style={{ width, height }}
         className={cn(base, "bg-muted", className)}
       />
     );
@@ -62,11 +85,11 @@ export function Flag({ code, size = 18, className }: FlagProps) {
     <span
       aria-hidden
       style={{
-        width: size,
+        width,
         height,
         backgroundImage: `url(${SPRITE_URL})`,
-        backgroundSize: `${COLS * size}px ${ROWS * height}px`,
-        backgroundPosition: `-${col * size}px -${row * height}px`,
+        backgroundSize: bgSize,
+        backgroundPosition: pos(col, row),
         backgroundRepeat: "no-repeat",
       }}
       className={cn(base, className)}
