@@ -305,7 +305,7 @@ function CenterCross({
   championCode?: string;
 }) {
   return (
-    <div className="relative flex-1 self-stretch">
+    <div className="relative flex-[2.6] self-stretch">
       <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
       {/* spans the two card centers; the opaque cards clip it to the gap */}
       <span className="absolute top-[27%] bottom-[27%] left-1/2 w-px bg-border-strong" />
@@ -357,7 +357,12 @@ function RoundColumn({
 
 function RoundLabels() {
   const cells = COLUMN_LABELS.flatMap((label, i) => {
-    const spacer = i > 0 ? [<div key={`s${i}`} className="flex-1" />] : [];
+    // the gap between the two SF labels is the center cross — keep it as wide
+    // as the CenterCross so the labels stay over their columns.
+    const spacer =
+      i > 0
+        ? [<div key={`s${i}`} className={i === 4 ? "flex-[2.6]" : "flex-1"} />]
+        : [];
     return [
       ...spacer,
       <span
