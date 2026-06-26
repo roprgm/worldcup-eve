@@ -4,8 +4,7 @@ import { cn } from "cnfast";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const LAST_CHAT_KEY = "wc26:last-chat-path";
+import { LAST_CHAT_KEY } from "@/components/chat/chat-context";
 
 const isChatPath = (path: string) => path === "/" || path.startsWith("/chat/");
 
@@ -40,11 +39,17 @@ export function SiteNav() {
 
   return (
     <nav className="flex items-center gap-0.5">
-      {/* Chat stays a full-page load: a saved `/chat/<id>` only restores from
-          storage when ChatProvider remounts, which client-side nav skips. */}
-      <a href={chatHref} className={linkClass(isChatPath(pathname))}>
+      {/* Client-side nav: the agent persists across navigations, and on a full
+          load ChatProvider restores the last chat, so the target is always in
+          memory. prefetch={false} — the chat route renders from that memory, not
+          from per-id route data. */}
+      <Link
+        href={chatHref}
+        prefetch={false}
+        className={linkClass(isChatPath(pathname))}
+      >
         Chat
-      </a>
+      </Link>
       {/* Link client-navigates and prefetches the route, so loading.tsx shows
           instantly; the page then renders its skeleton while data loads. */}
       <Link
