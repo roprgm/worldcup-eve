@@ -10,7 +10,7 @@ const percent = (p: number) => Math.round(p * 1000) / 10;
 
 export default defineTool({
   description:
-    "The race for the eight best third-placed teams that complete the Round of 32. Returns the twelve groups' third-placed teams ranked as things stand (the best eight `qualifies`), which Round-of-32 match each qualifier is heading to with the chance of every still-possible third, and how many of FIFA's 495 third-place combinations remain mathematically possible. Use it for any question about third-placed teams: who is in or out via third place, who a group winner will face, or how settled the third-place picture is. Everything is provisional until the groups finish.",
+    "Round-of-32 matchup detail for the third-place race: which R32 match each qualifying third is heading to, the chance of every still-possible third in each slot, and how many of FIFA's 495 third-place combinations remain mathematically possible. Use it when someone asks who a specific group winner will face among the thirds, or how settled the picture is. For the ranking of the twelve thirds by qualification chance (who is in or out), use show_thirds_ranking instead. Everything is provisional until the groups finish.",
   inputSchema: z.object({}),
   async execute() {
     const results = await getMatchResults();

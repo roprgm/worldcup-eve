@@ -45,7 +45,7 @@ export function MessageContent({
     return (
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl rounded-br-md border border-border-strong bg-surface-2 px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground sm:max-w-[80%]",
+          "max-w-[85%] rounded-xl rounded-br-sm border border-surface-divider bg-surface-2 px-3 py-1.5 text-base leading-relaxed whitespace-pre-wrap text-foreground sm:max-w-[80%]",
           className,
         )}
         {...props}

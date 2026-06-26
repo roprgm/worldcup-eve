@@ -31,7 +31,7 @@ function scheduleLine(match: (typeof matchSchedule)[number]) {
 
 export default defineTool({
   description:
-    "World Cup match numbers, fixtures, kickoff times, and which teams play. Filter by team or match numbers to keep the answer small.",
+    "Look up match numbers, fixtures, and kickoff times as text — filter by team or match numbers. Use this for a team's schedule or to list many matches; to display today's or in-progress matches as cards, use show_matches instead.",
   inputSchema: z.object({
     team: z
       .string()

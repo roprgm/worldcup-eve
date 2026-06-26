@@ -7,7 +7,7 @@ export const Response = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
       className={cn(
-        "text-[0.9375rem] leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "text-base leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
       // Drop the table copy/download/fullscreen toolbar.

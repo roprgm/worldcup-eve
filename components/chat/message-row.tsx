@@ -8,6 +8,7 @@ import {
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
+import { MessageWidgets } from "@/components/chat/message-widgets";
 import { messageText, questionPart } from "@/components/chat/messages";
 
 export function MessageRow({
@@ -60,6 +61,7 @@ function AssistantBody({ message }: { message: EveMessage }) {
     <div className="flex flex-col gap-3">
       {question ? <QuestionPrompt part={question} /> : null}
       {text ? <Response>{text}</Response> : null}
+      <MessageWidgets message={message} />
     </div>
   );
 }

@@ -19,6 +19,11 @@ the relevant guide before changing agent code.
   piece before the component that composes it. Extract sub-components freely — even single-use ones —
   to keep each one small and avoid deeply nested JSX conditionals.
 
+## Package manager
+
+- Use Bun. Install with `bun install` and run scripts with `bun run <script>`. Never use npm,
+  pnpm, or yarn.
+
 ## Code style
 
 - Keep code, comments, and docs in English, and prefer the simplest useful implementation.
