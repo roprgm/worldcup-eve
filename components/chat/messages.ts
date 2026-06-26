@@ -51,17 +51,11 @@ const toolActivityLabels: Record<string, string> = {
   get_group_standings: "Checking the standings",
   get_match_forecast: "Checking the predictions",
   get_knockout_forecast: "Checking the predictions",
-};
-
-const skillActivityLabels: Record<string, string> = {
-  worldcup_schedule: "Checking the schedule",
-  worldcup_venues: "Checking the venues",
+  get_match_schedule: "Checking the schedule",
+  get_match_venues: "Checking the venues",
 };
 
 function getToolActivityLabel(toolName: string): string | undefined {
-  if (toolName === "load_skill") {
-    return skillActivityLabels[toolName];
-  }
   return toolActivityLabels[toolName];
 }
 
