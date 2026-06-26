@@ -2,13 +2,12 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
@@ -19,49 +18,28 @@ type ChatContextValue = {
   agent: Agent;
   send: (message: string) => void;
   start: (message: string) => void;
+  newChat: () => void;
 };
 
 type SavedChat = { session?: Agent["session"]; events?: Agent["events"] };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-// The chat path you were last in. Written by the nav, read here to restore.
-export const LAST_CHAT_KEY = "wc26:last-chat-path";
-
-const chatKey = (id: string) => `wc26-chat:${id}`;
+const STORAGE_KEY = "wc26-chat";
 const newChatId = () => Math.random().toString(36).slice(2, 10);
 
-/** The chat id in a `/chat/<id>` path, or `null` anywhere else. */
-function chatIdFromPath(pathname: string): string | null {
-  return pathname.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
-}
-
-function loadChat(id: string): SavedChat | null {
-  const raw = localStorage.getItem(chatKey(id));
+// Restore the last chat everywhere except `/`, which is always a fresh prompt.
+function loadChat(): SavedChat | null {
+  if (typeof window === "undefined" || window.location.pathname === "/") {
+    return null;
+  }
+  const raw = localStorage.getItem(STORAGE_KEY);
   return raw ? (JSON.parse(raw) as SavedChat) : null;
 }
 
-function saveChat(id: string, chat: SavedChat): void {
-  localStorage.setItem(chatKey(id), JSON.stringify(chat));
-}
-
-// Which chat to seed the agent with on mount (only matters after a full load).
-// On a non-chat page, restore the last chat so the Chat link can stay client-side.
-function chatToRestore(): SavedChat | null {
-  if (typeof window === "undefined") return null;
-  const path = window.location.pathname;
-  const fromPath = chatIdFromPath(path);
-  if (fromPath) return loadChat(fromPath);
-  if (path === "/") return null;
-  const lastPath = sessionStorage.getItem(LAST_CHAT_KEY);
-  const lastId = lastPath ? chatIdFromPath(lastPath) : null;
-  return lastId ? loadChat(lastId) : null;
-}
-
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const id = chatIdFromPath(usePathname());
-
-  const [restored] = useState(chatToRestore);
+  const router = useRouter();
+  const [restored] = useState(loadChat);
 
   const agent = useEveAgent({
     initialSession: restored?.session,
@@ -72,12 +50,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
+    onFinish: ({ session, events }) =>
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ session, events })),
   });
-
-  const { session, events } = agent;
-  useEffect(() => {
-    if (id) saveChat(id, { session, events });
-  }, [id, session, events]);
 
   const send = useCallback(
     (text: string) => {
@@ -106,8 +81,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [agent, send],
   );
 
+  const newChat = useCallback(() => {
+    agent.reset();
+    router.push("/");
+  }, [agent, router]);
+
   return (
-    <ChatContext.Provider value={{ agent, send, start }}>
+    <ChatContext.Provider value={{ agent, send, start, newChat }}>
       {children}
     </ChatContext.Provider>
   );

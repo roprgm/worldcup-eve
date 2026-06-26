@@ -4,18 +4,16 @@ import { cn } from "cnfast";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LAST_CHAT_KEY } from "@/components/chat/chat-context";
 
-const isChatPath = (path: string) => path === "/" || path.startsWith("/chat/");
+const LAST_CHAT_KEY = "wc26:last-chat-path";
 
-/**
- * The Chat link returns to the chat you were last in (`/` or `/chat/<id>`).
- */
-function useLastChatHref(pathname: string) {
+// The Chat link points at the chat you were last in: the current `/chat/<id>`,
+// or the one remembered across reloads, falling back to `/`.
+function useChatHref(pathname: string) {
   const [href, setHref] = useState("/");
 
   useEffect(() => {
-    if (isChatPath(pathname)) {
+    if (pathname.startsWith("/chat/")) {
       sessionStorage.setItem(LAST_CHAT_KEY, pathname);
       setHref(pathname);
     } else {
@@ -35,22 +33,16 @@ const linkClass = (active: boolean) =>
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
   const pathname = usePathname();
-  const chatHref = useLastChatHref(pathname);
+  const chatHref = useChatHref(pathname);
+  const onPredictions = pathname.startsWith("/predictions");
 
   return (
     <nav className="flex items-center gap-0.5">
-      {/* prefetch off: the chat renders from the in-memory agent, not route data. */}
-      <Link
-        href={chatHref}
-        prefetch={false}
-        className={linkClass(isChatPath(pathname))}
-      >
+      {/* prefetch the dynamic chat route so its JS chunks are ready on click. */}
+      <Link href={chatHref} prefetch className={linkClass(!onPredictions)}>
         Chat
       </Link>
-      <Link
-        href="/predictions"
-        className={linkClass(pathname === "/predictions")}
-      >
+      <Link href="/predictions" className={linkClass(onPredictions)}>
         Predictions
       </Link>
     </nav>
