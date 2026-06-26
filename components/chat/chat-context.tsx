@@ -2,7 +2,6 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
-import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -18,7 +17,6 @@ type ChatContextValue = {
   agent: Agent;
   send: (message: string) => void;
   start: (message: string) => void;
-  newChat: () => void;
 };
 
 type SavedChat = { session?: Agent["session"]; events?: Agent["events"] };
@@ -38,7 +36,6 @@ function loadChat(): SavedChat | null {
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const [restored] = useState(loadChat);
 
   const agent = useEveAgent({
@@ -81,13 +78,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [agent, send],
   );
 
-  const newChat = useCallback(() => {
-    agent.reset();
-    router.push("/");
-  }, [agent, router]);
-
   return (
-    <ChatContext.Provider value={{ agent, send, start, newChat }}>
+    <ChatContext.Provider value={{ agent, send, start }}>
       {children}
     </ChatContext.Provider>
   );
