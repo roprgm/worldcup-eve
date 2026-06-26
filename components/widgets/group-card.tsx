@@ -80,15 +80,14 @@ function PredictedBadge() {
 
 function ResultCell({ result }: { result: GroupCardResult }) {
   const live = result.status === "live";
+  const predicted = result.status === "predicted";
 
   return (
     <div
       className={cn(
         "w-full rounded px-0.5 py-1.5 text-center text-[11px] font-semibold leading-none tabular-nums whitespace-nowrap select-none",
         // Speculative scorelines are a faint grey; confirmed and live ones stay white.
-        result.status === "predicted"
-          ? "text-foreground/45"
-          : "text-foreground",
+        predicted ? "text-foreground/45" : "text-foreground",
       )}
       title={result.title}
     >
@@ -102,6 +101,12 @@ function ResultCell({ result }: { result: GroupCardResult }) {
         <span className="relative">{result.text}</span>
         {live && (
           <LiveDot className="absolute left-full top-1/2 ml-1.5 size-1.5 -translate-y-1/2" />
+        )}
+        {predicted && (
+          <span
+            aria-hidden
+            className="absolute left-full top-1/2 ml-1.5 size-1.5 -translate-y-1/2 rounded-full bg-foreground/45"
+          />
         )}
       </span>
     </div>
