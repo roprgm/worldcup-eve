@@ -38,8 +38,7 @@ export function SiteNav() {
 
   return (
     <nav className="flex items-center gap-0.5">
-      {/* prefetch the dynamic chat route so its JS chunks are ready on click. */}
-      <Link href={chatHref} prefetch className={linkClass(!onPredictions)}>
+      <Link href={chatHref} className={linkClass(!onPredictions)}>
         Chat
       </Link>
       <Link href="/predictions" className={linkClass(onPredictions)}>

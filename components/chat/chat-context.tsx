@@ -70,10 +70,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (text: string) => {
       if (!text.trim()) return;
       agent.reset(); // start fresh even if a previous chat is still in context
+      send(text); // optimistic message lands before the view swaps in
       // Update the URL without a route navigation: the conversation already
       // renders from shared context, so a real navigation only adds a flicker.
       window.history.pushState(null, "", `/chat/${newChatId()}`);
-      send(text);
     },
     [agent, send],
   );
