@@ -5,10 +5,6 @@ import type { ReactNode } from "react";
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// rank · team · Pts · GD · GF · marker. Shared so the header and rows align.
-const RANKING_GRID =
-  "grid items-center gap-x-1.5 grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_1.25rem]";
-
 // Stable keys for the skeleton placeholder rows (one per ranked third / slot).
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
 const SLOT_SKELETON = Array.from({ length: 8 }, (_, i) => `slot-${i}`);
@@ -81,14 +77,30 @@ function ColumnLabel({
   );
 }
 
-function RankingRow({ row }: { row: ThirdRankingRow }) {
+// rank · team · Pts · GD · GF · marker — shared by the header and every row.
+function RankingGrid({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <div
       className={cn(
-        RANKING_GRID,
-        "py-1 tabular-nums",
-        !row.qualifies && "opacity-45",
+        "grid grid-cols-[1rem_minmax(0,1fr)_1.75rem_1.75rem_1.75rem_1.25rem] items-center gap-x-1.5",
+        className,
       )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function RankingRow({ row }: { row: ThirdRankingRow }) {
+  return (
+    <RankingGrid
+      className={cn("py-1 tabular-nums", !row.qualifies && "opacity-45")}
     >
       <span className="text-right text-[11px] text-muted-foreground">
         {row.rank}
@@ -116,7 +128,7 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
           <X className="size-3 text-muted-foreground/45" />
         )}
       </span>
-    </div>
+    </RankingGrid>
   );
 }
 
@@ -124,14 +136,14 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   return (
     <Card title="Best thirds" hint="as things stand">
       <div className="flex flex-col px-2 py-1.5">
-        <div className={cn(RANKING_GRID, "pb-1")}>
+        <RankingGrid className="pb-1">
           <span />
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-right">Pts</ColumnLabel>
           <ColumnLabel className="text-right">GD</ColumnLabel>
           <ColumnLabel className="text-right">GF</ColumnLabel>
           <span />
-        </div>
+        </RankingGrid>
         {props.loading
           ? RANKING_SKELETON.map((key) => (
               <div key={key} className="py-1">
