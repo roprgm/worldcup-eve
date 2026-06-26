@@ -1,13 +1,14 @@
 import { cn } from "cnfast";
 import type { ComponentProps } from "react";
 
-/** A message surface. Sized to its content and aligned by the parent Message;
- *  the clipped bottom-right corner gives the user bubble its "tail". */
+/** A message surface — sized to its content, aligned by the parent Message,
+ *  clipped to its radius. Following shadcn's bubble: a clean, uniform corner
+ *  and the surface carried by the fill rather than a border. */
 export function Bubble({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "w-fit max-w-[85%] rounded-xl rounded-br-sm border border-surface-divider bg-surface-2 sm:max-w-[80%]",
+        "w-fit max-w-[80%] overflow-hidden rounded-2xl bg-surface-2",
         className,
       )}
       {...props}
@@ -19,7 +20,7 @@ export function BubbleContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "px-3 py-1.5 text-base leading-relaxed whitespace-pre-wrap text-foreground",
+        "px-3 py-2 text-base leading-relaxed whitespace-pre-wrap break-words text-foreground",
         className,
       )}
       {...props}

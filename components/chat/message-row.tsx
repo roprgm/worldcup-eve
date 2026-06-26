@@ -64,7 +64,7 @@ function AssistantBody({ message }: { message: EveMessage }) {
   const question = questionPart(message);
   const text = messageText(message);
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {question ? <QuestionPrompt part={question} /> : null}
       {text ? <Response>{text}</Response> : null}
       <MessageWidgets message={message} />

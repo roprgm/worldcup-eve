@@ -55,7 +55,7 @@ export function ConversationItem({
   return (
     <MessageScroller.Item
       scrollAnchor={anchor}
-      className={cn("pb-6", className)}
+      className={cn("pb-8", className)}
       {...props}
     />
   );
