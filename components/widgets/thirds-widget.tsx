@@ -60,7 +60,6 @@ function rankingRows(results: Results): ThirdRankingRow[] {
       goalsFor: t.goalsFor,
       segments,
       chance: segments.reduce((sum, s) => sum + s.prob, 0),
-      qualifies: t.qualifies,
     };
   });
 }

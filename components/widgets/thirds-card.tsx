@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cnfast";
-import { Check, ChevronRight, X } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
@@ -29,7 +29,6 @@ export interface ThirdRankingRow {
   // Per-slot chances (sorted, biggest first); their sum is the qualify chance.
   segments: ThirdSlotChance[];
   chance: number; // 0–1, probability of finishing among the best eight thirds
-  qualifies: boolean;
 }
 
 export interface ThirdOddsCandidate {
@@ -89,11 +88,11 @@ function ColumnLabel({
   );
 }
 
-// rank · team · group · Pts · GD · GF · chance · marker · disclosure — shared by
-// the header, every row and the expanded breakdown so they all line up. The
+// rank · team · group · Pts · GD · GF · chance · disclosure — shared by the
+// header, every row and the expanded breakdown so they all line up. The
 // fixed-width code keeps the chance bars starting at one x.
 const RANKING_GRID =
-  "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_1.25rem_0.75rem] items-center gap-x-1.5";
+  "grid grid-cols-[1rem_3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_0.75rem] items-center gap-x-1.5";
 
 function RankingGrid({
   className,
@@ -166,7 +165,6 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
           </span>
           <ChanceBar value={s.prob} className="bg-pick/70" />
           <span />
-          <span />
         </div>
       ))}
     </div>
@@ -187,7 +185,7 @@ function RankingRow({
   const isOpen = expandable && open;
 
   return (
-    <div className={cn(!row.qualifies && "opacity-45")}>
+    <div>
       <button
         type="button"
         disabled={!expandable}
@@ -226,13 +224,6 @@ function RankingRow({
           {row.goalsFor}
         </span>
         <ChanceBar value={row.chance} />
-        <span className="flex justify-center">
-          {row.qualifies ? (
-            <Check className="size-3 text-pick" strokeWidth={3} />
-          ) : (
-            <X className="size-3 text-muted-foreground/45" />
-          )}
-        </span>
         <span className="flex justify-center">
           {expandable && (
             <ChevronRight
@@ -275,7 +266,6 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
           <ColumnLabel className="text-right">GD</ColumnLabel>
           <ColumnLabel className="text-right">GF</ColumnLabel>
           <ColumnLabel className="pl-1.5">Chance</ColumnLabel>
-          <span />
           <span />
         </RankingGrid>
         {props.loading
