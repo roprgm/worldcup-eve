@@ -1,14 +1,16 @@
 import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
-import { Fragment } from "react";
+import type { ReactNode } from "react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // rank · team · Pts · GD · GF · marker
-const RANKING_COLUMNS =
-  "1.25rem minmax(0,1fr) 1.75rem 1.75rem 1.75rem 1.25rem";
-const QUALIFY_CUT = 8; // the best eight third-placed teams reach the Round of 32
+const RANKING_COLUMNS = "1rem minmax(0,1fr) 1.75rem 1.75rem 1.75rem 1.25rem";
+
+// Stable keys for the skeleton placeholder rows (one per ranked third / slot).
+const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
+const SLOT_SKELETON = Array.from({ length: 8 }, (_, i) => `slot-${i}`);
 
 export interface ThirdRankingRow {
   group: string; // group letter
@@ -42,7 +44,7 @@ function Card({
 }: {
   title: string;
   hint?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
@@ -63,7 +65,7 @@ function ColumnLabel({
   children,
   className,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -82,7 +84,7 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
   return (
     <div
       className={cn(
-        "grid items-center gap-x-2 px-1.5 py-1 tabular-nums",
+        "grid items-center gap-x-1.5 py-1 tabular-nums",
         !row.qualifies && "opacity-45",
       )}
       style={{ gridTemplateColumns: RANKING_COLUMNS }}
@@ -117,24 +119,12 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
   );
 }
 
-function CutLine() {
-  return (
-    <div className="flex items-center gap-2 px-2 py-1">
-      <span className="h-px flex-1 bg-border" />
-      <span className="text-[9px] font-medium tracking-widest text-muted-foreground/60 uppercase">
-        best 8 qualify
-      </span>
-      <span className="h-px flex-1 bg-border" />
-    </div>
-  );
-}
-
 export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   return (
     <Card title="Best thirds" hint="as things stand">
-      <div className="flex flex-col px-1.5 py-1.5">
+      <div className="flex flex-col px-2 py-1.5">
         <div
-          className="grid items-center gap-x-2 px-1.5 pb-1"
+          className="grid items-center gap-x-1.5 pb-1"
           style={{ gridTemplateColumns: RANKING_COLUMNS }}
         >
           <span />
@@ -145,17 +135,12 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
           <span />
         </div>
         {props.loading
-          ? Array.from({ length: 12 }, (_, i) => (
-              <div key={i} className="px-1.5 py-1">
+          ? RANKING_SKELETON.map((key) => (
+              <div key={key} className="py-1">
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
-          : props.rows.map((row, i) => (
-              <Fragment key={row.group}>
-                {i === QUALIFY_CUT && <CutLine />}
-                <RankingRow row={row} />
-              </Fragment>
-            ))}
+          : props.rows.map((row) => <RankingRow key={row.group} row={row} />)}
       </div>
     </Card>
   );
@@ -163,7 +148,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
 
 function SlotRow({ row }: { row: ThirdSlotRow }) {
   return (
-    <div className="flex items-center gap-2 px-2.5 py-1.5 text-[12px]">
+    <div className="flex items-center gap-2 px-2 py-1.5 text-[12px]">
       <span className="w-16 shrink-0 text-muted-foreground">
         Winner {row.winner}
       </span>
@@ -185,8 +170,8 @@ export function ThirdsSlotsCard(props: ThirdsSlotsCardProps) {
     <Card title="Round of 32" hint="third-place slots">
       <div className="flex flex-col py-1">
         {props.loading
-          ? Array.from({ length: 8 }, (_, i) => (
-              <div key={i} className="px-2.5 py-1.5">
+          ? SLOT_SKELETON.map((key) => (
+              <div key={key} className="px-2 py-1.5">
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
