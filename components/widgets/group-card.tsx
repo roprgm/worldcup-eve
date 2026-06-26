@@ -23,7 +23,6 @@ export function groupGridColumns(count: number): string {
 interface TeamSummary {
   code: string;
   name?: string;
-  confirmed?: boolean;
 }
 
 interface GroupCardResult {
@@ -69,11 +68,8 @@ function LiveBadge() {
 
 function PredictedBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-amber-400">
-      <span
-        aria-hidden
-        className="size-1.5 shrink-0 rounded-full bg-amber-400"
-      />
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-sky-400">
+      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-sky-400" />
       Predicted
     </span>
   );
@@ -86,8 +82,8 @@ function ResultCell({ result }: { result: GroupCardResult }) {
     <div
       className={cn(
         "w-full rounded px-0.5 py-1.5 text-center text-[11px] font-semibold leading-none tabular-nums whitespace-nowrap select-none",
-        // Speculative scorelines are amber; confirmed and live ones stay white.
-        result.status === "predicted" ? "text-amber-400" : "text-foreground",
+        // Speculative scorelines are blue; confirmed and live ones stay white.
+        result.status === "predicted" ? "text-sky-400" : "text-foreground",
       )}
       title={result.title}
     >
@@ -219,10 +215,7 @@ export function GroupCard(props: GroupCardProps) {
             </span>
             <Flag code={row.team.code} size={16} />
             <span
-              className={cn(
-                "truncate text-[12px] font-semibold tracking-wide",
-                row.team.confirmed && "text-pick",
-              )}
+              className="truncate text-[12px] font-semibold tracking-wide"
               title={row.team.name}
             >
               {row.team.code}

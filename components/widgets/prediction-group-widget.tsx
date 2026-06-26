@@ -7,9 +7,6 @@ import type { MatchStatus, Results } from "@/lib/results";
 import { type GroupLetter, groupMatches, teamById } from "@/lib/tournament";
 import { computeStandings, type Scores } from "@/lib/tournament/standings";
 
-// Match the bracket's threshold: a market this lopsided is treated as decided.
-const QUALIFIED = 0.999;
-
 type GroupFixture = (typeof groupMatches)[number];
 type ResultStatus = "live" | "final" | "predicted";
 
@@ -69,7 +66,6 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
   const standings = computeStandings(group.letter, live.groupScores);
   const columns = standings.map((s) => s.teamId);
   const fixtures = groupMatches.filter((m) => m.group === group.letter);
-  const advanceOf = new Map(group.teams.map((t) => [t.code, t.advance]));
   const matchOf = (x: string, y: string) =>
     fixtures.find(
       (m) =>
@@ -84,7 +80,6 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
       team: {
         code: team.id,
         name: team.name,
-        confirmed: (advanceOf.get(standing.teamId) ?? 0) >= QUALIFIED,
       },
       dimmed: index >= 3,
       goalDiff:

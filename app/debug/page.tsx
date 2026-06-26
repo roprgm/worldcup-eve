@@ -22,7 +22,6 @@ interface FakeMatch {
 interface FakeTeam {
   code: string;
   name?: string;
-  confirmed?: boolean;
 }
 
 interface FakeGroup {
@@ -79,7 +78,6 @@ function buildGroup(group: FakeGroup) {
       team: {
         code,
         name: teamOf.get(code)?.name,
-        confirmed: teamOf.get(code)?.confirmed,
       },
       dimmed: index >= 3,
       goalDiff: gd > 0 ? `+${gd}` : String(gd),
@@ -149,12 +147,7 @@ const HAS_LIVE: FakeGroup = {
 
 const FINISHED: FakeGroup = {
   title: "D — Finished group",
-  teams: [
-    { code: "ARG", confirmed: true },
-    { code: "MEX", confirmed: true },
-    { code: "KOR" },
-    { code: "AUS" },
-  ],
+  teams: [{ code: "ARG" }, { code: "MEX" }, { code: "KOR" }, { code: "AUS" }],
   matches: [
     { home: "ARG", away: "AUS", h: 2, a: 0, status: "final" },
     { home: "MEX", away: "KOR", h: 1, a: 0, status: "final" },
@@ -192,7 +185,7 @@ export default function DebugPage() {
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Notice icon={Info} tone="amber">
           Temporary debug page. White = confirmed (real points and results),
-          amber = predicted (speculative), live = white text with a red pulse.
+          blue = predicted (speculative), live = white text with a red pulse.
         </Notice>
         <Section title="Group widget — situations">
           <CardGrid>
