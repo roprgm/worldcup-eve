@@ -23,7 +23,7 @@ function card(match: MatchResult) {
 
 export default defineTool({
   description:
-    "Show the user match cards (teams, score, live status or kickoff). Pass scope 'today' or 'live' for the day's slate or the matches in progress, or specific match numbers. The go-to for 'what's playing now / today'. Best for a handful of matches; for a long fixture list use get_match_schedule instead.",
+    "Show the user cards for matches — pass scope 'today' or 'live', or specific match numbers. The go-to for 'what's playing now / today'. For a long fixture list, use get_match_schedule instead.",
   inputSchema: z.object({
     scope: z
       .enum(["today", "live"])
@@ -56,7 +56,10 @@ export default defineTool({
       return { matches: [], note: "No matches found." };
 
     return {
-      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
+      // The cards carry every detail, so the model should only top them with a
+      // one-line intro — listing the matches again is the common failure here.
+      shownAsWidget:
+        "The cards already show each match's teams, score and kickoff. Reply with just one short intro line (e.g. \"Here are today's matches\") — do not list them.",
       matches: selected.map(card),
     };
   },
