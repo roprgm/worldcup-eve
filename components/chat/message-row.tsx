@@ -55,7 +55,7 @@ export function ActivityRow({ label }: { label: string }) {
         <BallIcon className="size-[15px]" />
       </MessageAvatar>
       <MessageContent>
-        <span className="shimmer flex min-h-7 items-center text-[0.8125rem] leading-snug text-subtle-foreground [--shimmer-color:var(--foreground)]">
+        <span className="shimmer flex min-h-7 items-center text-[0.8125rem] leading-snug">
           {label}
         </span>
       </MessageContent>

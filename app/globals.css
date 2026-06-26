@@ -125,15 +125,6 @@
       transform: scale(1);
     }
   }
-
-  @keyframes tw-shimmer {
-    from {
-      background-position: 100% 0;
-    }
-    to {
-      background-position: 0 0;
-    }
-  }
 }
 
 @layer base {
@@ -230,53 +221,26 @@
   z-index: 0;
 }
 
-/* shimmer — shadcn's text-sheen utility (keyframe registered in @theme above).
-   Base is currentColor; set --shimmer-color for the highlight. */
-@property --shimmer-angle {
-  syntax: "<angle>";
-  inherits: true;
-  initial-value: 20deg;
-}
-@property --shimmer-image {
-  syntax: "*";
-  inherits: false;
-}
-@property --shimmer-text-fill {
-  syntax: "*";
-  inherits: false;
-}
-
-@utility shimmer {
-  --_spread: var(--shimmer-spread, calc(3ch + 40px));
-  --_base: currentColor;
-  --_highlight: var(
-    --shimmer-color,
-    oklch(from currentColor l c h / calc(alpha * 0.2))
+/* shimmer — moving sheen for live-status text (the activity label). */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--subtle-foreground) 0%,
+    var(--foreground) 25%,
+    var(--subtle-foreground) 50%
   );
-
-  background-image: var(
-    --shimmer-image,
-    linear-gradient(
-      calc(90deg + var(--shimmer-angle)),
-      var(--_base) calc(50% - var(--_spread)),
-      color-mix(in oklch, var(--_highlight), var(--_base) 50%)
-        calc(50% - var(--_spread) * 0.5),
-      var(--_highlight) 50%,
-      color-mix(in oklch, var(--_highlight), var(--_base) 50%)
-        calc(50% + var(--_spread) * 0.5),
-      var(--_base) calc(50% + var(--_spread))
-    )
-  );
-  background-repeat: no-repeat;
-  background-size: calc(200% + var(--_spread) * 2) 100%;
-  background-position: 0 0;
-  background-clip: text;
+  background-size: 200% 100%;
   -webkit-background-clip: text;
-  -webkit-text-fill-color: var(--shimmer-text-fill, transparent);
-  animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
-
-  &:where([dir="rtl"], [dir="rtl"] *) {
-    animation-direction: reverse;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.4s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }
 
@@ -292,6 +256,6 @@
   /* Keep live-status text legible once the sheen is frozen. */
   .shimmer {
     background: none;
-    -webkit-text-fill-color: currentColor;
+    color: var(--muted-foreground);
   }
 }
