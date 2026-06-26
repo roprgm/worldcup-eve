@@ -2,13 +2,11 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
-import { usePathname } from "next/navigation";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
@@ -21,35 +19,39 @@ type ChatContextValue = {
   start: (message: string) => void;
 };
 
-type SavedChat = { session?: Agent["session"]; events?: Agent["events"] };
+type SavedChat = {
+  id: string;
+  session?: Agent["session"];
+  events?: Agent["events"];
+};
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-const chatKey = (id: string) => `wc26-chat:${id}`;
+const STORAGE_KEY = "wc26-chat";
 const newChatId = () => Math.random().toString(36).slice(2, 10);
+const chatIdFromPath = (path: string) =>
+  path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-/** The chat id in a `/chat/<id>` path, or `null` anywhere else. */
-function chatIdFromPath(pathname: string): string | null {
-  return pathname.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
-}
-
-function loadChat(id: string): SavedChat | null {
-  const raw = localStorage.getItem(chatKey(id));
-  return raw ? (JSON.parse(raw) as SavedChat) : null;
-}
-
-function saveChat(id: string, chat: SavedChat): void {
-  localStorage.setItem(chatKey(id), JSON.stringify(chat));
+// Restore the saved chat — but only under its own `/chat/<id>` (a fresh id stays
+// empty) or on a non-chat page (so the Chat link can return to it). `/` is fresh.
+function loadChat(): SavedChat | null {
+  if (typeof window === "undefined") return null;
+  const path = window.location.pathname;
+  if (path === "/") return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  let saved: SavedChat;
+  try {
+    saved = JSON.parse(raw) as SavedChat;
+  } catch {
+    return null;
+  }
+  const urlId = chatIdFromPath(path);
+  return urlId && urlId !== saved.id ? null : saved;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const id = chatIdFromPath(usePathname());
-
-  const [restored] = useState(() =>
-    typeof window === "undefined"
-      ? null
-      : loadChat(chatIdFromPath(window.location.pathname) ?? ""),
-  );
+  const [restored] = useState(loadChat);
 
   const agent = useEveAgent({
     initialSession: restored?.session,
@@ -60,12 +62,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
+    // Persist when a turn settles, keyed by the chat in the URL. Skip empty
+    // turns so a failed first message can't clobber the saved chat.
+    onFinish: ({ session, events }) => {
+      const id = chatIdFromPath(window.location.pathname);
+      if (id && events.length > 0) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ id, session, events }),
+        );
+      }
+    },
   });
-
-  const { session, events } = agent;
-  useEffect(() => {
-    if (id) saveChat(id, { session, events });
-  }, [id, session, events]);
 
   const send = useCallback(
     (text: string) => {
@@ -86,10 +94,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (text: string) => {
       if (!text.trim()) return;
       agent.reset(); // start fresh even if a previous chat is still in context
+      send(text); // optimistic message lands before the view swaps in
       // Update the URL without a route navigation: the conversation already
       // renders from shared context, so a real navigation only adds a flicker.
       window.history.pushState(null, "", `/chat/${newChatId()}`);
-      send(text);
     },
     [agent, send],
   );

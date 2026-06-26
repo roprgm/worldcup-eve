@@ -1,13 +1,9 @@
-"use client";
+import { ChatContent } from "@/app/chat/[id]/chat-content";
 
-import { useEffect, useState } from "react";
-import { ChatView } from "@/components/chat/chat-view";
+// The id is meaningless on the server (it only keys client-side state), so serve
+// one static shell for every chat instead of rendering each id on demand.
+export const dynamic = "force-static";
 
 export default function Page() {
-  // Only render on the client to avoid hydration errors from restored chats.
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  if (!ready) return null;
-
-  return <ChatView />;
+  return <ChatContent />;
 }

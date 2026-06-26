@@ -236,7 +236,7 @@ export function MatchWidget({
 }: MatchWidgetProps) {
   return (
     <div className="flex h-36 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="flex h-7 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-foreground/70">
           #{number}
           {phaseLabel ? ` · ${phaseLabel}` : ""}

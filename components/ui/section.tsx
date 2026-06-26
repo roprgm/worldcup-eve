@@ -1,53 +1,20 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
-
-import {
-  CardGrid,
-  CardGridFrame,
-} from "@/app/predictions/components/card-grid";
-import { PredictionMatchCard } from "@/components/widgets/prediction-match-card";
-
 import { cn } from "cnfast";
+import { ChevronRight } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 
-type Candidate = {
-  code: string;
-  probability: number;
-  name?: string;
-};
+import { CardGridFrame } from "@/components/ui/card-grid";
 
-interface MatchSide {
-  label: string;
-  candidates: Candidate[];
-  showAll?: boolean;
-}
-
-interface MatchCardView {
-  number: number;
-  phaseLabel: string;
-  dateTime: string;
-  location?: string;
-  title?: string;
-  home: MatchSide;
-  away: MatchSide;
-}
-
-interface PredictionSectionProps {
+interface SectionProps {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
 }
 
-interface PredictionMatchGridProps {
-  matches: MatchCardView[];
-}
-
-export function PredictionSection({
-  title,
-  children,
-  defaultOpen = true,
-}: PredictionSectionProps) {
+/** A titled, collapsible section with a sticky header. Generic layout — it knows
+ *  nothing about what it wraps. */
+export function Section({ title, children, defaultOpen = true }: SectionProps) {
   const contentId = useId();
   const [open, setOpen] = useState(defaultOpen);
 
@@ -75,15 +42,5 @@ export function PredictionSection({
       </CardGridFrame>
       {open && <div id={contentId}>{children}</div>}
     </section>
-  );
-}
-
-export function PredictionMatchGrid({ matches }: PredictionMatchGridProps) {
-  return (
-    <CardGrid>
-      {matches.map((match) => (
-        <PredictionMatchCard key={match.number} {...match} />
-      ))}
-    </CardGrid>
   );
 }

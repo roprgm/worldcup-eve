@@ -11,9 +11,7 @@ interface CardGridProps {
 }
 
 export function CardGridFrame({ children, className }: CardGridFrameProps) {
-  return (
-    <div className={cn("mx-auto w-full", className)}>{children}</div>
-  );
+  return <div className={cn("mx-auto w-full", className)}>{children}</div>;
 }
 
 export function CardGrid({ children }: CardGridProps) {

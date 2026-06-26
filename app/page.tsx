@@ -1,10 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
-import {
-  Conversation,
-  ConversationContent,
-} from "@/components/ai-elements/conversation";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
@@ -30,7 +27,7 @@ function EmptyState() {
   );
 
   return (
-    <div className="flex min-h-[62dvh] flex-col items-center justify-center py-10 text-center">
+    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-6 text-center">
       <div className="animate-fade-up relative mb-7">
         <div className="wc-halo" />
         <span className="relative flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-foreground">
@@ -80,7 +77,8 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { agent, start } = useChat();
+  const { start } = useChat();
+  const pathname = usePathname();
   const [input, setInput] = useState("");
 
   const handleSubmit = useCallback(() => {
@@ -88,17 +86,15 @@ export default function Page() {
     setInput("");
   }, [start, input]);
 
-  // Once a chat starts the conversation renders here immediately, so the user
-  // sees their message without waiting for the `/chat/[id]` navigation.
-  if (agent.data.messages.length > 0) return <ChatView />;
+  // `start()` swaps in a `/chat/<id>` URL with history.pushState (no route
+  // change), so the chat shows here instantly; render it off that URL.
+  if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Conversation>
-        <ConversationContent>
-          <EmptyState />
-        </ConversationContent>
-      </Conversation>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <EmptyState />
+      </div>
       <Composer
         value={input}
         onChange={setInput}
