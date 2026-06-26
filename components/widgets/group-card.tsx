@@ -1,8 +1,9 @@
+import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Flag } from "@/components/flags";
-
-import { cn } from "cnfast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ResultStatus = "predicted" | "final" | "live";
 type Marker = "advance" | "third" | "none";
@@ -10,6 +11,7 @@ type Marker = "advance" | "third" | "none";
 const GOAL_DIFF_COLUMN_WIDTH = "1.5rem";
 const POINTS_COLUMN_WIDTH = "1.75rem";
 const MARKER_COLUMN_WIDTH = "1.25rem";
+const SKELETON_ROWS = ["a", "b", "c", "d"];
 
 // Team and result columns each take an equal 1fr share so extra width spreads
 // evenly across them; GD/Pts/marker stay fixed and naturally tighter.
@@ -39,11 +41,9 @@ interface GroupCardRow {
   cells: Array<GroupCardResult | null | undefined>;
 }
 
-interface GroupCardProps {
-  title: string;
-  columns: string[];
-  rows: GroupCardRow[];
-}
+type GroupCardProps =
+  | { title: string; loading: true }
+  | { title: string; loading?: false; columns: string[]; rows: GroupCardRow[] };
 
 function LiveDot({ className }: { className?: string }) {
   return (
@@ -113,18 +113,48 @@ function MarkerIcon({ marker }: { marker?: Marker }) {
   return <X className="size-3 text-muted-foreground/45" />;
 }
 
-export function GroupCard({ title, columns, rows }: GroupCardProps) {
-  const live = rows.some((row) =>
-    row.cells.some((cell) => cell?.status === "live"),
-  );
-
+function GroupCardShell({
+  title,
+  live,
+  children,
+}: {
+  title: string;
+  live?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {live && <LiveBadge />}
       </div>
+      {children}
+    </div>
+  );
+}
 
+export function GroupCard(props: GroupCardProps) {
+  // While the data loads the title is already known, so show it for real and
+  // skeleton only the standings rows.
+  if (props.loading) {
+    return (
+      <GroupCardShell title={props.title}>
+        <div className="animate-pulse space-y-2.5 px-3 py-2.5" aria-hidden>
+          {SKELETON_ROWS.map((row) => (
+            <Skeleton key={row} className="h-3 w-full" />
+          ))}
+        </div>
+      </GroupCardShell>
+    );
+  }
+
+  const { title, columns, rows } = props;
+  const live = rows.some((row) =>
+    row.cells.some((cell) => cell?.status === "live"),
+  );
+
+  return (
+    <GroupCardShell title={title} live={live}>
       <div
         className="grid items-center gap-x-1 gap-y-1 px-1.5 py-2"
         style={{
@@ -206,6 +236,6 @@ export function GroupCard({ title, columns, rows }: GroupCardProps) {
           </span>,
         ])}
       </div>
-    </div>
+    </GroupCardShell>
   );
 }

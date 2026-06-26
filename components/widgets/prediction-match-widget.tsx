@@ -5,7 +5,6 @@ import { useMemo } from "react";
 
 import { PredictionMatchCard } from "@/components/widgets/prediction-match-card";
 import { usePredictions } from "@/components/widgets/queries";
-import { MatchCardSkeleton } from "@/components/widgets/widget-skeletons";
 import type { Predictions } from "@/lib/predictions";
 import type { KnockoutMatch, Round, SlotRef } from "@/lib/tournament";
 import { teamById } from "@/lib/tournament";
@@ -55,23 +54,30 @@ function kickoffLabel(kickoffAt: string): string {
   );
 }
 
+// The label, date and venue are static (from the bracket); only the candidates
+// need the market. While it loads, candidates stay `undefined` and the card
+// skeletons just that part.
 function sideFor(
   match: KnockoutMatch,
   side: "home" | "away",
-  predictions: Predictions,
+  predictions: Predictions | undefined,
 ) {
   const ref = match[side];
-  const candidates =
-    predictions.slots.find((s) => s.match === match.number && s.side === side)
-      ?.candidates ?? [];
+  const candidates = predictions
+    ? (
+        predictions.slots.find(
+          (s) => s.match === match.number && s.side === side,
+        )?.candidates ?? []
+      ).map(candidateView)
+    : undefined;
   return {
     label: slotLabel(ref),
-    candidates: candidates.map(candidateView),
+    candidates,
     showAll: showAllCandidates(ref, match.round),
   };
 }
 
-function matchView(match: KnockoutMatch, predictions: Predictions) {
+function matchView(match: KnockoutMatch, predictions: Predictions | undefined) {
   return {
     number: match.number,
     phaseLabel: PHASE_LABEL[match.round],
@@ -83,22 +89,14 @@ function matchView(match: KnockoutMatch, predictions: Predictions) {
   };
 }
 
-/** A single knockout fixture with each side's predicted qualifiers. Fetches the
- *  shared predictions; renders its own skeleton while loading. */
+/** A single knockout fixture with each side's predicted qualifiers. The header
+ *  and slot labels render immediately; the candidates fill in with the market. */
 export function PredictionMatchWidget({ match }: { match: KnockoutMatch }) {
   const predictions = usePredictions();
   const view = useMemo(
-    () => (predictions ? matchView(match, predictions) : null),
+    () => matchView(match, predictions),
     [match, predictions],
   );
-
-  if (!view) {
-    return (
-      <div className="animate-pulse" aria-hidden>
-        <MatchCardSkeleton />
-      </div>
-    );
-  }
 
   return <PredictionMatchCard {...view} />;
 }

@@ -2,7 +2,6 @@
 
 import { GroupCard } from "@/components/widgets/group-card";
 import { usePredictions, useResults } from "@/components/widgets/queries";
-import { GroupCardSkeleton } from "@/components/widgets/widget-skeletons";
 import type { GroupOdds } from "@/lib/predictions";
 import type { MatchStatus, Results } from "@/lib/results";
 import { type GroupLetter, groupMatches, teamById } from "@/lib/tournament";
@@ -115,11 +114,7 @@ export function PredictionGroupWidget({ letter }: { letter: GroupLetter }) {
   const results = useResults();
 
   if (!predictions || !results) {
-    return (
-      <div className="animate-pulse" aria-hidden>
-        <GroupCardSkeleton />
-      </div>
-    );
+    return <GroupCard title={`Group ${letter}`} loading />;
   }
 
   const group = predictions.groups.find((g) => g.letter === letter);

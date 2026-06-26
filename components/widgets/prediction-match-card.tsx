@@ -1,9 +1,11 @@
-import { Flag } from "@/components/flags";
-
 import { cn } from "cnfast";
+
+import { Flag } from "@/components/flags";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_PER_SIDE = 8;
 const MIN_PROBABILITY = 0.01;
+const SKELETON_ROWS = ["a", "b", "c", "d"];
 
 type SideName = "home" | "away";
 
@@ -15,7 +17,8 @@ interface Candidate {
 
 interface MatchSide {
   label: string;
-  candidates: Candidate[];
+  /** `undefined` while the predictions load — the side shows skeleton rows. */
+  candidates?: Candidate[];
   showAll?: boolean;
 }
 
@@ -108,8 +111,23 @@ function CandidateRow({
   );
 }
 
+function SideSkeleton({ side }: { side: SideName }) {
+  return (
+    <div className="animate-pulse space-y-1" aria-hidden>
+      {SKELETON_ROWS.map((row) => (
+        <div key={row} className="flex h-5 items-center gap-1.5">
+          <Skeleton className="size-3.5 shrink-0 rounded-sm" />
+          <Skeleton
+            className={cn("h-2.5 flex-1", side === "away" && "order-first")}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Side({ data, side }: { data: MatchSide; side: SideName }) {
-  const shown = topCandidates(data.candidates, data.showAll);
+  const shown = topCandidates(data.candidates ?? [], data.showAll);
   return (
     <div
       className={cn(
@@ -126,7 +144,9 @@ function Side({ data, side }: { data: MatchSide; side: SideName }) {
         {data.label}
       </p>
       <div className="min-h-[92px] space-y-1">
-        {shown.length === 0 ? (
+        {data.candidates === undefined ? (
+          <SideSkeleton side={side} />
+        ) : shown.length === 0 ? (
           <p
             className={cn(
               "text-[12px] text-muted-foreground/40 italic",
