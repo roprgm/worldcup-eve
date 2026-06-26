@@ -22,8 +22,8 @@ import { buildMatchDetail } from "./results/match-detail"
 import { fetchStandings } from "./results/standings"
 
 const results = await buildResults()
-// → { updatedAt, matches, groupScores, groupStatus,
-//     knockoutPicks, knockoutStatus, settledGroupOrder }
+// → { updatedAt, matches, groupScores, groupStatus, knockoutPicks,
+//     knockoutStatus, settledGroupOrder, bestThirds, thirdSlots }
 
 const detail = await buildMatchDetail(29, true) // match 29, with team stats
 const standings = await fetchStandings()
@@ -42,6 +42,10 @@ match is live.
 | `knockoutPicks` | winner side (`"home"`/`"away"`) of completed knockout matches |
 | `knockoutStatus` | `"live"` / `"final"` per started knockout match |
 | `settledGroupOrder` | final 1st–4th order of groups that are fully played, so the bracket can show real qualifiers instead of market favourites |
+| `bestThirds` | the twelve third-placed teams ranked as things stand (points → GD → GF); the best eight `qualify`. Provisional while any group is unfinished |
+| `thirdSlots` | the eight Round-of-32 third-place matchups those qualifiers imply, via FIFA's allocation table (`tournament`'s `assignThirds`) |
+| `thirdOdds` | per third slot, each group's chance of filling it — uniform over the FIFA combinations still mathematically reachable from the results so far (`possibleThirdSlotOdds`) |
+| `thirdCombosPossible` | how many of the 495 third-place combinations remain reachable |
 
 ## How it works
 

@@ -11,7 +11,7 @@ import { BallIcon } from "@/components/icons";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
-  "Who's favored, Spain or Uruguay?",
+  "Who are the best third-placed teams?",
   "Who is most likely to play in match 100?",
   "Where did Argentina play their last match?",
   "Who got the red card in Belgium vs Iran?",

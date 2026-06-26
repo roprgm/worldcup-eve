@@ -1,26 +1,31 @@
-import {
-  finalMatch,
-  roundLabel,
-  roundMatches,
-  thirdPlaceMatch,
-} from "@/app/predictions/bracket";
 import { CardGrid } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
-import { groupLetters, type KnockoutMatch } from "@/lib/tournament";
+import {
+  groupLetters,
+  knockoutMatches,
+  matchByNumber,
+  type Round,
+} from "@/lib/tournament";
 
-const KNOCKOUT_SECTIONS: {
-  id: string;
-  title: string;
-  matches: KnockoutMatch[];
-}[] = [
-  { id: "R32", title: roundLabel.R32, matches: roundMatches("R32") },
-  { id: "R16", title: roundLabel.R16, matches: roundMatches("R16") },
-  { id: "QF", title: roundLabel.QF, matches: roundMatches("QF") },
-  { id: "SF", title: roundLabel.SF, matches: roundMatches("SF") },
-  { id: "FINALS", title: "Finals", matches: [thirdPlaceMatch, finalMatch] },
+/** A round's matches, ordered by match number. */
+const roundMatches = (round: Round) =>
+  knockoutMatches
+    .filter((m) => m.round === round)
+    .sort((a, b) => a.number - b.number);
+
+const knockoutSections = [
+  { id: "R32", title: "Round of 32", matches: roundMatches("R32") },
+  { id: "R16", title: "Round of 16", matches: roundMatches("R16") },
+  { id: "QF", title: "Quarter-finals", matches: roundMatches("QF") },
+  { id: "SF", title: "Semi-finals", matches: roundMatches("SF") },
+  {
+    id: "FINALS",
+    title: "Finals",
+    matches: [matchByNumber[103], matchByNumber[104]],
+  },
 ];
 
 // This page owns the whole layout: it lays out the sections and places the
@@ -38,7 +43,7 @@ export default function PredictionsPage() {
           </CardGrid>
         </Section>
 
-        {KNOCKOUT_SECTIONS.map((section) => (
+        {knockoutSections.map((section) => (
           <Section key={section.id} title={section.title}>
             <CardGrid>
               {section.matches.map((match) => (
