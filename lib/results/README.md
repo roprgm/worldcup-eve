@@ -44,6 +44,8 @@ match is live.
 | `settledGroupOrder` | final 1st–4th order of groups that are fully played, so the bracket can show real qualifiers instead of market favourites |
 | `bestThirds` | the twelve third-placed teams ranked as things stand (points → GD → GF); the best eight `qualify`. Provisional while any group is unfinished |
 | `thirdSlots` | the eight Round-of-32 third-place matchups those qualifiers imply, via FIFA's allocation table (`tournament`'s `assignThirds`) |
+| `thirdOdds` | per third slot, each group's chance of filling it — uniform over the FIFA combinations still mathematically reachable from the results so far (`possibleThirdSlotOdds`) |
+| `thirdCombosPossible` | how many of the 495 third-place combinations remain reachable |
 
 ## How it works
 

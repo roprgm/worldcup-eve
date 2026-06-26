@@ -9,15 +9,9 @@ import {
 } from "@/components/widgets/thirds-card";
 import type { Results } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
-import {
-  thirdPlaceSlots,
-  uniformThirdSlotOdds,
-} from "@/lib/tournament/third-place";
+import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
-
-// Static baseline odds (uniform over all 495 combinations) and slot hosts.
-const ODDS = uniformThirdSlotOdds();
 const WINNER_BY_MATCH = new Map(
   thirdPlaceSlots.map((s) => [s.match, s.winner]),
 );
@@ -35,15 +29,19 @@ function rankingRows(results: Results): ThirdRankingRow[] {
   }));
 }
 
-// Map each slot's per-group odds onto the group's current third-placed team.
+// Map a slot's per-group odds onto each group's current third-placed team.
 function oddsCandidates(match: number, results: Results): ThirdOddsCandidate[] {
   const teamByGroup = new Map<string, string>(
     results.bestThirds.map((t) => [t.group, t.teamId]),
   );
-  return Object.entries(ODDS[match] ?? {})
+  return Object.entries(results.thirdOdds[match] ?? {})
     .map(([group, probability]) => {
       const code = teamByGroup.get(group) ?? group;
-      return { code, name: teamById[code]?.name, probability };
+      return {
+        code,
+        name: teamById[code]?.name,
+        probability: probability ?? 0,
+      };
     })
     .sort((a, b) => b.probability - a.probability);
 }
@@ -58,7 +56,8 @@ export function ThirdsRankingWidget() {
   );
 }
 
-/** One Round-of-32 third slot with each candidate team's chance (uniform prior). */
+/** One Round-of-32 third slot with each candidate team's chance, uniform over
+ *  the combinations still reachable from the current results. */
 export function ThirdOddsWidget({ match }: { match: number }) {
   const candidates = useResults((results) => oddsCandidates(match, results));
   const host = WINNER_BY_MATCH.get(match) ?? "?";
@@ -66,5 +65,18 @@ export function ThirdOddsWidget({ match }: { match: number }) {
     <ThirdOddsCard host={host} match={match} candidates={candidates} />
   ) : (
     <ThirdOddsCard host={host} match={match} loading />
+  );
+}
+
+/** A one-line note on how many of the 495 combinations remain mathematically
+ *  possible — the population the odds are uniform over. */
+export function ThirdScenariosCaption() {
+  const possible = useResults((r) => r.thirdCombosPossible);
+  if (!possible) return null;
+  return (
+    <p className="px-1 pb-1 text-[11px] text-muted-foreground">
+      Equal odds across the {possible} of 495 combinations still mathematically
+      possible.
+    </p>
   );
 }

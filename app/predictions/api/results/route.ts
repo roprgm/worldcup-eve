@@ -23,6 +23,8 @@ export async function GET() {
         settledGroupOrder: {},
         bestThirds: [],
         thirdSlots: [],
+        thirdOdds: {},
+        thirdCombosPossible: 0,
       },
       { status: 502 },
     );

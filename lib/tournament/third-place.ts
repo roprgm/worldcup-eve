@@ -159,22 +159,44 @@ export type ThirdSlotOdds = Record<
   Partial<Record<GroupLetter, number>>
 >;
 
+export interface ThirdSlotOddsResult {
+  possible: number; // how many of the 495 combinations were counted
+  odds: ThirdSlotOdds;
+}
+
 /**
- * The third-slot odds under a uniform prior over all 495 combinations — every
- * set of eight qualifying groups treated as equally likely. Purely combinatorial:
- * it counts, for each slot, how often each group's third lands there across the
- * table, then divides by 495. Reads only the static allocations — no results, no
- * model — so it's a fixed baseline that a real model would later reweight.
+ * Third-slot odds under a uniform prior over the combinations `keep` accepts —
+ * each kept combination equally likely. `keep` receives one combination's eight
+ * qualifying groups; returning false drops it. Counts, per slot, how often each
+ * group's third lands there across the kept combinations, then normalizes.
  */
-export function uniformThirdSlotOdds(): ThirdSlotOdds {
-  const odds: ThirdSlotOdds = {};
-  for (const slot of thirdPlaceSlots) odds[slot.match] = {};
+export function thirdSlotOdds(
+  keep: (qualifyingGroups: GroupLetter[]) => boolean,
+): ThirdSlotOddsResult {
+  const counts: ThirdSlotOdds = {};
+  for (const slot of thirdPlaceSlots) counts[slot.match] = {};
+  let possible = 0;
   for (const alloc of ALLOCATIONS) {
+    if (!keep([...alloc] as GroupLetter[])) continue;
+    possible++;
     thirdPlaceSlots.forEach((slot, i) => {
       const group = alloc[i] as GroupLetter;
-      const bucket = odds[slot.match];
-      bucket[group] = (bucket[group] ?? 0) + 1 / ALLOCATIONS.length;
+      counts[slot.match][group] = (counts[slot.match][group] ?? 0) + 1;
     });
   }
-  return odds;
+  for (const slot of thirdPlaceSlots) {
+    const bucket = counts[slot.match];
+    for (const group of Object.keys(bucket) as GroupLetter[])
+      bucket[group] = (bucket[group] ?? 0) / possible;
+  }
+  return { possible, odds: counts };
+}
+
+/**
+ * The third-slot odds with every one of the 495 combinations treated as equally
+ * likely. Purely combinatorial baseline — no results, no model — that a real
+ * model (or a feasibility filter) would later narrow.
+ */
+export function uniformThirdSlotOdds(): ThirdSlotOddsResult {
+  return thirdSlotOdds(() => true);
 }

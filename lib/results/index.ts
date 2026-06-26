@@ -13,11 +13,13 @@ import {
 import {
   assignThirds,
   computeStandings,
+  possibleThirdSlotOdds,
   rankThirds,
   type Score,
   type ThirdAssignment,
   type ThirdPlace,
 } from "../tournament/standings";
+import type { ThirdSlotOdds } from "../tournament/third-place";
 
 const API = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
 const DATES = "20260611-20260722";
@@ -83,6 +85,11 @@ export interface Results {
   /** Round-of-32 third-place matchups implied by `bestThirds` via FIFA's
    *  allocation table, keyed by match number. Provisional until the groups end. */
   thirdSlots: ThirdAssignment[];
+  /** Per third slot, each group's chance of filling it — uniform over the
+   *  combinations still mathematically reachable from the current results. */
+  thirdOdds: ThirdSlotOdds;
+  /** How many of the 495 third-place combinations are still reachable. */
+  thirdCombosPossible: number;
 }
 
 interface RawCompetitor {
@@ -181,6 +188,8 @@ export async function buildResults(): Promise<Results> {
       );
   }
 
+  const thirdOdds = possibleThirdSlotOdds(groupScores);
+
   return {
     updatedAt: new Date().toISOString(),
     matches,
@@ -191,5 +200,7 @@ export async function buildResults(): Promise<Results> {
     settledGroupOrder,
     bestThirds: rankThirds(groupScores),
     thirdSlots: assignThirds(groupScores),
+    thirdOdds: thirdOdds.odds,
+    thirdCombosPossible: thirdOdds.possible,
   };
 }
