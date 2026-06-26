@@ -38,7 +38,7 @@ export function Conversation({ children }: { children: ReactNode }) {
         <MessageScroller.Viewport
           data-slot="message-scroller-viewport"
           role="log"
-          className="wc-scroll-fade min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          className="min-h-0 flex-1 mask-b-from-[calc(100%-22px)] mask-b-to-100% overflow-y-auto overscroll-contain"
         >
           <MessageScroller.Content
             data-slot="message-scroller-content"
