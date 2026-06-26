@@ -130,13 +130,36 @@ function ChanceBar({
   );
 }
 
+// Tree guide on the left of a breakdown row: a vertical spine plus a horizontal
+// tick into the row. The last child caps the spine at its centre (└), earlier
+// ones run it past the gap into the next row (├).
+function TreeConnector({ last }: { last: boolean }) {
+  return (
+    <>
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute left-2 top-0 w-px bg-border-strong",
+          last ? "h-1/2" : "h-[calc(100%+0.25rem)]",
+        )}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-2 top-1/2 h-px w-2 -translate-y-1/2 bg-border-strong"
+      />
+    </>
+  );
+}
+
 // The expanded view: one bar per Round-of-32 slot the team could fill, each
 // aligned under the row's chance bar so the parts visibly add up to the whole.
+// Same row height and gap as the main rows so every bar stays equidistant.
 function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
   return (
-    <div className="mt-1 flex flex-col gap-1 rounded-[4px] bg-surface-2/25 py-1.5">
-      {segments.map((s) => (
-        <div key={s.match} className={cn(RANKING_GRID, "h-4")}>
+    <div className="flex flex-col gap-1 pt-1">
+      {segments.map((s, i) => (
+        <div key={s.match} className={cn(RANKING_GRID, "relative h-5")}>
+          <TreeConnector last={i === segments.length - 1} />
           <span />
           <span className="col-span-5 flex items-baseline gap-1.5">
             <span className="text-[11px] text-muted-foreground">
@@ -155,18 +178,26 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
   );
 }
 
-function RankingRow({ row }: { row: ThirdRankingRow }) {
-  const [open, setOpen] = useState(false);
+function RankingRow({
+  row,
+  open,
+  onToggle,
+}: {
+  row: ThirdRankingRow;
+  open: boolean;
+  onToggle: () => void;
+}) {
   // Only worth expanding when the chance is split across more than one slot.
   const expandable = row.segments.length > 1;
+  const isOpen = expandable && open;
 
   return (
     <div className={cn(!row.qualifies && "opacity-45")}>
       <button
         type="button"
         disabled={!expandable}
-        aria-expanded={expandable ? open : undefined}
-        onClick={() => setOpen((v) => !v)}
+        aria-expanded={expandable ? isOpen : undefined}
+        onClick={onToggle}
         className={cn(
           RANKING_GRID,
           "h-5 w-full rounded-[3px] text-left tabular-nums",
@@ -212,18 +243,32 @@ function RankingRow({ row }: { row: ThirdRankingRow }) {
             <ChevronRight
               className={cn(
                 "size-3 text-muted-foreground/50 transition-transform",
-                open && "rotate-90",
+                isOpen && "rotate-90",
               )}
             />
           )}
         </span>
       </button>
-      {expandable && open && <SlotBreakdown segments={row.segments} />}
+      {expandable && (
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-200 ease-out",
+            isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <SlotBreakdown segments={row.segments} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
+  // One breakdown open at a time: opening a row collapses any other.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+
   return (
     <Card title="Best thirds" hint="as things stand">
       <div className="flex flex-col gap-1 px-2 py-2">
@@ -244,7 +289,16 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
                 <Skeleton className="h-4 w-full" />
               </div>
             ))
-          : props.rows.map((row) => <RankingRow key={row.group} row={row} />)}
+          : props.rows.map((row) => (
+              <RankingRow
+                key={row.group}
+                row={row}
+                open={openGroup === row.group}
+                onToggle={() =>
+                  setOpenGroup((g) => (g === row.group ? null : row.group))
+                }
+              />
+            ))}
       </div>
     </Card>
   );
