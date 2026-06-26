@@ -21,6 +21,8 @@ export async function GET() {
         knockoutPicks: {},
         knockoutStatus: {},
         settledGroupOrder: {},
+        bestThirds: [],
+        thirdSlots: [],
       },
       { status: 502 },
     );
