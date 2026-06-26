@@ -110,7 +110,7 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
 
 /** One group's standings table — real scores where played, market predictions
  *  elsewhere. Fetches the shared predictions/results; renders its own skeleton. */
-export function PredictionGroup({ letter }: { letter: GroupLetter }) {
+export function PredictionGroupWidget({ letter }: { letter: GroupLetter }) {
   const predictions = usePredictions();
   const results = useResults();
 

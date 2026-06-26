@@ -6,9 +6,9 @@ import {
 } from "@/app/predictions/bracket";
 import { CardGrid } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
-import { PredictionChampion } from "@/components/widgets/prediction-champion";
-import { PredictionGroup } from "@/components/widgets/prediction-group";
-import { PredictionMatch } from "@/components/widgets/prediction-match";
+import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
+import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
+import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { groupLetters, type KnockoutMatch } from "@/lib/tournament";
 
 const KNOCKOUT_SECTIONS: {
@@ -33,7 +33,7 @@ export default function PredictionsPage() {
         <Section title="Groups">
           <CardGrid>
             {groupLetters.map((letter) => (
-              <PredictionGroup key={letter} letter={letter} />
+              <PredictionGroupWidget key={letter} letter={letter} />
             ))}
           </CardGrid>
         </Section>
@@ -42,14 +42,14 @@ export default function PredictionsPage() {
           <Section key={section.id} title={section.title}>
             <CardGrid>
               {section.matches.map((match) => (
-                <PredictionMatch key={match.number} match={match} />
+                <PredictionMatchWidget key={match.number} match={match} />
               ))}
             </CardGrid>
           </Section>
         ))}
 
         <Section title="Champion">
-          <PredictionChampion />
+          <PredictionChampionWidget />
         </Section>
       </div>
     </main>

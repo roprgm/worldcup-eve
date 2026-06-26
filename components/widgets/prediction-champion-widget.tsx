@@ -16,7 +16,7 @@ function championView(predictions: Predictions) {
 
 /** Connected champion card: fetches the shared predictions and renders the most
  *  likely champion, with a skeleton while it loads. */
-export function PredictionChampion() {
+export function PredictionChampionWidget() {
   const candidates = usePredictions(championView);
 
   if (!candidates) {

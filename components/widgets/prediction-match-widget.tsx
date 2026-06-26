@@ -85,7 +85,7 @@ function matchView(match: KnockoutMatch, predictions: Predictions) {
 
 /** A single knockout fixture with each side's predicted qualifiers. Fetches the
  *  shared predictions; renders its own skeleton while loading. */
-export function PredictionMatch({ match }: { match: KnockoutMatch }) {
+export function PredictionMatchWidget({ match }: { match: KnockoutMatch }) {
   const predictions = usePredictions();
   const view = useMemo(
     () => (predictions ? matchView(match, predictions) : null),
