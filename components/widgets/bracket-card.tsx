@@ -166,9 +166,9 @@ function MatchCard({
   );
 
   return (
-    <div className="rounded-md border border-surface-border bg-surface-2/40 p-0.5">
+    <div className="rounded-md border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
       <div
-        className="grid gap-0.5"
+        className="grid gap-0.5 sm:gap-1"
         style={{
           gridTemplateColumns: mirror
             ? `${VAR.pct} ${VAR.flag}`
@@ -231,12 +231,66 @@ function ConnectorColumn({
   );
 }
 
-function CenterLabel({ text, trophy }: { text: string; trophy?: boolean }) {
+function CenterLabel({
+  text,
+  trophy,
+  className,
+}: {
+  text: string;
+  trophy?: boolean;
+  className?: string;
+}) {
   return (
-    <span className="flex items-center gap-1 text-[9px] font-medium tracking-widest text-muted-foreground/70 uppercase">
+    <span
+      className={cn(
+        "absolute left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap text-[9px] font-medium tracking-widest text-muted-foreground/70 uppercase",
+        className,
+      )}
+    >
       {trophy && <Trophy className="size-3 text-pick" />}
       {text}
     </span>
+  );
+}
+
+/** A final/third card pinned at `top`, with a label above or below. The opaque
+ *  backing hides the vertical line where it passes behind the card, so the line
+ *  meets the card edge instead of running into the box. */
+function CenterNode({
+  number,
+  label,
+  trophy,
+  labelBelow,
+  top,
+  getSlot,
+  championCode,
+}: {
+  number: number;
+  label: string;
+  trophy?: boolean;
+  labelBelow?: boolean;
+  top: string;
+  getSlot: SlotLookup;
+  championCode?: string;
+}) {
+  return (
+    <div
+      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
+      style={{ top }}
+    >
+      <div className="relative rounded-md bg-card">
+        <CenterLabel
+          text={label}
+          trophy={trophy}
+          className={labelBelow ? "top-full mt-1" : "bottom-full mb-1"}
+        />
+        <MatchCard
+          number={number}
+          getSlot={getSlot}
+          championCode={championCode}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -253,23 +307,24 @@ function CenterCross({
   return (
     <div className="relative flex-1 self-stretch">
       <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
-      <span className="absolute top-[31%] bottom-[31%] left-1/2 w-px bg-border-strong" />
-      <div className="absolute top-[26%] left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
-        <CenterLabel text="Final" trophy />
-        <MatchCard
-          number={FINAL}
-          getSlot={getSlot}
-          championCode={championCode}
-        />
-      </div>
-      <div className="absolute top-[74%] left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
-        <MatchCard
-          number={THIRD}
-          getSlot={getSlot}
-          championCode={championCode}
-        />
-        <CenterLabel text="3rd" />
-      </div>
+      {/* spans the two card centers; the opaque cards clip it to the gap */}
+      <span className="absolute top-[27%] bottom-[27%] left-1/2 w-px bg-border-strong" />
+      <CenterNode
+        number={FINAL}
+        label="Final"
+        trophy
+        top="27%"
+        getSlot={getSlot}
+        championCode={championCode}
+      />
+      <CenterNode
+        number={THIRD}
+        label="3rd"
+        labelBelow
+        top="73%"
+        getSlot={getSlot}
+        championCode={championCode}
+      />
     </div>
   );
 }
