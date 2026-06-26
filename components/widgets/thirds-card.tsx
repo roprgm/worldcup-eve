@@ -2,7 +2,7 @@
 
 import { cn } from "cnfast";
 import { ChevronRight } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -182,6 +182,7 @@ function RankingRow({
   // team (e.g. a locked-in 100%) can reveal which slot it would fill.
   const expandable = row.segments.length > 0;
   const isOpen = expandable && open;
+  const breakdownId = useId();
 
   return (
     <div>
@@ -189,6 +190,7 @@ function RankingRow({
         type="button"
         disabled={!expandable}
         aria-expanded={expandable ? isOpen : undefined}
+        aria-controls={expandable ? breakdownId : undefined}
         onClick={onToggle}
         className={cn(
           RANKING_GRID,
@@ -233,6 +235,7 @@ function RankingRow({
       </button>
       {expandable && (
         <div
+          id={breakdownId}
           className={cn(
             "grid transition-[grid-template-rows] duration-200 ease-out",
             isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
@@ -252,7 +255,7 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   return (
-    <Card title="Best thirds" hint="as things stand">
+    <Card title="Best thirds" hint="ranked by chance">
       <div className="flex flex-col gap-1 px-2 py-2">
         <RankingGrid>
           <ColumnLabel>Team</ColumnLabel>
