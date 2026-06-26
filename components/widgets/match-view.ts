@@ -115,6 +115,34 @@ function currentMatchView(match: MatchResult, odds: Map<string, MatchOdds>) {
   };
 }
 
+/** Map a set of matches to MatchWidget props with win odds attached. */
+export function buildMatchViews(matches: MatchResult[], odds: MatchOdds[]) {
+  const oddsByPair = new Map(odds.map((o) => [pairKey(o.home, o.away), o]));
+  return matches.map((m) => currentMatchView(m, oddsByPair));
+}
+
+/** Matches currently in progress, as MatchWidget props. */
+export function liveMatchViews(matches: MatchResult[], odds: MatchOdds[]) {
+  return buildMatchViews(
+    matches.filter((m) => m.status === "live"),
+    odds,
+  );
+}
+
+/** Specific matches by FIFA number as MatchWidget props, in the order asked,
+ * skipping any number with no live entry. */
+export function matchViewsByNumber(
+  matches: MatchResult[],
+  odds: MatchOdds[],
+  numbers: number[],
+) {
+  const byNumber = new Map(matches.map((m) => [m.n, m]));
+  const ordered = numbers
+    .map((n) => byNumber.get(n))
+    .filter((m): m is MatchResult => m != null);
+  return buildMatchViews(ordered, odds);
+}
+
 /** Today's matches (US FIFA day) as MatchWidget props, kickoff-sorted, with
  * market win odds attached when available. */
 export function todayMatchViews(matches: MatchResult[], odds: MatchOdds[]) {

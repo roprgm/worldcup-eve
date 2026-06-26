@@ -6,8 +6,8 @@
 :root {
   color-scheme: dark;
   --background: oklch(0.12 0 0);
-  --surface: oklch(0.19 0 0); /* origin --card */
-  --surface-2: oklch(0.269 0 0); /* origin --muted / --secondary */
+  --surface: oklch(0.20 0 0); /* origin --card */
+  --surface-2: oklch(0.28 0 0); /* origin --muted / --secondary */
   --foreground: oklch(0.985 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --subtle-foreground: oklch(0.556 0 0);
@@ -55,6 +55,8 @@
 
   --text-xs: 0.68rem;
   --text-sm: 0.8rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.15rem;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -103,6 +105,7 @@
     touch-action: manipulation;
     background-color: var(--background);
     color: var(--foreground);
+    font-size: var(--text-base);
     font-family: var(--font-sans);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;

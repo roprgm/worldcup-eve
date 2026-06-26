@@ -58,7 +58,7 @@ function Card({
       <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
         {hint && (
-          <span className="shrink-0 text-muted-foreground/60 uppercase">
+          <span className="shrink-0 text-muted-foreground/60">
             {hint}
           </span>
         )}
@@ -89,9 +89,11 @@ function ColumnLabel({
 
 // team · group · Pts · GD · GF · chance · disclosure — shared by the header,
 // every row and the expanded breakdown so they all line up. The fixed-width
-// code keeps the chance bars starting at one x.
+// code keeps the chance bars starting at one x. When the card is wide enough
+// (container query), the leading columns get more room — full team names, wider
+// stats and gaps — while the chance bar is capped so it stops dominating.
 const RANKING_GRID =
-  "grid grid-cols-[3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_0.75rem] items-center gap-x-1.5";
+  "grid grid-cols-[3.75rem_1.25rem_1.75rem_1.75rem_1.75rem_minmax(6rem,1fr)_0.75rem] items-center gap-x-1.5 @2xl:grid-cols-[12rem_2rem_2.25rem_2.25rem_2.25rem_minmax(8rem,24rem)_1rem] @2xl:gap-x-3";
 
 function RankingGrid({
   className,
@@ -115,7 +117,7 @@ function ChanceBar({
   const pct = `${Math.round(value * 100)}%`;
   return (
     <span className="flex items-center gap-1.5 pl-1.5">
-      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
         <span
           className={cn("h-full rounded-[1px] bg-pick", className)}
           style={{ width: pct }}
@@ -200,13 +202,14 @@ function RankingRow({
             : "cursor-default",
         )}
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-1.5">
           <Flag code={row.code} size={14} />
           <span
             title={row.name}
-            className="w-9 shrink-0 truncate text-[12px] font-semibold tracking-wide"
+            className="min-w-0 truncate text-[12px] font-semibold tracking-wide"
           >
-            {row.code}
+            <span className="@2xl:hidden">{row.code}</span>
+            <span className="hidden @2xl:inline">{row.name ?? row.code}</span>
           </span>
         </span>
         <span className="text-center text-[11px] text-muted-foreground">
@@ -255,8 +258,8 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   return (
-    <Card title="Best thirds" hint="ranked by chance">
-      <div className="flex flex-col gap-1 py-2 pr-2 pl-2.5">
+    <Card title="Best thirds" hint="Ranked by chance">
+      <div className="@container flex flex-col gap-1 py-2 pr-2 pl-2.5">
         <RankingGrid>
           <ColumnLabel>Team</ColumnLabel>
           <ColumnLabel className="text-center">Grp</ColumnLabel>
@@ -307,7 +310,7 @@ function OddsRow({
       >
         {candidate.code}
       </span>
-      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
         <span
           className={cn(
             "h-full rounded-[1px]",

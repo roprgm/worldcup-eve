@@ -45,7 +45,7 @@ export default function PredictionsPage() {
         </Section>
 
         <Section title="Best thirds">
-          <CardGridFrame className="max-w-xl">
+          <CardGridFrame className="max-w-[480px] md:max-w-[972px]">
             <ThirdsRankingWidget />
           </CardGridFrame>
         </Section>
