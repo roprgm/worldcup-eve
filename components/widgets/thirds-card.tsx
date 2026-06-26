@@ -137,13 +137,13 @@ function TreeConnector({ last }: { last: boolean }) {
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute left-[7px] top-0 w-px bg-white/10",
+          "pointer-events-none absolute left-[7px] top-0 w-px bg-surface-divider",
           last ? "h-1/2" : "h-[calc(100%+0.25rem)]",
         )}
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute left-[7px] top-1/2 h-px w-[14px] -translate-y-1/2 bg-white/10"
+        className="pointer-events-none absolute left-[7px] top-1/2 h-px w-[14px] -translate-y-1/2 bg-surface-divider"
       />
     </>
   );
@@ -159,7 +159,7 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
         <div key={s.match} className={cn(RANKING_GRID, "relative h-[18px]")}>
           <TreeConnector last={i === segments.length - 1} />
           <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
-            Match {s.match} - Winner {s.host}
+            Match {s.match} · Winner {s.host}
           </span>
           <ChanceBar value={s.prob} className="bg-pick/55" />
           <span />
