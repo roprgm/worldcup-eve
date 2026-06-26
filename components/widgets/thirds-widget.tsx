@@ -46,22 +46,27 @@ function slotChancesByGroup(
   return byGroup;
 }
 
+// Ordered by qualification chance (biggest first) so the bars read top-down,
+// with the current third-place table rank as a stable tiebreak. The rank column
+// still shows that table position, so it may not run sequentially.
 function rankingRows(results: Results): ThirdRankingRow[] {
   const slots = slotChancesByGroup(results);
-  return results.bestThirds.map((t) => {
-    const segments = slots.get(t.group) ?? [];
-    return {
-      group: t.group,
-      code: t.teamId,
-      name: teamById[t.teamId]?.name,
-      rank: t.rank,
-      points: t.points,
-      goalDiff: signed(t.goalDiff),
-      goalsFor: t.goalsFor,
-      segments,
-      chance: segments.reduce((sum, s) => sum + s.prob, 0),
-    };
-  });
+  return results.bestThirds
+    .map((t) => {
+      const segments = slots.get(t.group) ?? [];
+      return {
+        group: t.group,
+        code: t.teamId,
+        name: teamById[t.teamId]?.name,
+        rank: t.rank,
+        points: t.points,
+        goalDiff: signed(t.goalDiff),
+        goalsFor: t.goalsFor,
+        segments,
+        chance: segments.reduce((sum, s) => sum + s.prob, 0),
+      };
+    })
+    .sort((a, b) => b.chance - a.chance || a.rank - b.rank);
 }
 
 // Map a slot's per-group odds onto each group's current third-placed team.
