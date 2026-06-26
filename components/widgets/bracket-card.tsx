@@ -1,5 +1,4 @@
 import { cn } from "cnfast";
-import { Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
 import {
@@ -11,18 +10,17 @@ import {
 // Geometry is driven by CSS variables set on the root (see BracketCard), so the
 // whole bracket scales with the breakpoint: dense on a phone, larger on the web.
 // --chip is a column width, --conn a connector length, --leaf the vertical slot
-// a Round-of-32 match reserves, --flag the flag width, --final the final box.
+// a Round-of-32 match reserves, --flag the flag width.
 const VAR = {
   chip: "var(--chip)",
   conn: "var(--conn)",
   leaf: "var(--leaf)",
   flag: "var(--flag)",
-  final: "var(--final)",
+  link: "var(--link)",
 };
 
 // The two semi-final roots and the final. The halves hang off the semis (the
-// right one mirrored so they meet in the middle); the final sits between them on
-// the web and drops below on a phone.
+// right one mirrored), with the final dropped into the center between them.
 const LEFT_ROOT = 101;
 const RIGHT_ROOT = 102;
 const FINAL = 104;
@@ -54,7 +52,7 @@ export type SlotLookup = (
 
 interface BracketCardProps {
   getSlot: SlotLookup;
-  /** Predicted champion code — highlighted in the final. `undefined` until the
+  /** Predicted champion code — highlighted along its path. `undefined` until the
    *  bracket simulation resolves. */
   championCode?: string;
 }
@@ -165,6 +163,16 @@ function Connector({ mirror }: { mirror?: boolean }) {
   );
 }
 
+/** A plain horizontal line — joins each semi to the final in the center. Wider
+ *  than a round connector so the final and the semis don't crowd each other. */
+function Link() {
+  return (
+    <div style={{ width: VAR.link }} className="relative shrink-0 self-stretch">
+      <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
+    </div>
+  );
+}
+
 /** One node and its whole subtree. Earlier rounds sit on the outer side (left,
  *  or right when mirrored), recursing until a Round-of-32 leaf. */
 function BracketTree({
@@ -248,129 +256,43 @@ function RoundLabels({ mirror }: { mirror?: boolean }) {
   );
 }
 
-function FinalSlot({
-  slot,
-  championCode,
-}: {
-  slot: BracketSlot | undefined;
-  championCode?: string;
-}) {
-  const champion = championCode != null && slot?.code === championCode;
-  return (
-    <div className="flex items-center gap-2" title={slot?.name}>
-      <Flag code={slot?.code} size={26} />
-      <div className="flex flex-col leading-tight">
-        <span
-          className={cn(
-            "text-[12px] font-semibold tracking-wide",
-            champion ? "text-pick" : "text-foreground",
-          )}
-        >
-          {slot?.code ?? "—"}
-        </span>
-        <span
-          className={cn(
-            "flex items-center gap-1 text-[11px] tabular-nums",
-            champion ? "font-semibold text-pick" : "text-muted-foreground",
-          )}
-        >
-          {champion && <Trophy className="size-3 shrink-0" />}
-          {formatPct(slot?.probability)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/** The champion box: the two finalists with the predicted winner highlighted.
- *  Fixed width (--final) so the label strip can reserve the same center gap. */
-function FinalBox({
-  getSlot,
-  championCode,
-}: {
-  getSlot: SlotLookup;
-  championCode?: string;
-}) {
-  return (
-    <div
-      style={{ width: VAR.final }}
-      className="flex shrink-0 flex-col items-center gap-2 rounded-xl border border-pick/40 bg-surface-2/40 px-4 py-3 ring-1 ring-pick/10"
-    >
-      <span className="text-[9px] font-medium tracking-widest text-muted-foreground uppercase">
-        Final
-      </span>
-      <div className="flex flex-col gap-2">
-        <FinalSlot slot={getSlot(FINAL, "home")} championCode={championCode} />
-        <FinalSlot slot={getSlot(FINAL, "away")} championCode={championCode} />
-      </div>
-    </div>
-  );
-}
-
-/** Final in the center column, joined to both semis by a connector. Web only —
- *  it needs the horizontal room a phone doesn't have. */
-function CenterFinal({
-  getSlot,
-  championCode,
-}: {
-  getSlot: SlotLookup;
-  championCode?: string;
-}) {
-  return (
-    <div className="hidden items-center lg:flex">
-      <span className="h-px bg-border-strong" style={{ width: VAR.conn }} />
-      <FinalBox getSlot={getSlot} championCode={championCode} />
-      <span className="h-px bg-border-strong" style={{ width: VAR.conn }} />
-    </div>
-  );
-}
-
-/** Final stacked below the bracket — the phone/tablet layout. */
-function FinalBelow({
-  getSlot,
-  championCode,
-}: {
-  getSlot: SlotLookup;
-  championCode?: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 pt-3 lg:hidden">
-      <span className="h-4 w-px bg-border-strong" />
-      <FinalBox getSlot={getSlot} championCode={championCode} />
-    </div>
-  );
-}
-
 /** The knockout bracket as predicted: each slot is a flag and its probability on
- *  one line. Both halves sit side by side (the right one mirrored); the final
- *  lands between them on the web and drops below on a phone. Geometry scales with
- *  the breakpoint via CSS variables. */
+ *  one line, no country code. The two halves sit side by side (the right one
+ *  mirrored) and the final lands in the center between them — using the vertical
+ *  room that would otherwise sit empty around the semis. */
 export function BracketCard({ getSlot, championCode }: BracketCardProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-3 py-4 [--chip:32px] [--conn:8px] [--final:160px] [--flag:13px] [--leaf:38px] sm:[--chip:46px] sm:[--conn:20px] sm:[--final:184px] sm:[--flag:18px] sm:[--leaf:46px] lg:[--chip:52px] lg:[--conn:26px] lg:[--final:196px] lg:[--flag:22px] lg:[--leaf:52px]">
+      <div className="overflow-x-auto px-2 py-3 [--chip:28px] [--conn:7px] [--flag:12px] [--leaf:34px] [--link:20px] sm:[--chip:46px] sm:[--conn:18px] sm:[--flag:18px] sm:[--leaf:44px] sm:[--link:32px] lg:[--chip:56px] lg:[--conn:32px] lg:[--flag:22px] lg:[--leaf:52px] lg:[--link:46px]">
         <div className="mx-auto flex w-fit flex-col items-center">
-          {/* Labels strip above the bracket, aligned to the columns. On the web
-              the center gap matches the final box so the right labels line up. */}
-          <div className="flex gap-5 sm:gap-7 lg:gap-0">
+          {/* Labels strip above the bracket, aligned to the columns. */}
+          <div className="flex">
             <RoundLabels />
-            <div
-              className="hidden shrink-0 lg:block"
-              style={{ width: "calc(var(--final) + var(--conn) * 2)" }}
-            />
+            <span
+              className="flex items-center justify-center text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
+              style={{ width: "calc(var(--chip) + var(--link) * 2)" }}
+            >
+              Final
+            </span>
             <RoundLabels mirror />
           </div>
 
-          <div className="mt-1.5 flex items-center gap-5 sm:gap-7 lg:gap-0">
+          <div className="mt-1.5 flex items-center">
             <BracketTree
               number={LEFT_ROOT}
               getSlot={getSlot}
               championCode={championCode}
             />
-            <CenterFinal getSlot={getSlot} championCode={championCode} />
+            <Link />
+            <MatchNode
+              number={FINAL}
+              getSlot={getSlot}
+              championCode={championCode}
+            />
+            <Link />
             <BracketTree
               number={RIGHT_ROOT}
               getSlot={getSlot}
@@ -379,8 +301,6 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
             />
           </div>
         </div>
-
-        <FinalBelow getSlot={getSlot} championCode={championCode} />
       </div>
     </div>
   );
