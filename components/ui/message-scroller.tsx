@@ -23,22 +23,12 @@ function JumpToLatestButton() {
   );
 }
 
-export function Conversation({
-  children,
-  autoScroll = true,
-  defaultScrollPosition = "last-anchor",
-  scrollPreviousItemPeek = 64,
-}: {
-  children: ReactNode;
-  autoScroll?: boolean;
-  defaultScrollPosition?: "start" | "end" | "last-anchor";
-  scrollPreviousItemPeek?: number;
-}) {
+export function Conversation({ children }: { children: ReactNode }) {
   return (
     <MessageScroller.Provider
-      autoScroll={autoScroll}
-      defaultScrollPosition={defaultScrollPosition}
-      scrollPreviousItemPeek={scrollPreviousItemPeek}
+      autoScroll
+      defaultScrollPosition="last-anchor"
+      scrollPreviousItemPeek={64}
     >
       <MessageScroller.Root className="relative flex min-h-0 flex-1 flex-col">
         <MessageScroller.Viewport

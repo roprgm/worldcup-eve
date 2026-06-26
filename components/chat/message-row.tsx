@@ -4,7 +4,6 @@ import { MessageWidgets } from "@/components/chat/message-widgets";
 import { messageText, questionPart } from "@/components/chat/messages";
 import { BallIcon } from "@/components/icons";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { Loader } from "@/components/ui/loader";
 import {
   Message,
   MessageAvatar,
@@ -53,10 +52,9 @@ export function ActivityRow({ label }: { label: string }) {
         <BallIcon className="size-[15px]" />
       </MessageAvatar>
       <MessageContent>
-        <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug">
-          <span className="wc-shimmer">{label}</span>
-          <Loader className="shrink-0" />
-        </div>
+        <span className="wc-shimmer flex min-h-7 items-center text-[0.8125rem] leading-snug">
+          {label}
+        </span>
       </MessageContent>
     </Message>
   );
