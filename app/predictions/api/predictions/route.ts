@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getCachedPredictions } from "@/lib/cached-predictions";
+import { getPredictions } from "@/lib/predictions";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json(await getCachedPredictions());
+    return NextResponse.json(await getPredictions());
   } catch {
     return NextResponse.json(
       {

@@ -4,6 +4,8 @@
 // app overlays on predictions: real group scores + status, knockout winners, and
 // the finishing order of any fully-played group.
 
+import { getCache } from "@vercel/functions";
+
 import {
   groupFixture,
   groupMatches,
@@ -203,4 +205,16 @@ export async function buildResults(): Promise<Results> {
     thirdOdds: thirdOdds.odds,
     thirdCombosPossible: thirdOdds.possible,
   };
+}
+
+// Cached snapshot shared by the results API route and the agent. Cached in the
+// Vercel Runtime Cache for 10s so polling clients don't hit ESPN every request.
+const resultsCache = getCache({ namespace: "results" });
+
+export async function getMatchResults(): Promise<Results> {
+  const hit = await resultsCache.get("snapshot");
+  if (hit != null) return hit as Results;
+  const data = await buildResults();
+  await resultsCache.set("snapshot", data, { ttl: 10, tags: ["results"] });
+  return data;
 }

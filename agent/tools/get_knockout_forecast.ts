@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { getCachedPredictions } from "@/lib/cached-predictions";
+import { getPredictions } from "@/lib/predictions";
 import { matchByNumber, type SlotRef, teamById } from "@/lib/tournament";
 
 function percent(value: number): number {
@@ -58,7 +58,7 @@ export default defineTool({
       .describe("Knockout match id, 73-104."),
   }),
   async execute({ id }) {
-    const snapshot = await getCachedPredictions();
+    const snapshot = await getPredictions();
     const sides = snapshot.slots.filter((slot) => slot.match === id);
     if (sides.length === 0) {
       return {

@@ -1,8 +1,10 @@
 // Entry point: fetch live market prices, fit the Bradley-Terry strengths,
 // simulate the bracket, and assemble one JSON snapshot.
 //
-//   import { buildPredictions } from "./predictions"
-//   const snapshot = await buildPredictions()
+//   import { getPredictions } from "./predictions"
+//   const snapshot = await getPredictions()
+
+import { getCache } from "@vercel/functions";
 
 import { catalog, fetchPrices } from "./market-api";
 import {
@@ -201,6 +203,25 @@ export async function buildPredictions(
     groupScores: groupMarkets.scores,
     matchOdds: groupMarkets.odds,
   };
+}
+
+// Cached snapshot shared by the predictions API route and the agent. The fit is
+// the cost (~2s), so we cache the result in the Vercel Runtime Cache
+// (cross-instance, with a transparent in-memory fallback elsewhere) and reuse
+// the fit anchor across the rare rebuilds.
+const PREDICTIONS_TTL = 60; // tune later (KV / longer partial caches) to optimize the BT fit
+const anchor: PredictionCache = {};
+const predictionsCache = getCache({ namespace: "predictions" });
+
+export async function getPredictions(): Promise<Predictions> {
+  const hit = await predictionsCache.get("snapshot");
+  if (hit != null) return hit as Predictions;
+  const data = await buildPredictions(anchor);
+  await predictionsCache.set("snapshot", data, {
+    ttl: PREDICTIONS_TTL,
+    tags: ["predictions"],
+  });
+  return data;
 }
 
 export type { MatchOdds, Scoreline } from "./group-markets";
