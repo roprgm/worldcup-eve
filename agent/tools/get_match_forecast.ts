@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { codeFor } from "@/agent/lib/team-aliases";
-import { getCachedPredictions } from "@/lib/cached-predictions";
+import { getPredictions } from "@/lib/predictions";
 import { groupFixture, groupMatches } from "@/lib/tournament";
 
 function percent(value: number): number {
@@ -48,7 +48,7 @@ export default defineTool({
       };
     }
 
-    const snapshot = await getCachedPredictions();
+    const snapshot = await getPredictions();
     const score = snapshot.groupScores[fixture.id];
     const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
     if (!score && !odds) {

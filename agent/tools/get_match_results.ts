@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { tournamentDateTime } from "@/agent/lib/time";
-import { buildResults } from "@/lib/results";
+import { getMatchResults } from "@/lib/results";
 
 const tournamentDate = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/);
 
@@ -43,7 +43,7 @@ export default defineTool({
       ),
   }),
   async execute({ status, from, to }) {
-    const { matches } = await buildResults();
+    const { matches } = await getMatchResults();
 
     const results = matches
       .map((match) => {

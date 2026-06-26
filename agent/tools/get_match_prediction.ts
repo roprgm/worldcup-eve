@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { codeFor } from "@/agent/lib/team-aliases";
-import { getCachedPredictions } from "@/lib/cached-predictions";
+import { getPredictions } from "@/lib/predictions";
 import type { Predictions } from "@/lib/predictions";
 import { type GroupLetter, groupLetters, teamById } from "@/lib/tournament";
 
@@ -111,7 +111,7 @@ export default defineTool({
       .describe("Maximum teams for the title ranking."),
   }),
   async execute({ team, group, limit }) {
-    const snapshot = await getCachedPredictions();
+    const snapshot = await getPredictions();
     const teams = projectTeams(snapshot);
     const updatedAt = snapshot.updatedAt;
 
