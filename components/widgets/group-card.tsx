@@ -60,7 +60,7 @@ function LiveDot({ className }: { className?: string }) {
 
 function LiveBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-rose-400 uppercase">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-rose-400">
       <LiveDot className="size-1.5" />
       Live
     </span>
@@ -69,7 +69,7 @@ function LiveBadge() {
 
 function PredictedBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-amber-400 uppercase">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-amber-400">
       <span
         aria-hidden
         className="size-1.5 shrink-0 rounded-full bg-amber-400"
