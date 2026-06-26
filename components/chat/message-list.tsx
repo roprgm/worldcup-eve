@@ -1,5 +1,6 @@
 import type { EveMessage } from "eve/react";
 import { ActivityRow, MessageRow } from "@/components/chat/message-row";
+import { messageWidgets } from "@/components/chat/message-widgets";
 import {
   assistantActivityLabel,
   isRenderableMessage,
@@ -14,7 +15,9 @@ export function MessageList({
   messages: readonly EveMessage[];
   isBusy: boolean;
 }) {
-  const bubbles = messages.filter(isRenderableMessage);
+  const bubbles = messages.filter((message) =>
+    shouldRenderMessage(message, isBusy),
+  );
   const latestAssistant = messages.findLast((m) => m.role === "assistant");
   // The reply is in flight until its text starts streaming. Until then the one
   // trailing ActivityRow stands in for it — so only one loader can ever show.
@@ -42,4 +45,10 @@ export function MessageList({
       )}
     </div>
   );
+}
+
+function shouldRenderMessage(message: EveMessage, isBusy: boolean): boolean {
+  if (isRenderableMessage(message)) return true;
+  if (isBusy && message.metadata?.status === "streaming") return false;
+  return messageWidgets(message).length > 0;
 }

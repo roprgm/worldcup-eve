@@ -1,13 +1,15 @@
 import { defineEval } from "eve/evals";
 
 export default defineEval({
-  description: "A 'matches today' question routes to get_match_results.",
+  description:
+    "A 'matches today' question uses the match-card widget instead of the text-only results tool.",
   async test(t) {
     await t.send("Which matches are playing today?");
 
     t.completed();
-    t.calledTool("get_match_results");
+    t.calledTool("show_matches", { input: { scope: "today" } });
+    t.notCalledTool("get_match_results");
     t.noFailedActions();
-    t.messageIncludes(/vs|match|today/i);
+    t.messageIncludes(/schedule|match|today/i);
   },
 });

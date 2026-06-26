@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { getPredictions } from "@/lib/predictions";
 import { matchByNumber, type SlotRef, teamById } from "@/lib/tournament";
 
@@ -55,7 +56,6 @@ export default defineTool({
     };
 
     return {
-      shownAsWidget: "Shown to the user as a widget — don't re-list it.",
       matchId: id,
       round: bracket.round,
       venue: bracket.venue,
@@ -63,4 +63,5 @@ export default defineTool({
       away: side("away"),
     };
   },
+  toModelOutput: widgetModelOutput,
 });
