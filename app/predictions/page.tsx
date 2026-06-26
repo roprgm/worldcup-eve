@@ -1,5 +1,6 @@
 import { CardGrid } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
+import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
@@ -41,6 +42,10 @@ export default function PredictionsPage() {
               <PredictionGroupWidget key={letter} letter={letter} />
             ))}
           </CardGrid>
+        </Section>
+
+        <Section title="Bracket">
+          <BracketWidget />
         </Section>
 
         {knockoutSections.map((section) => (
