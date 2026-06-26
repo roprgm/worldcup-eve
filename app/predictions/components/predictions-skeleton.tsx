@@ -145,13 +145,8 @@ function SkeletonChampion() {
   );
 }
 
-/**
- * Lightweight placeholder for the predictions funnel while market data loads.
- * It traces the layout's silhouette (groups grid, knockout sections, champion)
- * with simple blocks rather than replicating every cell — and a single
- * `animate-pulse` on the root drives all of them, which is far cheaper to paint
- * than animating each block on its own.
- */
+// One `animate-pulse` on the root drives every block — much cheaper to paint
+// than animating each one.
 export function PredictionsSkeleton() {
   return (
     <div className="animate-pulse space-y-3" aria-hidden>

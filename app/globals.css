@@ -88,8 +88,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     background-color: var(--background);
-    /* App-like shell: lock the page so only inner regions scroll, with no
-       pull-to-refresh or rubber-band bounce at the edges. */
+    /* Lock the page so only inner regions scroll — no pull-to-refresh/bounce. */
     height: 100dvh;
     overflow: hidden;
     overscroll-behavior: none;

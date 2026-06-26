@@ -25,9 +25,7 @@ type SavedChat = { session?: Agent["session"]; events?: Agent["events"] };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-// Tracks the chat path (`/` or `/chat/<id>`) you were last in, so the Chat nav
-// link and the agent restore agree on which chat to bring back. Shared with the
-// nav (which writes it).
+// The chat path you were last in. Written by the nav, read here to restore.
 export const LAST_CHAT_KEY = "wc26:last-chat-path";
 
 const chatKey = (id: string) => `wc26-chat:${id}`;
@@ -47,11 +45,8 @@ function saveChat(id: string, chat: SavedChat): void {
   localStorage.setItem(chatKey(id), JSON.stringify(chat));
 }
 
-// Which chat to seed the agent with on mount. The agent persists across
-// client-side navigations, so the only time it starts empty is after a full
-// page load: on `/chat/<id>` restore that chat; on a non-chat page (e.g.
-// `/predictions`) restore the last chat so the Chat link can client-navigate
-// back to it; on `/` stay empty for a fresh prompt.
+// Which chat to seed the agent with on mount (only matters after a full load).
+// On a non-chat page, restore the last chat so the Chat link can stay client-side.
 function chatToRestore(): SavedChat | null {
   if (typeof window === "undefined") return null;
   const path = window.location.pathname;

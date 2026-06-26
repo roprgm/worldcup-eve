@@ -39,10 +39,7 @@ export function SiteNav() {
 
   return (
     <nav className="flex items-center gap-0.5">
-      {/* Client-side nav: the agent persists across navigations, and on a full
-          load ChatProvider restores the last chat, so the target is always in
-          memory. prefetch={false} — the chat route renders from that memory, not
-          from per-id route data. */}
+      {/* prefetch off: the chat renders from the in-memory agent, not route data. */}
       <Link
         href={chatHref}
         prefetch={false}
@@ -50,8 +47,6 @@ export function SiteNav() {
       >
         Chat
       </Link>
-      {/* Link client-navigates and prefetches the route, so loading.tsx shows
-          instantly; the page then renders its skeleton while data loads. */}
       <Link
         href="/predictions"
         className={linkClass(pathname === "/predictions")}
