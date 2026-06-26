@@ -241,7 +241,7 @@ function SkeletonChampion() {
 /** Full-page placeholder for the predictions funnel while market data loads. */
 export function PredictionsSkeleton() {
   return (
-    <div className="space-y-3" aria-hidden>
+    <div className="animate-pulse space-y-3" aria-hidden>
       <SkeletonGroups />
       {MATCH_SECTIONS.map((matches, index) => (
         <SkeletonMatches key={index} matches={matches} />
