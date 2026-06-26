@@ -8,6 +8,7 @@ import {
   groupTeams,
   type GroupLetter,
 } from "./index";
+import { thirdPlaceAllocation } from "./third-place";
 
 export interface Score {
   h: number; // home goals
@@ -101,4 +102,68 @@ export function computeGroupOrder(
       computeStandings(letter, scores).map((s) => s.teamId),
     ]),
   ) as Record<GroupLetter, string[]>;
+}
+
+export interface ThirdPlace {
+  group: GroupLetter;
+  teamId: string;
+  points: number;
+  goalDiff: number;
+  goalsFor: number;
+  rank: number; // 1-based, across all twelve third-placed teams
+  qualifies: boolean; // the best eight reach the Round of 32
+}
+
+/**
+ * The twelve groups' third-placed teams ranked against each other by FIFA's
+ * criteria, best first: points → goal difference → goals for, then group letter
+ * as a deterministic stand-in for the official fair-play / drawing-of-lots
+ * tiebreak (which needs data we don't model). The best eight qualify. Before a
+ * group is final its third can still change, so the ranking stays provisional.
+ */
+export function rankThirds(scores: Scores): ThirdPlace[] {
+  const thirds = groupLetters.map((letter) => {
+    const s = computeStandings(letter, scores)[2];
+    return {
+      group: letter,
+      teamId: s.teamId,
+      points: s.points,
+      goalDiff: s.goalDiff,
+      goalsFor: s.goalsFor,
+    };
+  });
+  thirds.sort(
+    (a, b) =>
+      b.points - a.points ||
+      b.goalDiff - a.goalDiff ||
+      b.goalsFor - a.goalsFor ||
+      a.group.localeCompare(b.group),
+  );
+  return thirds.map((t, i) => ({ ...t, rank: i + 1, qualifies: i < 8 }));
+}
+
+export interface ThirdAssignment {
+  match: number; // Round-of-32 match number
+  group: GroupLetter; // group whose third-placed team fills this slot
+  teamId: string;
+}
+
+/**
+ * Provisional Round-of-32 third-place matchups implied by the current standings:
+ * rank the thirds, take the best eight, and place them through FIFA's allocation
+ * table (`thirdPlaceAllocation`). Sorted by match number; provisional until every
+ * group is final.
+ */
+export function assignThirds(scores: Scores): ThirdAssignment[] {
+  const qualifying = rankThirds(scores).filter((t) => t.qualifies);
+  const teamByGroup = new Map(qualifying.map((t) => [t.group, t.teamId]));
+  const allocation = thirdPlaceAllocation(qualifying.map((t) => t.group));
+  if (!allocation) return [];
+  return Object.entries(allocation)
+    .map(([match, group]) => ({
+      match: Number(match),
+      group,
+      teamId: teamByGroup.get(group) ?? "",
+    }))
+    .sort((a, b) => a.match - b.match);
 }
