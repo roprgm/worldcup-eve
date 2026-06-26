@@ -16,7 +16,7 @@ import type { KnockoutMatch } from "@/lib/tournament";
 // The tournament has 12 groups (A–L); the letters double as stable keys.
 const GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
 const GROUP_ROWS = ["a", "b", "c", "d"];
-const MATCH_ROWS = ["a", "b", "c"];
+const MATCH_ROWS = ["a", "b"];
 
 // Mirrors the funnel's section order so the skeleton roughly matches the layout.
 const MATCH_SECTIONS = [
@@ -62,13 +62,9 @@ function SkeletonGroupCard() {
       <div className="border-b border-surface-divider px-3 py-1.5">
         <Skeleton className="h-3 w-20" />
       </div>
-      <div className="space-y-2 px-3 py-2.5">
+      <div className="space-y-2.5 px-3 py-2.5">
         {GROUP_ROWS.map((row) => (
-          <div key={row} className="flex items-center gap-2">
-            <Skeleton className="size-3.5 shrink-0 rounded-sm" />
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="ml-auto h-3 w-6" />
-          </div>
+          <Skeleton key={row} className="h-3 w-full" />
         ))}
       </div>
     </SkeletonCardFrame>
@@ -79,22 +75,13 @@ function SkeletonMatchSide({ align }: { align: "start" | "end" }) {
   return (
     <div
       className={cn(
-        "space-y-2 px-3 py-2.5",
+        "space-y-2.5 px-3 py-2.5",
         align === "end" && "border-l border-surface-border",
       )}
     >
       <Skeleton className={cn("h-3.5 w-14", align === "end" && "ml-auto")} />
       {MATCH_ROWS.map((row) => (
-        <div
-          key={row}
-          className={cn(
-            "flex items-center gap-1.5",
-            align === "end" && "flex-row-reverse",
-          )}
-        >
-          <Skeleton className="size-3 shrink-0 rounded-sm" />
-          <Skeleton className="h-2.5 flex-1" />
-        </div>
+        <Skeleton key={row} className="h-2.5 w-full" />
       ))}
     </div>
   );
