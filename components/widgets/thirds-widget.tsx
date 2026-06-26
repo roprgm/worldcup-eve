@@ -41,7 +41,11 @@ function slotRows(results: Results): ThirdSlotRow[] {
 /** The twelve third-placed teams ranked as things stand. */
 export function ThirdsRankingWidget() {
   const rows = useResults(rankingRows);
-  return rows ? <ThirdsRankingCard rows={rows} /> : <ThirdsRankingCard loading />;
+  return rows ? (
+    <ThirdsRankingCard rows={rows} />
+  ) : (
+    <ThirdsRankingCard loading />
+  );
 }
 
 /** The eight Round-of-32 third-place matchups those qualifiers imply. */

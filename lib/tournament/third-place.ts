@@ -38,7 +38,7 @@ export const thirdPlaceSlots: ThirdPlaceSlot[] = [
 // is combination n (see `combinationNumber`). Each string is eight group letters —
 // the group whose third-placed team fills each slot, in `thirdPlaceSlots` order.
 // The set of eight letters is the combination of groups whose thirds qualified.
-// prettier-ignore
+// biome-ignore format: keep the 495-row table as a compact grid
 const ALLOCATIONS: string[] = [
   "EJIFHGLK", "HGIDJFLK", "EJIDHGLK", "EJIDHFLK", "EGIDJFLK", "EGJDHFLK", "EGIDHFLK", "EGJDHFLI", "EGJDHFIK",
   "HGICJFLK", "EJICHGLK", "EJICHFLK", "EGICJFLK", "EGJCHFLK", "EGICHFLK", "EGJCHFLI", "EGJCHFIK", "HGICJDLK",
@@ -111,7 +111,8 @@ const combinationNumberByEliminated = (() => {
   for (let a = 0; a < g.length; a++)
     for (let b = a + 1; b < g.length; b++)
       for (let c = b + 1; c < g.length; c++)
-        for (let d = c + 1; d < g.length; d++) map.set(g[a] + g[b] + g[c] + g[d], ++n);
+        for (let d = c + 1; d < g.length; d++)
+          map.set(g[a] + g[b] + g[c] + g[d], ++n);
   return map;
 })();
 
@@ -119,10 +120,13 @@ const combinationNumberByEliminated = (() => {
  * FIFA combination number (1–495) for a set of four groups whose third-placed team
  * did NOT qualify — the "No." column of Annex C. Throws if not four distinct groups.
  */
-export function combinationNumber(eliminatedGroups: Iterable<GroupLetter>): number {
+export function combinationNumber(
+  eliminatedGroups: Iterable<GroupLetter>,
+): number {
   const key = [...new Set(eliminatedGroups)].sort().join("");
   const n = combinationNumberByEliminated.get(key);
-  if (n == null) throw new Error(`expected four distinct group letters, got "${key}"`);
+  if (n == null)
+    throw new Error(`expected four distinct group letters, got "${key}"`);
   return n;
 }
 
@@ -145,4 +149,32 @@ export function thirdPlaceAllocation(
     out[slot.match] = alloc[i] as GroupLetter;
   });
   return out;
+}
+
+/** Per Round-of-32 third slot, the chance each group's third fills it. Keyed by
+ *  match number, then group letter → probability in [0, 1] (a slot's groups sum
+ *  to 1). */
+export type ThirdSlotOdds = Record<
+  number,
+  Partial<Record<GroupLetter, number>>
+>;
+
+/**
+ * The third-slot odds under a uniform prior over all 495 combinations — every
+ * set of eight qualifying groups treated as equally likely. Purely combinatorial:
+ * it counts, for each slot, how often each group's third lands there across the
+ * table, then divides by 495. Reads only the static allocations — no results, no
+ * model — so it's a fixed baseline that a real model would later reweight.
+ */
+export function uniformThirdSlotOdds(): ThirdSlotOdds {
+  const odds: ThirdSlotOdds = {};
+  for (const slot of thirdPlaceSlots) odds[slot.match] = {};
+  for (const alloc of ALLOCATIONS) {
+    thirdPlaceSlots.forEach((slot, i) => {
+      const group = alloc[i] as GroupLetter;
+      const bucket = odds[slot.match];
+      bucket[group] = (bucket[group] ?? 0) + 1 / ALLOCATIONS.length;
+    });
+  }
+  return odds;
 }
