@@ -11,7 +11,8 @@ type Marker = "advance" | "third" | "none";
 const GOAL_DIFF_COLUMN_WIDTH = "1.5rem";
 const POINTS_COLUMN_WIDTH = "1.75rem";
 const MARKER_COLUMN_WIDTH = "1.25rem";
-const SKELETON_ROWS = ["a", "b", "c", "d"];
+// One label row plus the four team rows — mirrors the real grid's row count.
+const SKELETON_ROWS = ["head", "a", "b", "c", "d"];
 
 // Team and result columns each take an equal 1fr share so extra width spreads
 // evenly across them; GD/Pts/marker stay fixed and naturally tighter.
@@ -124,7 +125,7 @@ function GroupCardShell({
 }) {
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="flex h-6 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {live && <LiveBadge />}
       </div>
@@ -139,9 +140,17 @@ export function GroupCard(props: GroupCardProps) {
   if (props.loading) {
     return (
       <GroupCardShell title={props.title}>
-        <div className="animate-pulse space-y-2.5 px-3 py-2.5" aria-hidden>
-          {SKELETON_ROWS.map((row) => (
-            <Skeleton key={row} className="h-3 w-full" />
+        {/* Same grid geometry as the real card (one label row + four team rows
+            at the fixed row height) so the placeholder reserves its exact size. */}
+        <div
+          className="grid animate-pulse auto-rows-[22px] items-center gap-y-1 px-3 py-2"
+          aria-hidden
+        >
+          {SKELETON_ROWS.map((row, i) => (
+            <Skeleton
+              key={row}
+              className={cn("h-3", i === 0 ? "w-1/3" : "w-full")}
+            />
           ))}
         </div>
       </GroupCardShell>
@@ -156,7 +165,7 @@ export function GroupCard(props: GroupCardProps) {
   return (
     <GroupCardShell title={title} live={live}>
       <div
-        className="grid items-center gap-x-1 gap-y-1 px-1.5 py-2"
+        className="grid auto-rows-[22px] items-center gap-x-1 gap-y-1 px-1.5 py-2"
         style={{
           gridTemplateColumns: groupGridColumns(columns.length),
         }}

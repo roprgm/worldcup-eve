@@ -184,7 +184,7 @@ export function PredictionMatchCard({
       title={title}
       className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card"
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 py-1.5 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-left text-foreground/70">
           #{number} - {phaseLabel}
         </span>
