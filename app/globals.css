@@ -67,6 +67,11 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   --animate-fade-up: wc-fade-up 0.5s var(--ease-geist) both;
+  /* Submit button: the up-arrow fades out while the soccer ball kicks up and
+     out of the top (clipped by the button's overflow-hidden). */
+  --animate-launch-out: launch-out 0.5s var(--ease-geist) forwards;
+  --animate-launch-kick: launch-kick 0.5s var(--ease-geist) forwards;
+  --animate-pop: pop 0.18s var(--ease-geist) both;
 
   @keyframes wc-fade-up {
     from {
@@ -76,6 +81,48 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes launch-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    24%,
+    100% {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+  }
+
+  @keyframes launch-kick {
+    0% {
+      opacity: 0;
+      transform: translateY(2px) scale(0.4) rotate(0deg);
+    }
+    22% {
+      opacity: 1;
+      transform: translateY(0) scale(1) rotate(12deg);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(-8px) scale(0.92) rotate(46deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-18px) scale(0.78) rotate(82deg);
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 }

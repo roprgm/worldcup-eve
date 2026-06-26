@@ -2,7 +2,7 @@ import type { UseEveAgentStatus } from "eve/react";
 import { cn } from "cnfast";
 import { ArrowUp, Square } from "lucide-react";
 import { BallIcon } from "@/components/icons";
-import styles from "./submit-button.module.css";
+import { LaunchIcon } from "@/components/ui/launch-icon";
 
 interface SubmitButtonProps {
   status: UseEveAgentStatus;
@@ -32,10 +32,7 @@ export function SubmitButton({
         type="button"
         onClick={onStop}
         aria-label="Stop generating"
-        className={cn(
-          styles.pop,
-          "flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-foreground transition-colors duration-150 hover:bg-surface-2",
-        )}
+        className="flex size-9 shrink-0 animate-pop items-center justify-center rounded-xl border border-border bg-muted text-foreground transition-colors duration-150 hover:bg-surface-2"
       >
         <Square className="size-3.5 fill-current" />
       </button>
@@ -47,7 +44,6 @@ export function SubmitButton({
       type="submit"
       disabled={!canSend && !launching}
       aria-label="Send message"
-      data-launching={launching}
       className={cn(
         "relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl transition-all duration-150",
         canSend || launching
@@ -55,9 +51,10 @@ export function SubmitButton({
           : "cursor-not-allowed border border-border bg-transparent text-subtle-foreground",
       )}
     >
-      <ArrowUp className={cn(styles.sendArrow, "size-[18px]")} />
-      <BallIcon
-        className={cn(styles.sendBall, "absolute inset-0 m-auto size-[17px]")}
+      <LaunchIcon
+        launching={launching}
+        idle={<ArrowUp className="size-[18px]" />}
+        active={<BallIcon className="size-[17px]" />}
       />
     </button>
   );
