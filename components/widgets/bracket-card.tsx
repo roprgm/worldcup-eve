@@ -118,7 +118,7 @@ function FlagCell({
     <Flag
       code={slot?.code}
       size={VAR.flag}
-      className={cn("block rounded-[2px] ring-0", dim && "opacity-55")}
+      className={cn("block rounded-[1px] ring-0", dim && "opacity-55")}
     />
   );
 }
@@ -161,7 +161,7 @@ function MatchCard({
   );
 
   return (
-    <div className="rounded-sm border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
+    <div className="overflow-hidden rounded-[3px] border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
       <div
         className="grid gap-0.5 sm:gap-1"
         style={{
@@ -377,7 +377,7 @@ export function BracketCard({ getSlot }: BracketCardProps) {
           <Info className="size-3.5 text-muted-foreground/55" />
         </span>
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:21px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:26px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:30px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:19px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:28px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
