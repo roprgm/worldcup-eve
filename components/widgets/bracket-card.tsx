@@ -2,7 +2,7 @@
 
 import { cn } from "cnfast";
 import { Info, Trophy } from "lucide-react";
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
@@ -11,15 +11,22 @@ import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 // whole bracket scales with the breakpoint. --flag is the flag column width,
 // --pct the (wider) probability column, --leaf the vertical slot a Round-of-32
 // match reserves, --card the full card width, --lane the gap that holds an
-// R32→R16 connector, and --ov how far each inner round nests into the previous.
+// R32→R16 connector, and --step the horizontal stride between inner columns.
 const VAR = {
   flag: "var(--flag)",
   pct: "var(--pct)",
   leaf: "var(--leaf)",
   card: "var(--card)",
   lane: "var(--lane)",
-  ov: "var(--ov)",
+  step: "var(--step)",
 };
+
+// The inner-column stride fills the available width: solving "left edge of the
+// far R32 + one card = 100%" for the stride gives (100% − 3·card − 2·lane)/6.
+// A floor keeps adjacent rounds from colliding when the widget is too narrow to
+// fill (below it the bracket simply scrolls). 100% resolves against the bracket
+// container, which spans the widget minus its padding.
+const STEP_VALUE = `max(calc(${VAR.card} * 0.58), calc((100% - 3 * ${VAR.card} - 2 * ${VAR.lane}) / 6))`;
 
 // A round's column index, left to right: R32→SF on the left, the final in the
 // middle, then the mirrored SF→R32 on the right.
@@ -29,9 +36,9 @@ const COL = {
   right: { SF: 5, QF: 6, R16: 7, R32: 8 },
 } as const;
 
-// Horizontal step between consecutive inner columns and the wider step around
-// the packed R32↔R16 boundary, in card-relative terms.
-const STEP = `(${VAR.card} - ${VAR.ov})`;
+// One inner stride (`--step`) between consecutive columns, and the wider step
+// around the packed R32↔R16 boundary, in card-relative terms.
+const STEP = VAR.step;
 const BASE = `(${VAR.card} + ${VAR.lane})`;
 
 /** Left edge of a column, as a CSS length. Columns 1–7 advance by one inner
@@ -41,8 +48,6 @@ function colX(col: number): string {
   if (col === 8) return `calc(2 * ${BASE} + 6 * ${STEP})`;
   return `calc(${BASE} + ${col - 1} * ${STEP})`;
 }
-
-const TOTAL_WIDTH = `calc(2 * ${BASE} + 6 * ${STEP} + ${VAR.card})`;
 
 const LEFT_ROOT = 101;
 const RIGHT_ROOT = 102;
@@ -426,7 +431,7 @@ const ROUND_LABELS: { round: RoundKey; col: number }[] = [
 
 function RoundLabels() {
   return (
-    <div className="relative h-3" style={{ width: TOTAL_WIDTH }}>
+    <div className="relative h-3 w-full">
       {ROUND_LABELS.map(({ round, col }) => (
         <span
           key={col}
@@ -537,11 +542,14 @@ export function BracketCard({ getSlot }: BracketCardProps) {
         </span>
         <BracketHelp />
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:14px] [--lane:6px] [--leaf:40px] [--ov:calc(var(--card)*0.42)] [--pct:20px] sm:[--flag:17px] sm:[--lane:9px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--lane:12px] lg:[--leaf:60px] lg:[--pct:28px]">
-        <div className="mx-auto" style={{ width: TOTAL_WIDTH }}>
+      <div className="overflow-x-auto px-2 py-3 [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:14px] [--lane:6px] [--leaf:40px] [--pct:20px] sm:[--flag:17px] sm:[--lane:9px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--lane:12px] lg:[--leaf:60px] lg:[--pct:28px]">
+        <div
+          className="w-full"
+          style={{ "--step": STEP_VALUE } as CSSProperties}
+        >
           <RoundLabels />
           <div
-            className="relative mt-1.5"
+            className="relative mt-1.5 w-full"
             style={{ height: `calc(${VAR.leaf} * 8)` }}
           >
             {half(left, "left", getSlot)}
