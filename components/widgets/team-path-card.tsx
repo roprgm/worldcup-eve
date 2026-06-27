@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cnfast";
-import { Info, Trophy } from "lucide-react";
+import { ChevronDown, Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
@@ -38,7 +38,10 @@ function formatPct(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
 
-function shownOpponents(list: Opponent[]): Opponent[] {
+// Collapsed: the top few above a floor (always keeping the leader). Expanded:
+// every opponent the model gives (already all > 0%).
+function visibleOpponents(list: Opponent[], all: boolean): Opponent[] {
+  if (all) return list;
   return list
     .filter((o, i) => i === 0 || o.probability >= MIN_PROBABILITY)
     .slice(0, MAX_OPPONENTS);
@@ -76,8 +79,16 @@ function OpponentRow({ opponent }: { opponent: Opponent }) {
   );
 }
 
-function Step({ step, last }: { step: PathStepView; last: boolean }) {
-  const opponents = shownOpponents(step.opponents);
+function Step({
+  step,
+  last,
+  showAll,
+}: {
+  step: PathStepView;
+  last: boolean;
+  showAll: boolean;
+}) {
+  const opponents = visibleOpponents(step.opponents, showAll);
   return (
     <div className="grid grid-cols-[16px_minmax(0,1fr)] gap-2">
       <div className="flex flex-col items-center">
@@ -177,6 +188,11 @@ export function TeamPathCard({
   note,
 }: TeamPathCardProps) {
   const [hintOpen, setHintOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const hasMore = (steps ?? []).some(
+    (s) => s.opponents.length > visibleOpponents(s.opponents, false).length,
+  );
+
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <CardHeader
@@ -202,10 +218,27 @@ export function TeamPathCard({
               key={step.roundLabel}
               step={step}
               last={i === steps.length - 1}
+              showAll={showAll}
             />
           ))
         )}
       </div>
+      {steps !== undefined && note === undefined && hasMore && (
+        <button
+          type="button"
+          onClick={() => setShowAll((open) => !open)}
+          aria-expanded={showAll}
+          className="flex items-center justify-center gap-1 border-t border-surface-divider py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          {showAll ? "Show fewer" : "Show all opponents"}
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform",
+              showAll && "rotate-180",
+            )}
+          />
+        </button>
+      )}
     </div>
   );
 }
