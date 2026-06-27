@@ -48,10 +48,6 @@ interface BracketCardProps {
   championCode?: string;
 }
 
-function formatPct(p?: number): string {
-  return p === undefined ? "··" : `${Math.round(p * 100)}%`;
-}
-
 /** The two feeding matches of a knockout node, or `null` for a Round-of-32 leaf
  *  (whose sides come from groups, not earlier matches). */
 function childMatches(match: KnockoutMatch): [number, number] | null {
@@ -88,6 +84,7 @@ function PctCell({
   champion?: boolean;
   mirror?: boolean;
 }) {
+  const p = slot?.probability;
   return (
     <span
       className={cn(
@@ -101,7 +98,11 @@ function PctCell({
             : "text-muted-foreground",
       )}
     >
-      {formatPct(slot?.probability)}
+      {/* number full size, percent sign a touch smaller to save width */}
+      <span>
+        {p === undefined ? "··" : Math.round(p * 100)}
+        {p !== undefined && <span className="text-[0.8em]">%</span>}
+      </span>
     </span>
   );
 }
@@ -117,7 +118,7 @@ function FlagCell({
     <Flag
       code={slot?.code}
       size={VAR.flag}
-      className={cn("block rounded-[3px] ring-0", dim && "opacity-55")}
+      className={cn("block rounded-[2px] ring-0", dim && "opacity-55")}
     />
   );
 }
@@ -166,7 +167,7 @@ function MatchCard({
   );
 
   return (
-    <div className="rounded-md border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
+    <div className="rounded-sm border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
       <div
         className="grid gap-0.5 sm:gap-1"
         style={{
@@ -278,7 +279,7 @@ function CenterNode({
       className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
       style={{ top }}
     >
-      <div className="relative rounded-md bg-card">
+      <div className="relative rounded-sm bg-card">
         <CenterLabel
           text={label}
           trophy={trophy}
@@ -397,7 +398,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:23px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:30px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:38px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:21px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:26px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:30px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
