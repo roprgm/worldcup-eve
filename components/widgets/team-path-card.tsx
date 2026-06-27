@@ -45,27 +45,26 @@ function shownOpponents(list: Opponent[]): Opponent[] {
     .slice(0, MAX_OPPONENTS);
 }
 
-// A compact opponent chip — flag, code, chance — so several wrap per row.
-function OpponentChip({
-  opponent,
-  lead,
-}: {
-  opponent: Opponent;
-  lead: boolean;
-}) {
+// A compact opponent chip — flag, code, chance. Fills its grid cell so every
+// chip is the same width; the pick accent is reserved for a near-certain (>99%)
+// opponent, not just the most likely one.
+function OpponentChip({ opponent }: { opponent: Opponent }) {
+  const certain = opponent.probability > 0.99;
   return (
     <div
       title={opponent.name}
       className={cn(
-        "flex items-center gap-1 rounded-md border px-1.5 py-0.5",
-        lead ? "border-pick/40 bg-pick/5" : "border-surface-border bg-muted/30",
+        "flex w-full items-center justify-center gap-1 rounded-md border px-1.5 py-0.5 whitespace-nowrap",
+        certain
+          ? "border-pick/40 bg-pick/5"
+          : "border-surface-border bg-muted/30",
       )}
     >
       <Flag code={opponent.code} size={12} />
       <span
         className={cn(
           "text-[11px] font-semibold tracking-wide",
-          lead ? "text-foreground" : "text-muted-foreground",
+          certain ? "text-foreground" : "text-muted-foreground",
         )}
       >
         {opponent.code}
@@ -73,7 +72,7 @@ function OpponentChip({
       <span
         className={cn(
           "text-[11px] tabular-nums",
-          lead ? "font-semibold text-pick" : "text-muted-foreground/70",
+          certain ? "font-semibold text-pick" : "text-muted-foreground/70",
         )}
       >
         {formatPct(opponent.probability)}
@@ -99,21 +98,17 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
             reach {formatPct(step.reachProbability)}
           </span>
         </div>
-        <div className="mt-1 flex flex-wrap gap-1">
-          {opponents.length === 0 ? (
-            <p className="text-[12px] text-muted-foreground/40 italic">
-              to be decided
-            </p>
-          ) : (
-            opponents.map((opponent, i) => (
-              <OpponentChip
-                key={opponent.code}
-                opponent={opponent}
-                lead={i === 0}
-              />
-            ))
-          )}
-        </div>
+        {opponents.length === 0 ? (
+          <p className="mt-1 text-[12px] text-muted-foreground/40 italic">
+            to be decided
+          </p>
+        ) : (
+          <div className="mt-1 grid grid-cols-[repeat(auto-fill,minmax(4.75rem,1fr))] gap-1">
+            {opponents.map((opponent) => (
+              <OpponentChip key={opponent.code} opponent={opponent} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
