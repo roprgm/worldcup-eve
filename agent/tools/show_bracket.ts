@@ -5,6 +5,8 @@ import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { getPredictions } from "@/lib/predictions";
 import { teamById } from "@/lib/tournament";
 
+const FINAL_MATCH = 104; // the bracket's final node (see bracket-card)
+
 const percent = (p: number) => Math.round(p * 1000) / 10;
 const teamName = (code: string) => teamById[code]?.name ?? code;
 
@@ -14,11 +16,22 @@ export default defineTool({
   inputSchema: z.object({}),
   async execute() {
     const snapshot = await getPredictions();
-    const champion = snapshot.champion.slice(0, 3).map((c) => ({
-      team: teamName(c.code),
-      chancePercent: percent(c.probability),
-    }));
-    return { champion };
+
+    // The widget shows each slot's most-likely team and that team's chance to
+    // REACH the match — not to win the cup. Summarise the final the same way.
+    const finalist = (side: "home" | "away") => {
+      const top = snapshot.slots.find(
+        (s) => s.match === FINAL_MATCH && s.side === side,
+      )?.candidates[0];
+      return top
+        ? {
+            team: teamName(top.code),
+            chanceToReachFinalPercent: percent(top.probability),
+          }
+        : undefined;
+    };
+
+    return { final: { home: finalist("home"), away: finalist("away") } };
   },
   toModelOutput: widgetModelOutput,
 });
