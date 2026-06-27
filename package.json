@@ -11,8 +11,6 @@
     "dev:agent": "eve dev",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "generate:forks": "bun run lib/forks/generate.ts",
-    "seed:groups": "bun run lib/forks/seed-groups.ts",
     "start": "node scripts/start.mjs",
     "sync:markets": "bun run lib/predictions/sync.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
@@ -20,7 +18,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.101.1",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/blob": "^2.5.0",
     "@vercel/functions": "^3.7.2",
     "ai": "7.0.0-beta.178",
     "bottleneck": "^2.19.5",

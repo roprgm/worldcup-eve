@@ -20,7 +20,7 @@ type ChatContextValue = {
   start: (message: string) => void;
 };
 
-// A shared chat to fork from: the prior events render immediately, and the
+// A starter chat to seed from: the prior events render immediately, and the
 // transcript is replayed as model context so the agent continues seamlessly.
 export type ChatSeed = {
   events: Agent["events"];
@@ -66,10 +66,10 @@ export function ChatProvider({
   children: ReactNode;
   seed?: ChatSeed;
 }) {
-  // A seeded fork ignores any saved chat and starts fresh from the seed.
+  // A seeded starter ignores any saved chat and starts fresh from the seed.
   const [restored] = useState(() => (seed ? null : loadChat()));
   // Prior conversation injected as model context every turn: a fresh durable
-  // session has no server-side history, so this is what makes the fork continue.
+  // session has no server-side history, so this is what lets a starter continue.
   const transcript = seed?.transcript ?? restored?.transcript;
   const adopted = useRef(false);
 
@@ -100,8 +100,8 @@ export function ChatProvider({
     (text: string) => {
       const message = text.trim();
       if (!message) return;
-      // On its first turn a fork adopts a normal `/chat/<id>` URL so it persists
-      // and later resumes like any other local chat.
+      // On its first turn a starter adopts a normal `/chat/<id>` URL so it
+      // persists and later resumes like any other local chat.
       if (seed && !adopted.current) {
         adopted.current = true;
         window.history.pushState(null, "", `/chat/${newChatId()}`);
