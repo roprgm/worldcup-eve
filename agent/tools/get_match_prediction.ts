@@ -93,7 +93,7 @@ function groupTeams(teams: PredictionTeam[], group: GroupLetter) {
 
 export default defineTool({
   description:
-    "World Cup prediction estimates: a single team's run (advance, reach by round, title odds), a group's advancement odds, or the title favorites. For a specific match's score/odds use get_match_forecast; for an undecided knockout matchup use get_knockout_forecast.",
+    "World Cup prediction estimates: a single team's run (advance, reach by round, title odds), a group's advancement odds, or the title favorites. For a specific match's score/odds use get_match_forecast; for an undecided knockout matchup use show_knockout_match.",
   inputSchema: z.object({
     team: z
       .string()
@@ -143,5 +143,37 @@ export default defineTool({
       type: "title_ranking",
       teams: topTeams(teams, limit ?? 8),
     };
+  },
+  // No view has a widget — the model answers from these numbers. Kept compact so
+  // a title ranking doesn't dump the full per-team breakdown into the reply.
+  toModelOutput(output) {
+    if ("error" in output) {
+      const known = (output.knownTeams ?? [])
+        .slice(0, 8)
+        .map((t) => t.name)
+        .join(", ");
+      return {
+        type: "text",
+        value: `Unknown team. Known teams include: ${known}.`,
+      };
+    }
+    if (output.type === "team" && output.team) {
+      const t = output.team;
+      return {
+        type: "text",
+        value: `${t.name} (Group ${t.group}): advance ${t.groupStage.advancePercent}%, reach the final ${t.knockout.reachFinalPercent}%, win it all ${t.championPercent}%.`,
+      };
+    }
+    if (output.type === "group") {
+      const order = (output.teams ?? [])
+        .map((t) => `${t.name} (advance ${t.groupStage.advancePercent}%)`)
+        .join(", ");
+      return { type: "text", value: `Group ${output.group}: ${order}.` };
+    }
+    const top = (output.teams ?? [])
+      .slice(0, 5)
+      .map((t) => `${t.name} ${t.championPercent}%`)
+      .join(", ");
+    return { type: "text", value: `Title favorites: ${top}.` };
   },
 });

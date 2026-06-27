@@ -111,7 +111,7 @@ export function PromptInput({
         event.preventDefault();
         submit();
       }}
-      className="flex items-end gap-2 rounded-[18px] border border-border bg-surface/70 p-2 pl-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-colors duration-150 focus-within:border-border-strong"
+      className="flex items-end gap-2 rounded-3xl border border-border bg-surface/70 p-2 pl-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-colors duration-150 focus-within:border-border-strong"
     >
       <textarea
         ref={textareaRef}
@@ -122,7 +122,7 @@ export function PromptInput({
         placeholder={placeholder}
         aria-label="Message WC26.chat"
         enterKeyHint="send"
-        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-[1rem] leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
+        className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-base leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
       />
 
       <SubmitButton

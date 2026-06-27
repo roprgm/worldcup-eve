@@ -1,9 +1,10 @@
-import { CardGrid } from "@/components/ui/card-grid";
+import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
 import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
 import {
   groupLetters,
   knockoutMatches,
@@ -36,12 +37,18 @@ export default function PredictionsPage() {
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
-        <Section title="Groups">
+        <Section title="Groups" defaultOpen={false}>
           <CardGrid>
             {groupLetters.map((letter) => (
               <PredictionGroupWidget key={letter} letter={letter} />
             ))}
           </CardGrid>
+        </Section>
+
+        <Section title="Best thirds">
+          <CardGridFrame className="max-w-[480px] md:max-w-[972px]">
+            <ThirdsRankingWidget />
+          </CardGridFrame>
         </Section>
 
         <Section title="Bracket">

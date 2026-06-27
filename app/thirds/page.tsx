@@ -1,4 +1,4 @@
-import { CardGrid } from "@/components/ui/card-grid";
+import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
 import {
   ThirdOddsWidget,
@@ -14,9 +14,9 @@ export default function ThirdsPage() {
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Section title="Best thirds">
-          <CardGrid>
+          <CardGridFrame className="max-w-xl">
             <ThirdsRankingWidget />
-          </CardGrid>
+          </CardGridFrame>
         </Section>
 
         <Section title="Third-place odds">

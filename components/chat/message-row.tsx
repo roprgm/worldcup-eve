@@ -8,6 +8,10 @@ import {
 import { Response } from "@/components/ai-elements/response";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useChat } from "@/components/chat/chat-context";
+import {
+  MessageWidgets,
+  messageWidgets,
+} from "@/components/chat/message-widgets";
 import { messageText, questionPart } from "@/components/chat/messages";
 
 export function MessageRow({
@@ -55,13 +59,25 @@ export function ActivityRow({ label }: { label: string }) {
 
 function AssistantBody({ message }: { message: EveMessage }) {
   const question = questionPart(message);
-  const text = messageText(message);
+  const widgets = messageWidgets(message);
+  const text = visibleAssistantText(messageText(message), widgets.length > 0);
   return (
     <div className="flex flex-col gap-3">
       {question ? <QuestionPrompt part={question} /> : null}
       {text ? <Response>{text}</Response> : null}
+      <MessageWidgets specs={widgets} />
     </div>
   );
+}
+
+function visibleAssistantText(text: string, hasWidgets: boolean): string {
+  const trimmed = text.trim();
+  if (!hasWidgets || trimmed.length === 0) return trimmed;
+
+  return trimmed
+    .split(/\n\s*(?:[-*•]|\d+[.)])\s+/u, 1)[0]
+    .split(/\n\s*\|/u, 1)[0]
+    .trim();
 }
 
 function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {

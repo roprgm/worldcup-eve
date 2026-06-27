@@ -7,15 +7,12 @@ import type { MatchStatus, Results } from "@/lib/results";
 import { type GroupLetter, groupMatches, teamById } from "@/lib/tournament";
 import { computeStandings, type Scores } from "@/lib/tournament/standings";
 
-// Match the bracket's threshold: a market this lopsided is treated as decided.
-const QUALIFIED = 0.999;
-
 type GroupFixture = (typeof groupMatches)[number];
 type ResultStatus = "live" | "final" | "predicted";
 
-/** Per-fixture scoreline: a real result if the match has been played, else the
- *  market's most-likely exact score. */
-function resultsFor(
+/** Per-fixture scoreline for the result matrix: a real result if the match has
+ *  been played, else the market's most-likely exact score. */
+function displayScoresFor(
   letter: GroupLetter,
   predicted: Scores,
   real: Scores,
@@ -60,11 +57,15 @@ function resultFor({
 }
 
 function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
-  const results = resultsFor(group.letter, predicted, live.groupScores);
-  const standings = computeStandings(group.letter, results);
+  const displayScores = displayScoresFor(
+    group.letter,
+    predicted,
+    live.groupScores,
+  );
+  // Standings count real results only (live scores included), never predictions.
+  const standings = computeStandings(group.letter, live.groupScores);
   const columns = standings.map((s) => s.teamId);
   const fixtures = groupMatches.filter((m) => m.group === group.letter);
-  const advanceOf = new Map(group.teams.map((t) => [t.code, t.advance]));
   const matchOf = (x: string, y: string) =>
     fixtures.find(
       (m) =>
@@ -79,7 +80,6 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
       team: {
         code: team.id,
         name: team.name,
-        confirmed: (advanceOf.get(standing.teamId) ?? 0) >= QUALIFIED,
       },
       dimmed: index >= 3,
       goalDiff:
@@ -97,7 +97,7 @@ function groupRows(group: GroupOdds, predicted: Scores, live: Results) {
           : resultFor({
               match: matchOf(standing.teamId, column),
               rowTeam: standing.teamId,
-              results,
+              results: displayScores,
               status: live.groupStatus,
             }),
       ),
