@@ -1,6 +1,6 @@
 import { cn } from "cnfast";
 
-/** Three-dot typing indicator shown while the agent is "thinking". */
+/** Three-dot typing indicator shown while the agent is working. */
 export function Loader({ className }: { className?: string }) {
   return (
     <div

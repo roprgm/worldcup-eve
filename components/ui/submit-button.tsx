@@ -3,28 +3,22 @@ import { cn } from "cnfast";
 import { ArrowUp, Square } from "lucide-react";
 import { BallIcon } from "@/components/icons";
 
-interface SubmitButtonProps {
-  status: UseEveAgentStatus;
-  canSend: boolean;
-  /** When true, plays the arrow → soccer-ball launch animation. */
-  launching: boolean;
-  onStop: () => void;
-}
-
-/**
- * Send / stop control for the prompt input. On send it plays a subtle
- * launch animation: the up-arrow becomes a soccer ball that kicks up and out
- * of the top of the button (clipped to its bounds via overflow-hidden).
- */
+/** Send / stop control for the prompt input. On send it plays a launch
+ *  animation: the up-arrow becomes a soccer ball that kicks up out of the
+ *  button (clipped to its bounds via overflow-hidden). */
 export function SubmitButton({
   status,
   canSend,
   launching,
   onStop,
-}: SubmitButtonProps) {
+}: {
+  status: UseEveAgentStatus;
+  canSend: boolean;
+  launching: boolean;
+  onStop: () => void;
+}) {
   const isBusy = status === "submitted" || status === "streaming";
 
-  // While generating — and not mid-launch — show the stop control.
   if (isBusy && !launching) {
     return (
       <button

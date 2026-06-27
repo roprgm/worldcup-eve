@@ -2,7 +2,8 @@ import { cn } from "cnfast";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
 
-// AI Elements–style Response: streams markdown safely via Streamdown.
+/** Streamed markdown, rendered safely. Memoized on its text so a parent
+ *  re-render mid-stream doesn't reparse unchanged content. */
 export const Response = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
@@ -10,7 +11,6 @@ export const Response = memo(
         "text-base leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
-      // Drop the table copy/download/fullscreen toolbar.
       controls={false}
       {...props}
     />

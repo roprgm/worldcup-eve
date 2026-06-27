@@ -1,54 +1,52 @@
-import type { EveMessage } from "eve/react";
-import { ActivityRow, MessageRow } from "@/components/chat/message-row";
+import type { EveMessage, UseEveAgentStatus } from "eve/react";
+import { MessageRow, PendingRow } from "@/components/chat/message-row";
 import { messageWidgets } from "@/components/chat/message-widgets";
 import {
-  assistantActivityLabel,
-  isRenderableMessage,
   messageKey,
   messageText,
+  questionPart,
 } from "@/components/chat/messages";
 
-export function MessageList({
-  messages,
-  isBusy,
-}: {
-  messages: readonly EveMessage[];
-  isBusy: boolean;
-}) {
-  const bubbles = messages.filter((message) =>
-    shouldRenderMessage(message, isBusy),
-  );
-  const latestAssistant = messages.findLast((m) => m.role === "assistant");
-  // The reply is in flight until its text starts streaming. Until then the one
-  // trailing ActivityRow stands in for it — so only one loader can ever show.
-  const replying =
-    isBusy && (!latestAssistant || messageText(latestAssistant).length === 0);
-
+function hasContent(message: EveMessage): boolean {
   return (
-    <div className="flex flex-col gap-6">
-      {bubbles.map((message, index) => (
-        <MessageRow
-          key={messageKey(message, index)}
-          message={message}
-          index={index}
-          streaming={isBusy && message.metadata?.status === "streaming"}
-        />
-      ))}
-      {replying && (
-        <ActivityRow
-          label={
-            latestAssistant
-              ? assistantActivityLabel(latestAssistant)
-              : "Thinking"
-          }
-        />
-      )}
-    </div>
+    messageText(message).length > 0 ||
+    questionPart(message) !== undefined ||
+    messageWidgets(message).length > 0
   );
 }
 
-function shouldRenderMessage(message: EveMessage, isBusy: boolean): boolean {
-  if (isRenderableMessage(message)) return true;
-  if (isBusy && message.metadata?.status === "streaming") return false;
-  return messageWidgets(message).length > 0;
+export function MessageList({
+  messages,
+  status,
+}: {
+  messages: readonly EveMessage[];
+  status: UseEveAgentStatus;
+}) {
+  const isBusy = status === "submitted" || status === "streaming";
+  const last = messages.at(-1);
+
+  // Show a row for every message with content, plus the trailing assistant reply
+  // while it's still in flight — its body carries the loader until text arrives,
+  // so the indicator turns into the answer in place, with no row swap.
+  const rows = messages.filter(
+    (message, index) =>
+      hasContent(message) ||
+      (isBusy && message.role === "assistant" && index === messages.length - 1),
+  );
+
+  // The reply hasn't produced an assistant message yet (still "submitted").
+  const awaitingReply = isBusy && last?.role !== "assistant";
+
+  return (
+    <div className="flex flex-col gap-6">
+      {rows.map((message, index) => (
+        <MessageRow
+          key={messageKey(message, index)}
+          message={message}
+          busy={isBusy}
+        />
+      ))}
+      {awaitingReply && <PendingRow label="Thinking" />}
+    </div>
+  );
 }

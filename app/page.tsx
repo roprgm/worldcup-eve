@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
 import { Composer } from "@/components/composer";

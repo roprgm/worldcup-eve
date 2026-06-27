@@ -1,3 +1,5 @@
+"use client";
+
 import type { UseEveAgentStatus } from "eve/react";
 import {
   useCallback,
@@ -6,7 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { SubmitButton } from "@/components/ai-elements/submit-button";
+import { SubmitButton } from "@/components/ui/submit-button";
+
+const MAX_HEIGHT = 168;
 
 interface PromptInputProps {
   value: string;
@@ -28,82 +32,44 @@ export function PromptInput({
   autoFocus = true,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const launchTimer = useRef<number | null>(null);
   const [launching, setLaunching] = useState(false);
   const isBusy = status === "submitted" || status === "streaming";
   const canSend = value.trim().length > 0 && !isBusy;
 
-  // Auto-grow the textarea up to a max height. A zero-width textarea (before flex
-  // layout resolves) reports a bogus scrollHeight, so skip measuring until it has width.
+  // Auto-grow the textarea up to a cap. A zero-width textarea (before flex
+  // layout resolves) reports a bogus scrollHeight, so skip it until it has width.
   const fit = useCallback(() => {
     const el = textareaRef.current;
     if (!el || el.clientWidth === 0) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`;
   }, []);
 
-  useLayoutEffect(() => {
-    fit();
-  }, [fit]);
+  useLayoutEffect(fit, [fit, value]);
 
+  // Refit when the textarea's width changes (layout settles, viewport resizes).
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    let lastWidth = el.clientWidth;
-    fit();
-    // Refit when the textarea's width changes (layout settles, viewport resizes).
-    const observer = new ResizeObserver(() => {
-      if (el.clientWidth !== lastWidth) {
-        lastWidth = el.clientWidth;
-        fit();
-      }
-    });
+    const observer = new ResizeObserver(fit);
     observer.observe(el);
-    // Font metrics can shift the height once Geist loads.
-    let cancelled = false;
-    document.fonts?.ready.then(() => {
-      if (!cancelled) fit();
-    });
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [fit]);
 
-  useEffect(
-    () => () => {
-      if (launchTimer.current) window.clearTimeout(launchTimer.current);
-    },
-    [],
-  );
-
-  // Focus on mount — but only on fine-pointer devices; on touch, focusing pops
-  // the keyboard and scrolls the page.
+  // Focus on mount, but only with a fine pointer — on touch this pops the
+  // keyboard and scrolls the page.
   useEffect(() => {
     if (autoFocus && window.matchMedia("(pointer: fine)").matches) {
       textareaRef.current?.focus();
     }
   }, [autoFocus]);
 
-  // Send the message and fire the submit-button launch animation (click or Enter).
   const submit = useCallback(() => {
     if (isBusy || !value.trim()) return;
-    if (launchTimer.current) window.clearTimeout(launchTimer.current);
     setLaunching(true);
-    launchTimer.current = window.setTimeout(() => setLaunching(false), 500);
+    window.setTimeout(() => setLaunching(false), 500);
     onSubmit();
   }, [isBusy, value, onSubmit]);
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey &&
-      !event.nativeEvent.isComposing
-    ) {
-      event.preventDefault();
-      submit();
-    }
-  };
 
   return (
     <form
@@ -117,14 +83,22 @@ export function PromptInput({
         ref={textareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(event) => {
+          if (
+            event.key === "Enter" &&
+            !event.shiftKey &&
+            !event.nativeEvent.isComposing
+          ) {
+            event.preventDefault();
+            submit();
+          }
+        }}
         rows={1}
         placeholder={placeholder}
         aria-label="Message WC26.chat"
         enterKeyHint="send"
         className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-base leading-6 text-foreground placeholder:text-subtle-foreground focus:outline-none"
       />
-
       <SubmitButton
         status={status}
         canSend={canSend}

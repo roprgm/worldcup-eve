@@ -28,10 +28,6 @@ export function questionPart(
   );
 }
 
-export function isRenderableMessage(message: EveMessage): boolean {
-  return messageText(message).length > 0 || questionPart(message) !== undefined;
-}
-
 export function activeQuestion(
   messages: readonly EveMessage[],
 ): EveMessageInputRequest | undefined {

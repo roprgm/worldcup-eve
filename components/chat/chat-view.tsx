@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { MessageList } from "@/components/chat/message-list";
 import { Composer } from "@/components/composer";
+import { MessageScroller } from "@/components/ui/message-scroller";
 
 /** The active conversation: message list plus composer. Shared by the home
  *  route (once a chat starts) and the `/chat/[id]` route, so starting a chat
@@ -17,7 +13,6 @@ import { Composer } from "@/components/composer";
 export function ChatView() {
   const { agent, send } = useChat();
   const [input, setInput] = useState("");
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
 
   const handleSubmit = () => {
     send(input);
@@ -26,12 +21,11 @@ export function ChatView() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Conversation>
-        <ConversationContent>
-          <MessageList messages={agent.data.messages} isBusy={isBusy} />
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+      <MessageScroller>
+        <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+          <MessageList messages={agent.data.messages} status={agent.status} />
+        </div>
+      </MessageScroller>
 
       <Composer
         value={input}

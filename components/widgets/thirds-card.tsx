@@ -58,9 +58,7 @@ function Card({
       <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
         {hint && (
-          <span className="shrink-0 text-muted-foreground/60">
-            {hint}
-          </span>
+          <span className="shrink-0 text-muted-foreground/60">{hint}</span>
         )}
       </div>
       {children}
