@@ -353,8 +353,7 @@ function RoundLabels() {
   return <div className="flex w-full">{cells}</div>;
 }
 
-const HELP_TEXT =
-  "Each number is a team's chance to reach that match — not to win it. Green marks teams effectively through (≥99%).";
+const HELP_TEXT = "Each number is a team's chance to reach that match.";
 
 /** The header info affordance. Native `title` only surfaces on hover, so on
  *  touch we toggle a small popover on tap; a transparent backdrop dismisses it. */
