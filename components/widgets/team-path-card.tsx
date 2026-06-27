@@ -19,7 +19,6 @@ interface Opponent {
 
 export interface PathStepView {
   roundLabel: string;
-  reachProbability: number;
   opponents: Opponent[];
 }
 
@@ -90,14 +89,9 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
         {!last && <span className="my-1 w-px flex-1 bg-surface-border" />}
       </div>
       <div className="pb-2.5">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
-            {step.roundLabel}
-          </p>
-          <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-            reach {formatPct(step.reachProbability)}
-          </span>
-        </div>
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
+          {step.roundLabel}
+        </p>
         {opponents.length === 0 ? (
           <p className="mt-1 text-[12px] text-muted-foreground/40 italic">
             to be decided

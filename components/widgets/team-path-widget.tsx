@@ -47,7 +47,6 @@ function pathView(
       : undefined,
     steps: result.steps.map((step) => ({
       roundLabel: ROUND_LABEL[step.round],
-      reachProbability: step.reachProbability,
       opponents: step.opponents,
     })),
   };
