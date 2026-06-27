@@ -5,10 +5,12 @@ import { useCallback, useState } from "react";
 import { useChat } from "@/components/chat/chat-context";
 import { buildTranscript } from "@/components/chat/messages";
 
-const isDev = process.env.NODE_ENV === "development";
+// Visible everywhere except real production (local dev + Vercel preview).
+// Vercel auto-exposes NEXT_PUBLIC_VERCEL_ENV; it's undefined in local dev.
+const canPublish = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
 
-/** Admin-only (dev) affordance to publish the current chat as a shareable fork.
- *  Tree-shaken out of production builds, where forks are read-only. */
+/** Admin affordance to publish the current chat as a shareable fork. Available
+ *  in dev and preview; in production forks are read-only (the API enforces it). */
 export function ShareFork() {
   const { agent } = useChat();
   const [busy, setBusy] = useState(false);
@@ -39,7 +41,7 @@ export function ShareFork() {
     }
   }, [agent]);
 
-  if (!isDev || agent.data.messages.length === 0) return null;
+  if (!canPublish || agent.data.messages.length === 0) return null;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl justify-end px-4 sm:px-6">

@@ -4,13 +4,14 @@ import { type ForkSeed, isValidSlug, saveFork } from "@/lib/forks/store";
 
 export const dynamic = "force-dynamic";
 
-// Creating shareable forks is an admin action, restricted to local/dev. In
-// production this route only ever reads (see app/fork/[slug]); writes are closed.
+// Creating shareable forks is an admin action, open in local dev and Vercel
+// preview but closed in real production, where this route only ever reads
+// (see app/fork/[slug]). VERCEL_ENV is "production" only on the prod deployment.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.VERCEL_ENV === "production") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
