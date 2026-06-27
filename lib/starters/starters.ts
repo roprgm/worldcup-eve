@@ -1,4 +1,5 @@
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
+import { matchByNumber } from "../tournament";
 
 // Starter chats are built on the fly by parsing the slug — no storage. Each maps
 // to one "show" widget tool, hand-written so the answer stays terse. The widgets
@@ -87,8 +88,7 @@ function widgetStarter(slug: string, spec: WidgetSpec): StarterSeed {
 }
 
 /** Build a starter chat from its slug, or null if the slug isn't recognized.
- *  Slugs: group-a…group-l, thirds, kickoffs (today), live, match(es)-<n>[-<n>…],
- *  knockout-<n>. */
+ *  Slugs: group-a…group-l, thirds, kickoffs (today), live, match-<n>. */
 export function buildStarter(slug: string): StarterSeed | null {
   const group = /^group-([a-l])$/.exec(slug);
   if (group) {
@@ -133,36 +133,26 @@ export function buildStarter(slug: string): StarterSeed | null {
     });
   }
 
-  const matches = /^match(?:es)?-(\d+(?:-\d+)*)$/.exec(slug);
-  if (matches) {
-    const numbers = matches[1]
-      .split("-")
-      .map(Number)
-      .filter((n) => n >= 1 && n <= 104);
-    if (numbers.length > 0) {
-      const plural = numbers.length > 1;
+  const match = /^match-(\d+)$/.exec(slug);
+  if (match) {
+    const n = Number(match[1]);
+    // Knockout matches have a prediction widget; group-stage matches show a card.
+    if (matchByNumber[n]) {
       return widgetStarter(slug, {
-        question: plural
-          ? `Show me matches ${numbers.join(", ")}.`
-          : `Show me match ${numbers[0]}.`,
-        answer: "Here you go:",
-        toolName: "show_matches",
-        input: { matches: numbers },
-        summary: `showed cards for match${plural ? "es" : ""} ${numbers.join(", ")}`,
+        question: `Who's likely to win match ${n}?`,
+        answer: `Match ${n} prediction:`,
+        toolName: "show_knockout_match",
+        input: { id: n },
+        summary: `showed the predicted result for knockout match ${n}`,
       });
     }
-  }
-
-  const knockout = /^knockout-(\d+)$/.exec(slug);
-  if (knockout) {
-    const id = Number(knockout[1]);
-    if (id >= 1 && id <= 104) {
+    if (n >= 1 && n <= 104) {
       return widgetStarter(slug, {
-        question: `Who's likely to win match ${id}?`,
-        answer: `Match ${id} prediction:`,
-        toolName: "show_knockout_match",
-        input: { id },
-        summary: `showed the predicted result for knockout match ${id}`,
+        question: `How did match ${n} go?`,
+        answer: `Match ${n}:`,
+        toolName: "show_matches",
+        input: { matches: [n] },
+        summary: `showed the card for match ${n}`,
       });
     }
   }
