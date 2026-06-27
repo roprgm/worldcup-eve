@@ -78,6 +78,10 @@ export interface Predictions {
   groupScores: Record<string, Scoreline>;
   /** Live two-way (home/away) win chance per group fixture with a market. */
   matchOdds: MatchOdds[];
+  /** BT win distribution per knockout match (73–104, excl. the third-place
+   *  play-off): the teams that could win it, sorted high→low. For a decided
+   *  matchup this is the head-to-head win split. */
+  matchWinOdds: Record<number, Candidate[]>;
 }
 
 // 4 decimals: display-only, keeps the payload small, drops long-tail candidates.
@@ -175,6 +179,14 @@ export async function buildPredictions(
     normalize(winners.get(104) ?? new Map()),
   );
 
+  // Per knockout match, the BT distribution over who wins it. simulate() skips
+  // the third-place play-off, so it has no entry here.
+  const matchWinOdds: Record<number, Candidate[]> = {};
+  for (const m of knockoutMatches) {
+    const dist = winners.get(m.number);
+    if (dist?.size) matchWinOdds[m.number] = toCandidates(normalize(dist));
+  }
+
   // Per-team reach: sum each team's winner probability across a round's matches
   // (REACH_ROUNDS[0]=R32→r16, [1]=R16→qf, [2]=QF→sf, [3]=SF→final).
   const sumReach = (ms: KnockoutMatch[], code: string) =>
@@ -213,6 +225,7 @@ export async function buildPredictions(
     reach,
     groupScores: groupMarkets.scores,
     matchOdds: groupMarkets.odds,
+    matchWinOdds,
   };
 }
 
