@@ -1,17 +1,15 @@
 import Link from "next/link";
-import { MessageSquarePlus } from "lucide-react";
 import { BallIcon, GitHubIcon } from "@/components/icons";
+import { NewChatButton } from "@/components/new-chat-button";
 import { SiteNav } from "@/components/site-nav";
 
 export function Header() {
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-6">
-        {/* Home is the empty prompt — the new-chat screen. */}
         <Link
           href="/"
-          aria-label="New chat"
-          title="New chat"
+          aria-label="WC26.chat home"
           className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
         >
           <span className="flex size-8 items-center justify-center rounded-[9px] border border-border bg-surface text-foreground">
@@ -25,15 +23,7 @@ export function Header() {
         <span className="mx-2 hidden h-4 w-px rotate-18 bg-border-strong sm:block" />
         <SiteNav />
         <div className="ml-auto flex items-center gap-1.5">
-          <Link
-            href="/"
-            aria-label="New chat"
-            title="New chat"
-            className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-surface text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground sm:w-auto sm:gap-1.5 sm:px-2.5"
-          >
-            <MessageSquarePlus className="size-4" />
-            <span className="hidden sm:inline">New chat</span>
-          </Link>
+          <NewChatButton />
           {/* External link — a plain anchor is correct here. */}
           <a
             href="https://github.com/roprgm/worldcup-eve"

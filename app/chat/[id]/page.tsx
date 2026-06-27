@@ -1,9 +1,12 @@
-import { ChatContent } from "@/app/chat/[id]/chat-content";
+import { Chat } from "@/components/chat/chat";
 
-// The id is meaningless on the server (it only keys client-side state), so serve
-// one static shell for every chat instead of rendering each id on demand.
-export const dynamic = "force-static";
-
-export default function Page() {
-  return <ChatContent />;
+// The id names a durable Eve session. The conversation replays from the server
+// on load (see ChatProvider), so the page just hands the id to the chat surface.
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <Chat pendingSessionId={id} />;
 }

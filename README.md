@@ -8,7 +8,7 @@ Built with [Eve](https://github.com/vercel/eve), [Next.js](https://nextjs.org), 
 
 - ⚡ Live match context: scores, standings, and match events exposed to the Eve agent as typed tools
 - 🧠 Open model routing: `gpt-oss-120b` served through the Vercel AI Gateway with provider ordering
-- 💬 Resumable chats: each conversation gets a `/chat/<id>` URL and restores from browser storage
+- 💬 Resumable chats: each conversation gets a `/chat/<id>` URL and replays from its durable Eve session on reload
 - 🧩 Complete Eve setup: typed tools, dynamic instructions, evals, and a chat UI in one small app
 
 ## Requirements

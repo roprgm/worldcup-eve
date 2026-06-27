@@ -115,7 +115,7 @@ function visibleAssistantText(text: string, hasWidgets: boolean): string {
 }
 
 function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
-  const { agent } = useChat();
+  const { agent, status } = useChat();
   const request = part.toolMetadata?.eve?.inputRequest;
   if (!request) return null;
 
@@ -125,7 +125,7 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
     ? (options.find((o) => o.id === response.optionId)?.label ??
       response.optionId)
     : response?.text;
-  const busy = agent.status === "submitted" || agent.status === "streaming";
+  const busy = status === "submitted" || status === "streaming";
 
   return (
     <div className="flex flex-col gap-2.5">

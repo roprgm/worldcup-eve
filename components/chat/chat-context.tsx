@@ -1,79 +1,95 @@
 "use client";
 
-import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
+import type { EveMessage, EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
+import type { HandleMessageStreamEvent, SessionState } from "eve/client";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
+import {
+  readCursor,
+  streamHistory,
+  writeCursor,
+} from "@/components/chat/session-store";
 
 type Agent = UseEveAgentHelpers<EveMessageData>;
 
 type ChatContextValue = {
   agent: Agent;
-  send: (message: string) => void;
-  start: (message: string) => void;
-};
-
-type SavedChat = {
-  id: string;
-  session?: Agent["session"];
-  events?: Agent["events"];
+  messages: readonly EveMessage[];
+  status: Agent["status"];
+  sessionId: string | undefined;
+  send: (text: string) => void;
+  newChat: () => void;
+  restore: (sessionId: string) => void;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-const STORAGE_KEY = "wc26-chat";
-const newChatId = () => Math.random().toString(36).slice(2, 10);
-const chatIdFromPath = (path: string) =>
-  path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
+// What the agent is constructed with. `key` remounts it when the conversation
+// identity changes (new chat, or a restore finishing).
+type Conversation = {
+  key: string;
+  events?: readonly HandleMessageStreamEvent[];
+  session?: SessionState;
+};
 
-// Restore the saved chat — but only under its own `/chat/<id>` (a fresh id stays
-// empty) or on a non-chat page (so the Chat link can return to it). `/` is fresh.
-function loadChat(): SavedChat | null {
-  if (typeof window === "undefined") return null;
-  const path = window.location.pathname;
-  if (path === "/") return null;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  let saved: SavedChat;
-  try {
-    saved = JSON.parse(raw) as SavedChat;
-  } catch {
-    return null;
-  }
-  const urlId = chatIdFromPath(path);
-  return urlId && urlId !== saved.id ? null : saved;
-}
+type Props = {
+  conversation: Conversation;
+  onSession: (id: string | undefined) => void;
+  newChat: () => void;
+  restore: (sessionId: string) => void;
+  children: ReactNode;
+};
 
-export function ChatProvider({ children }: { children: ReactNode }) {
-  const [restored] = useState(loadChat);
+/** Owns the live agent for one conversation. Remounted (via `key`) whenever the
+ *  conversation identity changes, so it always boots from the right history. */
+function ConversationProvider({
+  conversation,
+  onSession,
+  newChat,
+  restore,
+  children,
+}: Props) {
+  const router = useRouter();
+  const namedRef = useRef(conversation.session?.sessionId);
 
   const agent = useEveAgent({
-    initialSession: restored?.session,
-    initialEvents: restored?.events,
+    initialEvents: conversation.events,
+    initialSession: conversation.session,
     prepareSend: (input) => ({
       ...input,
       clientContext: {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
-    // Persist when a turn settles, keyed by the chat in the URL. Skip empty
-    // turns so a failed first message can't clobber the saved chat.
-    onFinish: ({ session, events }) => {
-      const id = chatIdFromPath(window.location.pathname);
-      if (id && events.length > 0) {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ id, session, events }),
-        );
+    // Persist the cursor each turn, and move the URL to /chat/<id> the first time
+    // a turn earns a server session, so a refresh can replay it.
+    onSessionChange: (session) => {
+      onSession(session.sessionId);
+      if (!session.sessionId) return;
+      writeCursor(session);
+      if (session.sessionId !== namedRef.current) {
+        namedRef.current = session.sessionId;
+        if (window.location.pathname !== `/chat/${session.sessionId}`) {
+          router.replace(`/chat/${session.sessionId}`);
+        }
       }
     },
   });
+
+  useEffect(() => {
+    onSession(agent.session.sessionId);
+  }, [onSession, agent.session.sessionId]);
 
   const send = useCallback(
     (text: string) => {
@@ -90,22 +106,91 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [agent],
   );
 
-  const start = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      agent.reset(); // start fresh even if a previous chat is still in context
-      send(text); // optimistic message lands before the view swaps in
-      // Update the URL without a route navigation: the conversation already
-      // renders from shared context, so a real navigation only adds a flicker.
-      window.history.pushState(null, "", `/chat/${newChatId()}`);
+  const value = useMemo<ChatContextValue>(
+    () => ({
+      agent,
+      messages: agent.data.messages,
+      status: agent.status,
+      sessionId: agent.session.sessionId,
+      send,
+      newChat,
+      restore,
+    }),
+    [agent, send, newChat, restore],
+  );
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+const freshConversation = (seq: number): Conversation => ({
+  key: `new:${seq}`,
+});
+
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [conversation, setConversation] = useState<Conversation>(() =>
+    freshConversation(0),
+  );
+  const seq = useRef(0);
+  const currentId = useRef<string | undefined>(undefined);
+  const replay = useRef<AbortController | null>(null);
+
+  const onSession = useCallback((id: string | undefined) => {
+    currentId.current = id;
+  }, []);
+
+  const newChat = useCallback(() => {
+    replay.current?.abort();
+    seq.current += 1;
+    currentId.current = undefined;
+    setConversation(freshConversation(seq.current));
+  }, []);
+
+  // Load a conversation by id: skip if it's already live, replay its history
+  // from the server otherwise, and fall back to a new chat if it can't be read.
+  const restore = useCallback(
+    (sessionId: string) => {
+      if (currentId.current === sessionId) return;
+      const cursor = readCursor(sessionId);
+      if (!cursor?.streamIndex) {
+        router.replace("/");
+        return;
+      }
+      currentId.current = sessionId;
+      replay.current?.abort();
+      const controller = new AbortController();
+      replay.current = controller;
+      setConversation({ key: `${sessionId}:loading` });
+      streamHistory(cursor, controller.signal)
+        .then((events) => {
+          if (controller.signal.aborted) return;
+          if (events.length === 0) {
+            router.replace("/");
+            return;
+          }
+          setConversation({
+            key: `${sessionId}:ready`,
+            events,
+            session: cursor,
+          });
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) router.replace("/");
+        });
     },
-    [agent, send],
+    [router],
   );
 
   return (
-    <ChatContext.Provider value={{ agent, send, start }}>
+    <ConversationProvider
+      key={conversation.key}
+      conversation={conversation}
+      onSession={onSession}
+      newChat={newChat}
+      restore={restore}
+    >
       {children}
-    </ChatContext.Provider>
+    </ConversationProvider>
   );
 }
 
