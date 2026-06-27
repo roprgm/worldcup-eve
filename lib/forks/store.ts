@@ -1,5 +1,6 @@
 import { get, put } from "@vercel/blob";
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
+import { bundledSeeds } from "./seeds";
 
 // The raw eve stream events (used to re-render the prior conversation) plus a
 // plain-text transcript the forked session injects as model context each turn.
@@ -30,7 +31,14 @@ export async function saveFork(slug: string, seed: ForkSeed): Promise<void> {
 
 export async function loadFork(slug: string): Promise<ForkSeed | null> {
   if (!isValidSlug(slug)) return null;
-  const result = await get(pathname(slug), { access: "private" });
-  if (result?.statusCode !== 200) return null;
-  return (await new Response(result.stream).json()) as ForkSeed;
+  try {
+    const result = await get(pathname(slug), { access: "private" });
+    if (result?.statusCode === 200) {
+      return (await new Response(result.stream).json()) as ForkSeed;
+    }
+  } catch {
+    // Fall through to bundled seeds (e.g. no Blob store/token in this env).
+  }
+  // Curated forks committed to the repo (see lib/forks/seeds); moved to Blob later.
+  return bundledSeeds[slug] ?? null;
 }

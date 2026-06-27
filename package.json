@@ -12,6 +12,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "generate:forks": "bun run lib/forks/generate.ts",
+    "seed:groups": "bun run lib/forks/seed-groups.ts",
     "start": "node scripts/start.mjs",
     "sync:markets": "bun run lib/predictions/sync.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
