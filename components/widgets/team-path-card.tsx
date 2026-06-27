@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cnfast";
-import { ChevronDown, Info, Trophy } from "lucide-react";
+import { Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
@@ -142,12 +142,18 @@ function CardHeader({
   hint,
   hintOpen,
   onToggleHint,
+  hasMore,
+  showAll,
+  onToggleAll,
 }: {
   team?: { code: string; name: string };
   subtitle?: string;
   hint?: string;
   hintOpen: boolean;
   onToggleHint: () => void;
+  hasMore: boolean;
+  showAll: boolean;
+  onToggleAll: () => void;
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-surface-divider px-3 py-2">
@@ -156,8 +162,8 @@ function CardHeader({
         <p className="truncate text-sm font-semibold text-foreground">
           {team?.name ?? "—"}
         </p>
-        <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <span className="truncate">{subtitle ?? "Road to the final"}</span>
+        <p className="flex flex-wrap items-center gap-x-1 text-[11px] text-muted-foreground">
+          <span>{subtitle ?? "Most likely opponents to the final"}</span>
           {hint && (
             <button
               type="button"
@@ -167,6 +173,16 @@ function CardHeader({
               className="inline-flex shrink-0 rounded-full p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <Info className="size-3" />
+            </button>
+          )}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={onToggleAll}
+              aria-expanded={showAll}
+              className="shrink-0 font-medium text-foreground/70 underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              · {showAll ? "See fewer" : "See all"}
             </button>
           )}
         </p>
@@ -201,6 +217,9 @@ export function TeamPathCard({
         hint={hint}
         hintOpen={hintOpen}
         onToggleHint={() => setHintOpen((open) => !open)}
+        hasMore={hasMore}
+        showAll={showAll}
+        onToggleAll={() => setShowAll((open) => !open)}
       />
       {hint && hintOpen && (
         <p className="border-b border-surface-divider bg-muted/30 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
@@ -223,22 +242,6 @@ export function TeamPathCard({
           ))
         )}
       </div>
-      {steps !== undefined && note === undefined && hasMore && (
-        <button
-          type="button"
-          onClick={() => setShowAll((open) => !open)}
-          aria-expanded={showAll}
-          className="flex items-center justify-center gap-1 border-t border-surface-divider py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          {showAll ? "Show fewer" : "Show all opponents"}
-          <ChevronDown
-            className={cn(
-              "size-3 transition-transform",
-              showAll && "rotate-180",
-            )}
-          />
-        </button>
-      )}
     </div>
   );
 }

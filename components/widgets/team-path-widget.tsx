@@ -39,9 +39,7 @@ function pathView(
 
   return {
     status: "path",
-    subtitle: result.dependsOnGroup
-      ? `Road to the final · depends on Group ${result.group}`
-      : "Road to the final",
+    subtitle: "Most likely opponents to the final",
     hint: result.dependsOnGroup
       ? `${result.name} hasn't sealed its Group ${result.group} place yet — these opponents and chances blend its 1st- and 2nd-place routes, and will sharpen once the group is decided.`
       : undefined,
