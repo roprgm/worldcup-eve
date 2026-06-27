@@ -37,8 +37,11 @@ export async function POST(
       transcript: body.transcript,
       createdAt: new Date().toISOString(),
     });
-  } catch {
-    return NextResponse.json({ error: "save failed" }, { status: 502 });
+  } catch (error) {
+    // Surface the real cause (e.g. missing BLOB_READ_WRITE_TOKEN / no Blob
+    // store connected). Safe to expose: this route is closed in production.
+    const detail = error instanceof Error ? error.message : "save failed";
+    return NextResponse.json({ error: detail }, { status: 502 });
   }
 
   return NextResponse.json({ url: `/fork/${slug}` });
