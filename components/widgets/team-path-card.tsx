@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "cnfast";
 import { Info, Trophy } from "lucide-react";
+import { useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +27,7 @@ interface TeamPathCardProps {
   team?: { code: string; name: string };
   /** Header line under the team name. */
   subtitle?: string;
-  /** When set, an (i) by the subtitle carries this tooltip (group-finish note). */
+  /** When set, a tappable (i) by the subtitle reveals this note (group-finish). */
   hint?: string;
   /** `undefined` while the predictions load — the card shows skeleton steps. */
   steps?: PathStepView[];
@@ -90,7 +93,7 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
         <span className="mt-1 size-2 shrink-0 rounded-full bg-pick/70 ring-2 ring-pick/15" />
         {!last && <span className="my-1 w-px flex-1 bg-surface-border" />}
       </div>
-      <div className="pb-3">
+      <div className="pb-2.5">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
             {step.roundLabel}
@@ -99,7 +102,7 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
             reach {formatPct(step.reachProbability)}
           </span>
         </div>
-        <div className="mt-1 space-y-1">
+        <div className="mt-1 space-y-0.5">
           {opponents.length === 0 ? (
             <p className="text-[12px] text-muted-foreground/40 italic">
               to be decided
@@ -130,7 +133,7 @@ function StepsSkeleton() {
               <span className="my-1 w-px flex-1 bg-surface-border" />
             )}
           </div>
-          <div className="pb-3">
+          <div className="pb-2.5">
             <Skeleton className="h-2.5 w-20" />
             <Skeleton className="mt-2 h-2.5 w-full" />
           </div>
@@ -144,10 +147,14 @@ function CardHeader({
   team,
   subtitle,
   hint,
+  hintOpen,
+  onToggleHint,
 }: {
   team?: { code: string; name: string };
   subtitle?: string;
   hint?: string;
+  hintOpen: boolean;
+  onToggleHint: () => void;
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-surface-divider px-3 py-2">
@@ -159,13 +166,15 @@ function CardHeader({
         <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
           <span className="truncate">{subtitle ?? "Road to the final"}</span>
           {hint && (
-            <span
-              title={hint}
-              className="inline-flex cursor-help"
-              aria-label={hint}
+            <button
+              type="button"
+              onClick={onToggleHint}
+              aria-expanded={hintOpen}
+              aria-label="Why these chances can change"
+              className="inline-flex shrink-0 rounded-full p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <Info className="size-3 shrink-0 text-muted-foreground/60" />
-            </span>
+              <Info className="size-3" />
+            </button>
           )}
         </p>
       </div>
@@ -177,7 +186,7 @@ function CardHeader({
 /** A team's projected knockout route — likely opponents each round from the
  *  Round of 32 to the final. Steps are `undefined` while the market loads; a
  *  `note` replaces them when the team is out. When the chances hinge on the
- *  group result, `hint` surfaces that via an (i) by the subtitle. */
+ *  group result, a tappable (i) by the subtitle reveals `hint`. */
 export function TeamPathCard({
   team,
   subtitle,
@@ -185,9 +194,21 @@ export function TeamPathCard({
   steps,
   note,
 }: TeamPathCardProps) {
+  const [hintOpen, setHintOpen] = useState(false);
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <CardHeader team={team} subtitle={subtitle} hint={hint} />
+      <CardHeader
+        team={team}
+        subtitle={subtitle}
+        hint={hint}
+        hintOpen={hintOpen}
+        onToggleHint={() => setHintOpen((open) => !open)}
+      />
+      {hint && hintOpen && (
+        <p className="border-b border-surface-divider bg-muted/30 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
+          {hint}
+        </p>
+      )}
       <div className="px-3 pt-3">
         {note !== undefined ? (
           <p className="pb-3 text-[13px] text-muted-foreground">{note}</p>
