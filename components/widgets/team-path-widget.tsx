@@ -18,8 +18,10 @@ const ROUND_LABEL: Record<Round, string> = {
   FINAL: "Final",
 };
 
+// The path subtitle is dynamic (it tracks the See all / See fewer toggle) so the
+// card owns it; only the "out" state carries a fixed subtitle here.
 type PathView =
-  | { status: "path"; subtitle: string; hint?: string; steps: PathStepView[] }
+  | { status: "path"; hint?: string; steps: PathStepView[] }
   | { status: "out"; subtitle: string; note: string };
 
 function pathView(
@@ -39,7 +41,6 @@ function pathView(
 
   return {
     status: "path",
-    subtitle: "Most likely opponents to the final",
     hint: result.dependsOnGroup
       ? `${result.name} hasn't sealed its Group ${result.group} place yet — these opponents and chances blend its 1st- and 2nd-place routes, and will sharpen once the group is decided.`
       : undefined,
@@ -61,7 +62,7 @@ export function TeamPathWidget({ code }: { code: string }) {
   return (
     <TeamPathCard
       team={team ? { code: team.id, name: team.name } : undefined}
-      subtitle={view?.subtitle}
+      subtitle={view?.status === "out" ? view.subtitle : undefined}
       hint={view?.status === "path" ? view.hint : undefined}
       steps={view?.status === "path" ? view.steps : undefined}
       note={view?.status === "out" ? view.note : undefined}

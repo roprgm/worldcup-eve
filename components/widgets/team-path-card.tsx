@@ -209,11 +209,20 @@ export function TeamPathCard({
     (s) => s.opponents.length > visibleOpponents(s.opponents, false).length,
   );
 
+  // "out" keeps its fixed subtitle; the path subtitle tracks the toggle, since
+  // expanded we're showing every possible opponent, not just the likeliest.
+  const headerSubtitle =
+    note !== undefined
+      ? subtitle
+      : showAll
+        ? "All possible opponents to the final"
+        : "Most likely opponents to the final";
+
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <CardHeader
         team={team}
-        subtitle={subtitle}
+        subtitle={headerSubtitle}
         hint={hint}
         hintOpen={hintOpen}
         onToggleHint={() => setHintOpen((open) => !open)}
