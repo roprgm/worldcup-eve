@@ -1,5 +1,6 @@
 import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
+import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
@@ -48,6 +49,10 @@ export default function PredictionsPage() {
           <CardGridFrame className="max-w-[480px] md:max-w-[972px]">
             <ThirdsRankingWidget />
           </CardGridFrame>
+        </Section>
+
+        <Section title="Bracket">
+          <BracketWidget />
         </Section>
 
         {knockoutSections.map((section) => (
