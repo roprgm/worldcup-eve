@@ -291,10 +291,23 @@ function Wire({
 }) {
   const armY = `calc(${parentLeaf} * ${VAR.leaf})`;
   const childInner = mirror ? childX : `calc(${childX} + ${VAR.card})`;
-  const busX = fromBottom ? `calc(${childX} + ${VAR.card} / 2)` : childInner;
   const parentOuter = mirror ? `calc(${parentX} + ${VAR.card})` : parentX;
-  const a = parentOuter;
-  const b = busX;
+  // Side connectors centre the bus in the gap (with short stubs from each
+  // child's edge); bottom connectors run it through the child's centre.
+  const busX = fromBottom
+    ? `calc(${childX} + ${VAR.card} / 2)`
+    : `calc((${childInner} + ${parentOuter}) / 2)`;
+  const hLine = (from: string, to: string, top: string) => (
+    <span
+      aria-hidden
+      className="absolute z-0 h-px bg-border-strong"
+      style={{
+        left: `min(${from}, ${to})`,
+        top,
+        width: `calc(max(${from}, ${to}) - min(${from}, ${to}))`,
+      }}
+    />
+  );
   return (
     <>
       <span
@@ -306,15 +319,13 @@ function Wire({
           height: `calc(2 * ${off} * ${VAR.leaf})`,
         }}
       />
-      <span
-        aria-hidden
-        className="absolute z-0 h-px bg-border-strong"
-        style={{
-          left: `min(${a}, ${b})`,
-          top: armY,
-          width: `calc(max(${a}, ${b}) - min(${a}, ${b}))`,
-        }}
-      />
+      {hLine(busX, parentOuter, armY)}
+      {!fromBottom && (
+        <>
+          {hLine(childInner, busX, `calc(${armY} - ${off} * ${VAR.leaf})`)}
+          {hLine(childInner, busX, `calc(${armY} + ${off} * ${VAR.leaf})`)}
+        </>
+      )}
     </>
   );
 }
