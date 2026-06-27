@@ -15,6 +15,12 @@ const ROUND_LABEL: Record<string, string> = {
   FINAL: "Final",
 };
 
+const PLACEMENT_LABEL: Record<string, string> = {
+  first: "win the group",
+  second: "finish runner-up",
+  third: "go through as a third place",
+};
+
 const percent = (v: number) => Math.round(v * 100);
 
 export default defineTool({
@@ -43,17 +49,22 @@ export default defineTool({
       return { note: outMessage(result) };
     }
 
-    // Compact, one-line-per-round content: enough for a caption, small enough
-    // that the model just summarizes it instead of re-listing every candidate.
+    // Compact content: one branch per still-possible group finish, one line per
+    // round. Small enough that the model summarizes it instead of re-listing
+    // every candidate. When forked, the group result decides the branch.
     return {
       team: result.name,
       group: result.group,
-      rounds: result.steps.map((step) => ({
-        round: ROUND_LABEL[step.round] ?? step.round,
-        reachPercent: percent(step.reachProbability),
-        possibleOpponents: step.opponents
-          .slice(0, 4)
-          .map((o) => `${o.name} (${percent(o.probability)}%)`),
+      forks: result.branches.length > 1,
+      branches: result.branches.map((branch) => ({
+        finish: `${PLACEMENT_LABEL[branch.placement] ?? branch.placement} (Group ${result.group})`,
+        chancePercent: percent(branch.probability),
+        rounds: branch.steps.map((step) => ({
+          round: ROUND_LABEL[step.round] ?? step.round,
+          likelyOpponent: step.opponents[0]
+            ? `${step.opponents[0].name} (${percent(step.opponents[0].probability)}%)`
+            : "to be decided",
+        })),
       })),
     };
   },

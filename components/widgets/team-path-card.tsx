@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import { Trophy } from "lucide-react";
+import { GitFork, Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,18 +16,24 @@ interface Opponent {
 
 export interface PathStepView {
   roundLabel: string;
-  /** P(team reaches this round), shown as a muted "reach NN%". */
-  reachProbability: number;
   opponents: Opponent[];
+}
+
+export interface PathBranchView {
+  /** Shown above the steps when the path forks, e.g. "If they win Group J". */
+  title?: string;
+  /** Right-aligned chance of taking this branch, e.g. "45%". */
+  chance?: string;
+  steps: PathStepView[];
 }
 
 interface TeamPathCardProps {
   team?: { code: string; name: string };
-  /** Header line under the team name, e.g. "Road to the final · …". */
+  /** Header line under the team name. */
   subtitle?: string;
   /** `undefined` while the predictions load — the card shows skeleton steps. */
-  steps?: PathStepView[];
-  /** When set, the team has no path (eliminated): shown instead of steps. */
+  branches?: PathBranchView[];
+  /** When set, the team has no path (eliminated): shown instead of branches. */
   note?: string;
 }
 
@@ -90,18 +96,13 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
         {!last && <span className="my-1 w-px flex-1 bg-surface-border" />}
       </div>
       <div className="pb-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
-            {step.roundLabel}
-          </p>
-          <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-            reach {formatPct(step.reachProbability)}
-          </span>
-        </div>
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
+          {step.roundLabel}
+        </p>
         <div className="mt-1 space-y-1">
           {opponents.length === 0 ? (
             <p className="text-[12px] text-muted-foreground/40 italic">
-              no market
+              to be decided
             </p>
           ) : (
             opponents.map((opponent, i) => (
@@ -114,6 +115,39 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Branch({
+  branch,
+  showTitle,
+}: {
+  branch: PathBranchView;
+  showTitle: boolean;
+}) {
+  return (
+    <div>
+      {showTitle && branch.title && (
+        <div className="mb-2 flex items-center gap-1.5">
+          <GitFork className="size-3 text-pick/70" />
+          <span className="text-[12px] font-semibold text-foreground">
+            {branch.title}
+          </span>
+          {branch.chance && (
+            <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+              {branch.chance}
+            </span>
+          )}
+        </div>
+      )}
+      {branch.steps.map((step, i) => (
+        <Step
+          key={step.roundLabel}
+          step={step}
+          last={i === branch.steps.length - 1}
+        />
+      ))}
     </div>
   );
 }
@@ -162,30 +196,35 @@ function CardHeader({
   );
 }
 
-/** A team's projected knockout route — likely opponents at each round from the
- *  Round of 32 to the final. Steps are `undefined` while the market loads; a
- *  `note` replaces them when the team has no path (eliminated). */
+/** A team's projected knockout route — likely opponents each round from the
+ *  Round of 32 to the final. When the group is undecided the path forks, so the
+ *  body stacks one labeled branch per possible finish. `branches` is `undefined`
+ *  while the market loads; a `note` replaces them when the team is out. */
 export function TeamPathCard({
   team,
   subtitle,
-  steps,
+  branches,
   note,
 }: TeamPathCardProps) {
+  const forked = (branches?.length ?? 0) > 1;
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <CardHeader team={team} subtitle={subtitle} />
       <div className="px-3 pt-3">
         {note !== undefined ? (
           <p className="pb-3 text-[13px] text-muted-foreground">{note}</p>
-        ) : steps === undefined ? (
+        ) : branches === undefined ? (
           <StepsSkeleton />
         ) : (
-          steps.map((step, i) => (
-            <Step
-              key={step.roundLabel}
-              step={step}
-              last={i === steps.length - 1}
-            />
+          branches.map((branch, i) => (
+            <div
+              key={branch.title ?? i}
+              className={cn(
+                i > 0 && "mt-1 border-t border-surface-divider pt-3",
+              )}
+            >
+              <Branch branch={branch} showTitle={forked} />
+            </div>
           ))
         )}
       </div>
