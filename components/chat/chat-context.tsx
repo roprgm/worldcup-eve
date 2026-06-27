@@ -76,13 +76,22 @@ export function ChatProvider({
   const agent = useEveAgent({
     initialSession: seed ? undefined : restored?.session,
     initialEvents: seed ? seed.events : restored?.events,
-    prepareSend: (input) => ({
-      ...input,
-      clientContext: {
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        ...(transcript ? { priorConversation: transcript } : {}),
-      },
-    }),
+    prepareSend: (input) => {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (!transcript) return { ...input, clientContext: { timeZone } };
+      // A seeded starter runs a fresh session with no server-side history, so
+      // replay the prior conversation as plain context messages (not a JSON
+      // blob) the model reads as the chat so far and continues from.
+      return {
+        ...input,
+        clientContext: [
+          `Current user's time zone: ${timeZone}.`,
+          `You are continuing an ongoing chat. The conversation so far:\n\n${transcript}\n\n` +
+            `Continue it naturally and resolve references like "it", "they", or "the group" ` +
+            `against this history. Don't ask the user to repeat what's above.`,
+        ],
+      };
+    },
     // Persist when a turn settles, keyed by the chat in the URL. Skip empty
     // turns so a failed first message can't clobber the saved chat.
     onFinish: ({ session, events }) => {
