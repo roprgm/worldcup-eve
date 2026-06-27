@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cnfast";
-import { Info, Trophy } from "lucide-react";
+import { Check, Info, Trophy } from "lucide-react";
 import { type CSSProperties, useState } from "react";
 
 import { Flag } from "@/components/flags";
@@ -21,12 +21,15 @@ const VAR = {
   step: "var(--step)",
 };
 
-// The inner-column stride fills the available width: solving "left edge of the
-// far R32 + one card = 100%" for the stride gives (100% − 3·card − 2·lane)/6.
-// A floor keeps adjacent rounds from colliding when the widget is too narrow to
-// fill (below it the bracket simply scrolls). 100% resolves against the bracket
-// container, which spans the widget minus its padding.
-const STEP_VALUE = `max(calc(${VAR.card} * 0.58), calc((100% - 3 * ${VAR.card} - 2 * ${VAR.lane}) / 6))`;
+// The inner stride fills the available width. Two regimes, picked by `min`:
+//  - narrow: the R32→R16 step stays pinned at BASE (R32 is packed, no room to
+//    spread), so the six remaining strides fill: (100% − 3·card − 2·lane)/6;
+//  - wide: all eight strides grow together and split the width: (100% − card)/8,
+//    so R32 and R16 separate like the rest instead of staying glued.
+// They cross exactly where the stride reaches BASE, so the switch is seamless.
+// A floor keeps adjacent rounds from colliding when too narrow to fill (below it
+// the bracket scrolls). 100% resolves against the bracket container.
+const STEP_VALUE = `max(calc(${VAR.card} * 0.58), min(calc((100% - 3 * ${VAR.card} - 2 * ${VAR.lane}) / 6), calc((100% - ${VAR.card}) / 8)))`;
 
 // A round's column index, left to right: R32→SF on the left, the final in the
 // middle, then the mirrored SF→R32 on the right.
@@ -36,17 +39,19 @@ const COL = {
   right: { SF: 5, QF: 6, R16: 7, R32: 8 },
 } as const;
 
-// One inner stride (`--step`) between consecutive columns, and the wider step
-// around the packed R32↔R16 boundary, in card-relative terms.
+// One inner stride (`--step`) between consecutive columns. The R32→R16 step is
+// at least BASE (so the packed R32 never overlaps R16) but grows with the stride
+// once the widget is wide enough, keeping the spacing even across the bracket.
 const STEP = VAR.step;
 const BASE = `(${VAR.card} + ${VAR.lane})`;
+const R32_STEP = `max(${BASE}, ${STEP})`;
 
 /** Left edge of a column, as a CSS length. Columns 1–7 advance by one inner
- *  step each; the two R32 columns sit a full BASE out past their R16 neighbour. */
+ *  step each; the two R32 columns sit one R32 step out past their R16 neighbour. */
 function colX(col: number): string {
   if (col === 0) return "0px";
-  if (col === 8) return `calc(2 * ${BASE} + 6 * ${STEP})`;
-  return `calc(${BASE} + ${col - 1} * ${STEP})`;
+  if (col === 8) return `calc(2 * ${R32_STEP} + 6 * ${STEP})`;
+  return `calc(${R32_STEP} + ${col - 1} * ${STEP})`;
 }
 
 const LEFT_ROOT = 101;
@@ -142,8 +147,8 @@ function PctCell({
     <span
       className={cn(
         "flex items-center text-[8px] leading-none tabular-nums sm:text-[10px] lg:text-[11px]",
-        // aligned against the flag, not centered
-        mirror ? "justify-end" : "justify-start",
+        // the check centres in the column's free space; numbers hug the flag
+        certain ? "justify-center" : mirror ? "justify-end" : "justify-start",
         certain
           ? "font-semibold text-pick"
           : lead
@@ -151,11 +156,20 @@ function PctCell({
             : "text-muted-foreground",
       )}
     >
-      {/* number full size, percent sign a touch smaller to save width */}
-      <span>
-        {p === undefined ? "··" : Math.round(p * 100)}
-        {p !== undefined && <span className="text-[0.8em]">%</span>}
-      </span>
+      {/* a confirmed team reads as a check; it says "through" in less width */}
+      {certain ? (
+        <Check
+          className="size-2 sm:size-2.5"
+          strokeWidth={3}
+          aria-label="through"
+        />
+      ) : (
+        // number full size, percent sign a touch smaller to save width
+        <span>
+          {p === undefined ? "··" : Math.round(p * 100)}
+          {p !== undefined && <span className="text-[0.8em]">%</span>}
+        </span>
+      )}
     </span>
   );
 }
