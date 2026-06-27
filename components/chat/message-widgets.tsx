@@ -9,7 +9,9 @@ import {
 } from "@/components/chat/chat-matches-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { TeamPathWidget } from "@/components/widgets/team-path-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
+import { codeFor } from "@/agent/lib/team-aliases";
 import {
   type GroupLetter,
   groupLetters,
@@ -58,6 +60,13 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
     }
     case "show_group_standings":
       return isGroupLetter(args.group) ? groupSpec(args.group) : null;
+    case "show_team_path": {
+      const code =
+        typeof args.team === "string" ? codeFor(args.team) : undefined;
+      return code
+        ? { key: `path:${code}`, render: () => <TeamPathWidget code={code} /> }
+        : null;
+    }
     case "show_thirds_ranking":
       return { key: "thirds", render: () => <ThirdsRankingWidget /> };
     case "show_matches": {

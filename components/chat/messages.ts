@@ -55,6 +55,7 @@ const toolActivityLabels: Record<string, string> = {
   get_best_thirds: "Checking the third-place race",
   show_thirds_ranking: "Pulling up the third-place table",
   show_knockout_match: "Pulling up the match prediction",
+  show_team_path: "Tracing the road to the final",
   show_group_standings: "Pulling up the group table",
   show_matches: "Pulling up the matches",
 };
