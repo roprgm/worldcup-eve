@@ -13,6 +13,18 @@ export function messageText(message: EveMessage): string {
   return text;
 }
 
+/** Flatten a conversation to role-labelled text — the context a forked session
+ *  replays so the model continues from where the shared chat left off. */
+export function buildTranscript(messages: readonly EveMessage[]): string {
+  const lines: string[] = [];
+  for (const message of messages) {
+    const text = messageText(message).trim();
+    if (!text) continue;
+    lines.push(`${message.role === "user" ? "User" : "Assistant"}: ${text}`);
+  }
+  return lines.join("\n\n");
+}
+
 export function messageKey(message: EveMessage, index: number): string {
   if (message.role !== "user") return message.id;
   return `${message.role}-${index}`;

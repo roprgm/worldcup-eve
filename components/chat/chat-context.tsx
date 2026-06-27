@@ -7,6 +7,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useRef,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
@@ -19,10 +20,18 @@ type ChatContextValue = {
   start: (message: string) => void;
 };
 
+// A shared chat to fork from: the prior events render immediately, and the
+// transcript is replayed as model context so the agent continues seamlessly.
+export type ChatSeed = {
+  events: Agent["events"];
+  transcript: string;
+};
+
 type SavedChat = {
   id: string;
   session?: Agent["session"];
   events?: Agent["events"];
+  transcript?: string;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -50,16 +59,28 @@ function loadChat(): SavedChat | null {
   return urlId && urlId !== saved.id ? null : saved;
 }
 
-export function ChatProvider({ children }: { children: ReactNode }) {
-  const [restored] = useState(loadChat);
+export function ChatProvider({
+  children,
+  seed,
+}: {
+  children: ReactNode;
+  seed?: ChatSeed;
+}) {
+  // A seeded fork ignores any saved chat and starts fresh from the seed.
+  const [restored] = useState(() => (seed ? null : loadChat()));
+  // Prior conversation injected as model context every turn: a fresh durable
+  // session has no server-side history, so this is what makes the fork continue.
+  const transcript = seed?.transcript ?? restored?.transcript;
+  const adopted = useRef(false);
 
   const agent = useEveAgent({
-    initialSession: restored?.session,
-    initialEvents: restored?.events,
+    initialSession: seed ? undefined : restored?.session,
+    initialEvents: seed ? seed.events : restored?.events,
     prepareSend: (input) => ({
       ...input,
       clientContext: {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(transcript ? { priorConversation: transcript } : {}),
       },
     }),
     // Persist when a turn settles, keyed by the chat in the URL. Skip empty
@@ -69,7 +90,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (id && events.length > 0) {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ id, session, events }),
+          JSON.stringify({ id, session, events, transcript }),
         );
       }
     },
@@ -79,6 +100,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     (text: string) => {
       const message = text.trim();
       if (!message) return;
+      // On its first turn a fork adopts a normal `/chat/<id>` URL so it persists
+      // and later resumes like any other local chat.
+      if (seed && !adopted.current) {
+        adopted.current = true;
+        window.history.pushState(null, "", `/chat/${newChatId()}`);
+      }
       // While a question is parked, a plain message would be dropped as
       // "ignored"; route it back as the answer to the pending request.
       const question = activeQuestion(agent.data.messages);
@@ -87,7 +114,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         : { message };
       void agent.send(payload).catch(() => {});
     },
-    [agent],
+    [agent, seed],
   );
 
   const start = useCallback(

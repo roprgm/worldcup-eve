@@ -9,6 +9,7 @@ import {
 import { useChat } from "@/components/chat/chat-context";
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { MessageList } from "@/components/chat/message-list";
+import { ShareFork } from "@/components/chat/share-fork";
 import { Composer } from "@/components/composer";
 
 /** The active conversation: message list plus composer. Shared by the home
@@ -32,6 +33,8 @@ export function ChatView() {
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
+
+      <ShareFork />
 
       <Composer
         value={input}
