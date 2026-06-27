@@ -12,7 +12,7 @@ import { teamById } from "@/lib/tournament";
 
 // Index the predicted slots by "match:side" so the bracket can look up any node
 // in O(1); recomputed only when the predictions change.
-function bracketView(predictions: Predictions) {
+function bracketSlots(predictions: Predictions) {
   const slots = new Map<string, BracketSlot>();
   for (const slot of predictions.slots) {
     const top = slot.candidates[0];
@@ -23,18 +23,17 @@ function bracketView(predictions: Predictions) {
       probability: top.probability,
     });
   }
-  return { slots, championCode: predictions.bracketChampion[0]?.code };
+  return slots;
 }
 
 /** The full knockout bracket with each slot's predicted team. Structure renders
  *  immediately; the picks and probabilities fill in with the market. */
 export function BracketWidget() {
-  const view = usePredictions(bracketView);
+  const slots = usePredictions(bracketSlots);
   const getSlot = useCallback(
-    (match: number, side: "home" | "away") =>
-      view?.slots.get(`${match}:${side}`),
-    [view],
+    (match: number, side: "home" | "away") => slots?.get(`${match}:${side}`),
+    [slots],
   );
 
-  return <BracketCard getSlot={getSlot} championCode={view?.championCode} />;
+  return <BracketCard getSlot={getSlot} />;
 }

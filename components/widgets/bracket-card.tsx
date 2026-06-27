@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import { Trophy } from "lucide-react";
+import { Info, Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
 import {
@@ -43,10 +43,10 @@ export type SlotLookup = (
 
 interface BracketCardProps {
   getSlot: SlotLookup;
-  /** Predicted champion code — highlighted along its path. `undefined` until the
-   *  bracket simulation resolves. */
-  championCode?: string;
 }
+
+// A slot whose team is essentially certain to reach the match — highlighted.
+const CERTAIN = 0.99;
 
 /** The two feeding matches of a knockout node, or `null` for a Round-of-32 leaf
  *  (whose sides come from groups, not earlier matches). */
@@ -76,12 +76,12 @@ function orderedRounds(root: number): Record<string, number[]> {
 function PctCell({
   slot,
   lead,
-  champion,
+  certain,
   mirror,
 }: {
   slot: BracketSlot | undefined;
   lead: boolean;
-  champion?: boolean;
+  certain?: boolean;
   mirror?: boolean;
 }) {
   const p = slot?.probability;
@@ -91,7 +91,7 @@ function PctCell({
         "flex items-center text-[8px] leading-none tabular-nums sm:text-[10px] lg:text-[11px]",
         // aligned against the flag, not centered
         mirror ? "justify-end" : "justify-start",
-        champion
+        certain
           ? "font-semibold text-pick"
           : lead
             ? "font-semibold text-foreground"
@@ -129,39 +129,33 @@ function FlagCell({
 function MatchCard({
   number,
   getSlot,
-  championCode,
   mirror,
 }: {
   number: number;
   getSlot: SlotLookup;
-  championCode?: string;
   mirror?: boolean;
 }) {
   const home = getSlot(number, "home");
   const away = getSlot(number, "away");
   const homeLeads = (home?.probability ?? 0) >= (away?.probability ?? 0);
-  const isChampion = (slot?: BracketSlot) =>
-    championCode != null && slot?.code === championCode;
+  const homeCertain = (home?.probability ?? 0) > CERTAIN;
+  const awayCertain = (away?.probability ?? 0) > CERTAIN;
 
-  const flagHome = (
-    <FlagCell slot={home} dim={!homeLeads && !isChampion(home)} />
-  );
+  const flagHome = <FlagCell slot={home} dim={!homeLeads && !homeCertain} />;
   const pctHome = (
     <PctCell
       slot={home}
       lead={homeLeads}
-      champion={isChampion(home)}
+      certain={homeCertain}
       mirror={mirror}
     />
   );
-  const flagAway = (
-    <FlagCell slot={away} dim={homeLeads && !isChampion(away)} />
-  );
+  const flagAway = <FlagCell slot={away} dim={homeLeads && !awayCertain} />;
   const pctAway = (
     <PctCell
       slot={away}
       lead={!homeLeads}
-      champion={isChampion(away)}
+      certain={awayCertain}
       mirror={mirror}
     />
   );
@@ -264,7 +258,6 @@ function CenterNode({
   labelBelow,
   top,
   getSlot,
-  championCode,
 }: {
   number: number;
   label: string;
@@ -272,7 +265,6 @@ function CenterNode({
   labelBelow?: boolean;
   top: string;
   getSlot: SlotLookup;
-  championCode?: string;
 }) {
   return (
     <div
@@ -285,11 +277,7 @@ function CenterNode({
           trophy={trophy}
           className={labelBelow ? "top-full mt-1" : "bottom-full mb-1"}
         />
-        <MatchCard
-          number={number}
-          getSlot={getSlot}
-          championCode={championCode}
-        />
+        <MatchCard number={number} getSlot={getSlot} />
       </div>
     </div>
   );
@@ -298,13 +286,7 @@ function CenterNode({
 /** The center of the bracket: a cross of lines. The horizontal line joins the
  *  two semis; the vertical line runs up to the final and down to the third-place
  *  play-off, which float in the otherwise-empty middle so they cost no width. */
-function CenterCross({
-  getSlot,
-  championCode,
-}: {
-  getSlot: SlotLookup;
-  championCode?: string;
-}) {
+function CenterCross({ getSlot }: { getSlot: SlotLookup }) {
   return (
     <div className="relative flex-[2.6] self-stretch">
       <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
@@ -316,7 +298,6 @@ function CenterCross({
         trophy
         top="27%"
         getSlot={getSlot}
-        championCode={championCode}
       />
       <CenterNode
         number={THIRD}
@@ -324,7 +305,6 @@ function CenterCross({
         labelBelow
         top="73%"
         getSlot={getSlot}
-        championCode={championCode}
       />
     </div>
   );
@@ -333,24 +313,16 @@ function CenterCross({
 function RoundColumn({
   matches,
   getSlot,
-  championCode,
   mirror,
 }: {
   matches: number[];
   getSlot: SlotLookup;
-  championCode?: string;
   mirror?: boolean;
 }) {
   return (
     <div className="flex shrink-0 flex-col justify-around">
       {matches.map((n) => (
-        <MatchCard
-          key={n}
-          number={n}
-          getSlot={getSlot}
-          championCode={championCode}
-          mirror={mirror}
-        />
+        <MatchCard key={n} number={n} getSlot={getSlot} mirror={mirror} />
       ))}
     </div>
   );
@@ -381,22 +353,29 @@ function RoundLabels() {
 /** The knockout bracket as predicted: each match is a four-quadrant card (flags
  *  stacked on the outer side, probabilities inner). The two halves and the
  *  center final span the full widget width, the connectors stretching to fill. */
-export function BracketCard({ getSlot, championCode }: BracketCardProps) {
+export function BracketCard({ getSlot }: BracketCardProps) {
   const left = orderedRounds(LEFT_ROOT);
   const right = orderedRounds(RIGHT_ROOT);
   const col = (matches: number[], mirror?: boolean) => (
-    <RoundColumn
-      matches={matches}
-      getSlot={getSlot}
-      championCode={championCode}
-      mirror={mirror}
-    />
+    <RoundColumn matches={matches} getSlot={getSlot} mirror={mirror} />
   );
 
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
-        Bracket
+      <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
+        <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
+          Prediction bracket
+        </span>
+        <span className="hidden truncate text-[10px] text-muted-foreground/55 sm:inline">
+          · chance to reach each match
+        </span>
+        <span
+          className="ml-auto flex shrink-0 cursor-help"
+          title="Each number is a team's chance to reach that match — not to win it. Green marks teams effectively through (≥99%)."
+          aria-label="How to read this bracket"
+        >
+          <Info className="size-3.5 text-muted-foreground/55" />
+        </span>
       </div>
       <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:21px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:26px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:30px]">
         <RoundLabels />
@@ -411,7 +390,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
           {col(left.QF)}
           <ConnectorColumn pairs={1} />
           {col(left.SF)}
-          <CenterCross getSlot={getSlot} championCode={championCode} />
+          <CenterCross getSlot={getSlot} />
           {col(right.SF, true)}
           <ConnectorColumn pairs={1} mirror />
           {col(right.QF, true)}
