@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { SubmitButton } from "@/components/ai-elements/submit-button";
+import { SubmitButton } from "@/components/composer/submit-button";
 
 interface PromptInputProps {
   value: string;

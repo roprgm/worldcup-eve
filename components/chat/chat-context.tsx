@@ -2,11 +2,16 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
+  useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
@@ -15,8 +20,12 @@ type Agent = UseEveAgentHelpers<EveMessageData>;
 
 type ChatContextValue = {
   agent: Agent;
-  send: (message: string) => void;
-  start: (message: string) => void;
+  /** Send a message in the open chat, or answer a pending question. */
+  send: (text: string) => void;
+  /** Open a fresh chat seeded with its first message. */
+  start: (text: string) => void;
+  /** Where the "Chat" nav should point: the open chat, or a new one. */
+  chatHref: string;
 };
 
 type SavedChat = {
@@ -25,6 +34,8 @@ type SavedChat = {
   events?: Agent["events"];
 };
 
+type Seed = { id: string; text: string };
+
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 const STORAGE_KEY = "wc26-chat";
@@ -32,26 +43,74 @@ const newChatId = () => Math.random().toString(36).slice(2, 10);
 const chatIdFromPath = (path: string) =>
   path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-// Restore the saved chat — but only under its own `/chat/<id>` (a fresh id stays
-// empty) or on a non-chat page (so the Chat link can return to it). `/` is fresh.
-function loadChat(): SavedChat | null {
-  if (typeof window === "undefined") return null;
-  const path = window.location.pathname;
-  if (path === "/") return null;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  let saved: SavedChat;
+function readSavedChat(): SavedChat | null {
   try {
-    saved = JSON.parse(raw) as SavedChat;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as SavedChat) : null;
   } catch {
     return null;
   }
-  const urlId = chatIdFromPath(path);
-  return urlId && urlId !== saved.id ? null : saved;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [restored] = useState(loadChat);
+  const pathname = usePathname();
+  const router = useRouter();
+  const seed = useRef<Seed | null>(null);
+
+  // The URL is the single source of truth for which chat is open. The id is
+  // sticky across non-chat routes (e.g. visiting Predictions) so the live
+  // conversation survives, and clears only on the home / new-chat screen.
+  const [chatId, setChatId] = useState<string | null>(() =>
+    chatIdFromPath(pathname),
+  );
+  useEffect(() => {
+    const id = chatIdFromPath(pathname);
+    if (id) setChatId(id);
+    else if (pathname === "/") setChatId(null);
+  }, [pathname]);
+
+  const start = useCallback(
+    (text: string) => {
+      const message = text.trim();
+      if (!message) return;
+      const id = newChatId();
+      seed.current = { id, text: message };
+      router.push(`/chat/${id}`);
+    },
+    [router],
+  );
+
+  // Remount the session whenever the chat changes, so the agent's state always
+  // matches the URL — no stale messages bleeding from a previous conversation.
+  return (
+    <ChatSession
+      key={chatId ?? "new"}
+      chatId={chatId}
+      seed={seed}
+      start={start}
+    >
+      {children}
+    </ChatSession>
+  );
+}
+
+function ChatSession({
+  chatId,
+  seed,
+  start,
+  children,
+}: {
+  chatId: string | null;
+  seed: RefObject<Seed | null>;
+  start: (text: string) => void;
+  children: ReactNode;
+}) {
+  // Restore from storage only when the URL points at the saved chat; a fresh id
+  // (or the home screen) starts empty.
+  const [restored] = useState(() => {
+    const saved = readSavedChat();
+    return chatId && saved?.id === chatId ? saved : null;
+  });
 
   const agent = useEveAgent({
     initialSession: restored?.session,
@@ -62,14 +121,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
-    // Persist when a turn settles, keyed by the chat in the URL. Skip empty
-    // turns so a failed first message can't clobber the saved chat.
+    // Persist when a turn settles. Skip empty turns so a failed first message
+    // can't clobber the saved chat.
     onFinish: ({ session, events }) => {
-      const id = chatIdFromPath(window.location.pathname);
-      if (id && events.length > 0) {
+      if (chatId && events.length > 0) {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ id, session, events }),
+          JSON.stringify({ id: chatId, session, events } satisfies SavedChat),
         );
       }
     },
@@ -90,23 +148,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [agent],
   );
 
-  const start = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      agent.reset(); // start fresh even if a previous chat is still in context
-      send(text); // optimistic message lands before the view swaps in
-      // Update the URL without a route navigation: the conversation already
-      // renders from shared context, so a real navigation only adds a flicker.
-      window.history.pushState(null, "", `/chat/${newChatId()}`);
-    },
-    [agent, send],
+  // Deliver the message that opened this chat. The guard — empty, idle, and the
+  // seed still targets this id — makes it idempotent: it can't double-send into
+  // one session, yet a Strict Mode remount with a fresh empty agent re-delivers.
+  const status = agent.status;
+  const isEmpty = agent.data.messages.length === 0;
+  useEffect(() => {
+    const pending = seed.current;
+    if (restored || pending?.id !== chatId) return;
+    if (!isEmpty || status !== "ready") return;
+    void agent.send({ message: pending.text }).catch(() => {});
+  }, [agent, chatId, restored, seed, isEmpty, status]);
+
+  const value = useMemo<ChatContextValue>(
+    () => ({ agent, send, start, chatHref: chatId ? `/chat/${chatId}` : "/" }),
+    [agent, send, start, chatId],
   );
 
-  return (
-    <ChatContext.Provider value={{ agent, send, start }}>
-      {children}
-    </ChatContext.Provider>
-  );
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
 
 export function useChat(): ChatContextValue {

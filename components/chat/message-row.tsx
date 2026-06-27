@@ -1,59 +1,74 @@
+import { cn } from "cnfast";
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
-import { Loader } from "@/components/ai-elements/loader";
+import { useChat } from "@/components/chat/chat-context";
+import {
+  hasRenderableContent,
+  MessageWidgets,
+  messageWidgets,
+} from "@/components/chat/message-widgets";
+import {
+  assistantActivityLabel,
+  messageText,
+  questionPart,
+} from "@/components/chat/messages";
+import { BallIcon } from "@/components/icons";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Loader } from "@/components/ui/loader";
 import {
   Message,
   MessageAvatar,
   MessageContent,
-} from "@/components/ai-elements/message";
-import { Response } from "@/components/ai-elements/response";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { useChat } from "@/components/chat/chat-context";
-import {
-  MessageWidgets,
-  messageWidgets,
-} from "@/components/chat/message-widgets";
-import { messageText, questionPart } from "@/components/chat/messages";
+} from "@/components/ui/message";
+import { Response } from "@/components/ui/response";
+import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
-export function MessageRow({
-  message,
-  index,
-  streaming,
-}: {
-  message: EveMessage;
-  index: number;
-  streaming: boolean;
-}) {
+export function UserRow({ message }: { message: EveMessage }) {
   return (
-    <Message
-      from={message.role}
-      className="animate-fade-up"
-      style={{ animationDelay: `${Math.min(index, 6) * 30}ms` }}
-    >
-      {message.role === "user" ? (
-        <MessageContent from="user">{messageText(message)}</MessageContent>
-      ) : (
-        <>
-          <MessageAvatar streaming={streaming} />
-          <MessageContent from="assistant">
-            <AssistantBody message={message} />
-          </MessageContent>
-        </>
-      )}
+    <Message align="end" className="animate-fade-up">
+      <MessageContent>
+        <Bubble>
+          <BubbleContent>{messageText(message)}</BubbleContent>
+        </Bubble>
+      </MessageContent>
     </Message>
   );
 }
 
-export function ActivityRow({ label }: { label: string }) {
+/** The assistant's turn. Until its first prose, question, or widget arrives it
+ *  shows a labelled loader in place — same row, so nothing shifts when content
+ *  lands. `message` is absent only in the brief gap before the reply starts. */
+export function AssistantRow({
+  message,
+  streaming,
+}: {
+  message?: EveMessage;
+  streaming: boolean;
+}) {
+  const ready = message ? hasRenderableContent(message) : false;
   return (
-    <Message from="assistant">
-      <MessageAvatar streaming />
-      <MessageContent from="assistant">
-        <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
-          <span>{label}</span>
-          <Loader className="shrink-0" />
-        </div>
+    <Message className="animate-fade-up">
+      <MessageAvatar className={cn(streaming && "wc-streaming")}>
+        <BallIcon className="size-[15px]" />
+      </MessageAvatar>
+      <MessageContent className="min-w-0 flex-1 pt-0.5">
+        {ready && message ? (
+          <AssistantBody message={message} />
+        ) : (
+          <Activity
+            label={message ? assistantActivityLabel(message) : "Thinking"}
+          />
+        )}
       </MessageContent>
     </Message>
+  );
+}
+
+function Activity({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
+      <span>{label}</span>
+      <Loader className="shrink-0" />
+    </div>
   );
 }
 
@@ -96,9 +111,9 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
     <div className="flex flex-col gap-2.5">
       <Response>{request.prompt}</Response>
       {chosen ? (
-        <span className="w-fit rounded-full border border-border bg-surface px-3 py-1.5 text-[0.8125rem] text-muted-foreground">
-          {chosen}
-        </span>
+        <Bubble variant="muted">
+          <BubbleContent className="text-[0.8125rem]">{chosen}</BubbleContent>
+        </Bubble>
       ) : options.length > 0 ? (
         <Suggestions>
           {options.map((option) => (

@@ -10,6 +10,7 @@ import {
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
+import { messageText, questionPart } from "@/components/chat/messages";
 import {
   type GroupLetter,
   groupLetters,
@@ -99,6 +100,16 @@ export function messageWidgets(message: EveMessage): WidgetSpec[] {
     byKey.set(spec.key, spec);
   }
   return [...byKey.values()].slice(-MAX_WIDGETS);
+}
+
+/** Whether an assistant message has anything worth showing yet: prose, a
+ *  question, or a widget. Drives the loader → content swap. */
+export function hasRenderableContent(message: EveMessage): boolean {
+  return (
+    messageText(message).trim().length > 0 ||
+    questionPart(message) !== undefined ||
+    messageWidgets(message).length > 0
+  );
 }
 
 export function MessageWidgets({ specs }: { specs: WidgetSpec[] }) {

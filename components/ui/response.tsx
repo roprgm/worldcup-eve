@@ -2,7 +2,7 @@ import { cn } from "cnfast";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
 
-// AI Elements–style Response: streams markdown safely via Streamdown.
+/** Streaming-safe markdown, rendered with Streamdown. */
 export const Response = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
