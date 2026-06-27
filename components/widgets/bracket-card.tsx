@@ -5,31 +5,76 @@ import { Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
-import {
-  type KnockoutMatch,
-  matchByNumber,
-  type Round,
-} from "@/lib/tournament";
+import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
 // Geometry is driven by CSS variables set on the root (see BracketCard), so the
 // whole bracket scales with the breakpoint. --flag is the flag column width,
 // --pct the (wider) probability column, --leaf the vertical slot a Round-of-32
-// match reserves. Connectors flex to fill the rest of the widget width.
+// match reserves, --card the full card width, --lane the gap that holds an
+// R32→R16 connector, and --ov how far each inner round nests into the previous.
 const VAR = {
   flag: "var(--flag)",
   pct: "var(--pct)",
   leaf: "var(--leaf)",
+  card: "var(--card)",
+  lane: "var(--lane)",
+  ov: "var(--ov)",
 };
+
+// A round's column index, left to right: R32→SF on the left, the final in the
+// middle, then the mirrored SF→R32 on the right.
+const COL = {
+  left: { R32: 0, R16: 1, QF: 2, SF: 3 },
+  center: 4,
+  right: { SF: 5, QF: 6, R16: 7, R32: 8 },
+} as const;
+
+// Horizontal step between consecutive inner columns and the wider step around
+// the packed R32↔R16 boundary, in card-relative terms.
+const STEP = `(${VAR.card} - ${VAR.ov})`;
+const BASE = `(${VAR.card} + ${VAR.lane})`;
+
+/** Left edge of a column, as a CSS length. Columns 1–7 advance by one inner
+ *  step each; the two R32 columns sit a full BASE out past their R16 neighbour. */
+function colX(col: number): string {
+  if (col === 0) return "0px";
+  if (col === 8) return `calc(2 * ${BASE} + 6 * ${STEP})`;
+  return `calc(${BASE} + ${col - 1} * ${STEP})`;
+}
+
+const TOTAL_WIDTH = `calc(2 * ${BASE} + 6 * ${STEP} + ${VAR.card})`;
 
 const LEFT_ROOT = 101;
 const RIGHT_ROOT = 102;
 const FINAL = 104;
 const THIRD = 103;
 
-// Round labels per column, left to right: the left half (R32→SF), then the
-// mirrored right half (SF→R32). The center holds the final/third cross instead
-// of a column, so it has no label.
-const COLUMN_LABELS = ["R32", "R16", "QF", "SF", "SF", "QF", "R16", "R32"];
+// Where the final and third-place cards float vertically (in --leaf units), set
+// into the empty middle so they clear the semis at --leaf 4.
+const FINAL_LEAF = 2.3;
+const THIRD_LEAF = 5.7;
+
+// Vertical distance from a parent card's centre to each child's centre, in
+// --leaf units, by the parent's depth above the leaves (R16 = 1 … SF = 3).
+const CHILD_LEAF_OFFSET: Record<number, number> = { 1: 0.5, 2: 1, 3: 2 };
+
+type RoundKey = "R32" | "R16" | "QF" | "SF";
+const ROUND_DEPTH: Record<RoundKey, number> = { R32: 0, R16: 1, QF: 2, SF: 3 };
+const CHILD_ROUND: Record<RoundKey, RoundKey | null> = {
+  R32: null,
+  R16: "R32",
+  QF: "R16",
+  SF: "QF",
+};
+
+/** Vertical centre of a card (in --leaf units) from its index within the round:
+ *  each round's cards sit at the midpoint of the leaves they cover. */
+function leafCenter(round: RoundKey, idx: number): number {
+  if (round === "R32") return idx + 0.5;
+  if (round === "R16") return 2 * idx + 1;
+  if (round === "QF") return 4 * idx + 2;
+  return 4; // single SF per half
+}
 
 export interface BracketSlot {
   code?: string;
@@ -61,8 +106,8 @@ function childMatches(match: KnockoutMatch): [number, number] | null {
 
 /** Each round's match numbers under a half-root, ordered top→bottom so a flat
  *  column lines up with the connectors (the order a DFS visits the leaves). */
-function orderedRounds(root: number): Record<string, number[]> {
-  const out: Record<string, number[]> = { R32: [], R16: [], QF: [], SF: [] };
+function orderedRounds(root: number): Record<RoundKey, number[]> {
+  const out: Record<RoundKey, number[]> = { R32: [], R16: [], QF: [], SF: [] };
   const visit = (n: number) => {
     const match = matchByNumber[n];
     const kids = childMatches(match);
@@ -70,7 +115,7 @@ function orderedRounds(root: number): Record<string, number[]> {
       visit(kids[0]);
       visit(kids[1]);
     }
-    out[match.round]?.push(n);
+    out[match.round as RoundKey]?.push(n);
   };
   visit(root);
   return out;
@@ -126,9 +171,9 @@ function FlagCell({
   );
 }
 
-/** One match as a bordered card split into four: the two flags stacked on the
- *  outer side, their probabilities on the (wider) inner side. 2px gaps separate
- *  the quadrants; each flag rounds only the corner it shares with the card. */
+/** One match as a four-quadrant card: the two flags stacked on the outer side,
+ *  their probabilities on the (wider) inner side. Opaque so the connectors that
+ *  pass behind it (the columns nest) stay hidden until they clear the edge. */
 function MatchCard({
   number,
   getSlot,
@@ -164,9 +209,9 @@ function MatchCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-[3px] border border-surface-border bg-surface-2/40 p-0.5 sm:p-1">
+    <div className="overflow-hidden rounded-[3px] border border-surface-border bg-surface-2 p-0.5">
       <div
-        className="grid gap-0.5 sm:gap-1"
+        className="grid gap-0.5"
         style={{
           gridTemplateColumns: mirror
             ? `${VAR.pct} ${VAR.flag}`
@@ -193,39 +238,74 @@ function MatchCard({
   );
 }
 
-/** ⊢ (⊣ when mirrored) filling its slot: ticks at 25%/75% reach the two children
- *  and the 50% tick the parent. */
-function Connector({ mirror }: { mirror?: boolean }) {
-  const tick = "absolute h-px bg-border-strong";
-  const childX = mirror ? "right-0 left-1/2" : "left-0 right-1/2";
-  const nodeX = mirror ? "left-0 right-1/2" : "right-0 left-1/2";
+/** A card pinned by absolute position: centred on (`x`, `leaf`) in the shared
+ *  coordinate space, above the connectors so it masks the ones behind it. */
+function PositionedCard({
+  number,
+  x,
+  leaf,
+  getSlot,
+  mirror,
+}: {
+  number: number;
+  x: string;
+  leaf: number;
+  getSlot: SlotLookup;
+  mirror?: boolean;
+}) {
   return (
-    <div className="relative h-full w-full">
-      <span className={cn(tick, childX, "top-1/4")} />
-      <span className={cn(tick, childX, "top-3/4")} />
-      <span className="absolute top-1/4 bottom-1/4 left-1/2 w-px bg-border-strong" />
-      <span className={cn(tick, nodeX, "top-1/2")} />
+    <div
+      className="absolute z-10 -translate-y-1/2"
+      style={{ left: x, top: `calc(${leaf} * ${VAR.leaf})`, width: VAR.card }}
+    >
+      <MatchCard number={number} getSlot={getSlot} mirror={mirror} />
     </div>
   );
 }
 
-/** A flex column of `pairs` connectors — one per parent match in the next round.
- *  Grows to share the leftover width, so the bracket fills the widget. */
-function ConnectorColumn({
-  pairs,
+/** Connector from a parent card to its two children: a vertical bus at the
+ *  children's inner edge spanning both child centres, plus a horizontal arm at
+ *  the parent's centre line. Drawn behind the cards (z-0); where the columns
+ *  nest, the parent masks the overlap and the lines emerge from its edges. */
+function Wire({
+  parentX,
+  childX,
+  parentLeaf,
+  off,
   mirror,
 }: {
-  pairs: number;
+  parentX: string;
+  childX: string;
+  parentLeaf: number;
+  off: number;
   mirror?: boolean;
 }) {
+  const armY = `calc(${parentLeaf} * ${VAR.leaf})`;
+  const childInner = mirror ? childX : `calc(${childX} + ${VAR.card})`;
+  const parentOuter = mirror ? `calc(${parentX} + ${VAR.card})` : parentX;
+  const a = parentOuter;
+  const b = childInner;
   return (
-    <div className="flex flex-1 flex-col">
-      {Array.from({ length: pairs }, (_, i) => (
-        <div key={i} className="flex-1">
-          <Connector mirror={mirror} />
-        </div>
-      ))}
-    </div>
+    <>
+      <span
+        aria-hidden
+        className="absolute z-0 w-px bg-border-strong"
+        style={{
+          left: childInner,
+          top: `calc(${armY} - ${off} * ${VAR.leaf})`,
+          height: `calc(2 * ${off} * ${VAR.leaf})`,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute z-0 h-px bg-border-strong"
+        style={{
+          left: `min(${a}, ${b})`,
+          top: armY,
+          width: `calc(max(${a}, ${b}) - min(${a}, ${b}))`,
+        }}
+      />
+    </>
   );
 }
 
@@ -251,30 +331,31 @@ function CenterLabel({
   );
 }
 
-/** A final/third card pinned at `top`, with a label above or below. The opaque
- *  backing hides the vertical line where it passes behind the card, so the line
- *  meets the card edge instead of running into the box. */
+/** The final / third-place card, centred on (`x`, `leaf`) with a label above or
+ *  below it. Opaque, so the vertical center line meets its edge cleanly. */
 function CenterNode({
   number,
+  x,
+  leaf,
   label,
   trophy,
   labelBelow,
-  top,
   getSlot,
 }: {
   number: number;
+  x: string;
+  leaf: number;
   label: string;
   trophy?: boolean;
   labelBelow?: boolean;
-  top: string;
   getSlot: SlotLookup;
 }) {
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
-      style={{ top }}
+      className="absolute z-10 -translate-y-1/2"
+      style={{ left: x, top: `calc(${leaf} * ${VAR.leaf})`, width: VAR.card }}
     >
-      <div className="relative rounded-sm bg-card">
+      <div className="relative">
         <CenterLabel
           text={label}
           trophy={trophy}
@@ -286,71 +367,77 @@ function CenterNode({
   );
 }
 
-/** The center of the bracket: a cross of lines. The horizontal line joins the
- *  two semis; the vertical line runs up to the final and down to the third-place
- *  play-off, which float in the otherwise-empty middle so they cost no width. */
+/** The center cross: the horizontal line joining the two semis at --leaf 4, and
+ *  the vertical line running up to the final and down to the third-place card. */
 function CenterCross({ getSlot }: { getSlot: SlotLookup }) {
+  const centerX = `calc(${colX(COL.center)} + ${VAR.card} / 2)`;
+  const leftInner = `calc(${colX(COL.left.SF)} + ${VAR.card})`;
+  const rightInner = colX(COL.right.SF);
   return (
-    <div className="relative flex-[2.6] self-stretch">
-      <span className="absolute inset-x-0 top-1/2 h-px bg-border-strong" />
-      {/* spans the two card centers; the opaque cards clip it to the gap */}
-      <span className="absolute top-[27%] bottom-[27%] left-1/2 w-px bg-border-strong" />
+    <>
+      <span
+        aria-hidden
+        className="absolute z-0 h-px bg-border-strong"
+        style={{
+          left: leftInner,
+          top: `calc(4 * ${VAR.leaf})`,
+          width: `calc(${rightInner} - ${leftInner})`,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute z-0 w-px bg-border-strong"
+        style={{
+          left: centerX,
+          top: `calc(${FINAL_LEAF} * ${VAR.leaf})`,
+          height: `calc(${THIRD_LEAF - FINAL_LEAF} * ${VAR.leaf})`,
+        }}
+      />
       <CenterNode
         number={FINAL}
+        x={colX(COL.center)}
+        leaf={FINAL_LEAF}
         label="Final"
         trophy
-        top="27%"
         getSlot={getSlot}
       />
       <CenterNode
         number={THIRD}
+        x={colX(COL.center)}
+        leaf={THIRD_LEAF}
         label="3rd"
         labelBelow
-        top="73%"
         getSlot={getSlot}
       />
-    </div>
+    </>
   );
 }
 
-function RoundColumn({
-  matches,
-  getSlot,
-  mirror,
-}: {
-  matches: number[];
-  getSlot: SlotLookup;
-  mirror?: boolean;
-}) {
+const ROUND_LABELS: { round: RoundKey; col: number }[] = [
+  { round: "R32", col: COL.left.R32 },
+  { round: "R16", col: COL.left.R16 },
+  { round: "QF", col: COL.left.QF },
+  { round: "SF", col: COL.left.SF },
+  { round: "SF", col: COL.right.SF },
+  { round: "QF", col: COL.right.QF },
+  { round: "R16", col: COL.right.R16 },
+  { round: "R32", col: COL.right.R32 },
+];
+
+function RoundLabels() {
   return (
-    <div className="flex shrink-0 flex-col justify-around">
-      {matches.map((n) => (
-        <MatchCard key={n} number={n} getSlot={getSlot} mirror={mirror} />
+    <div className="relative h-3" style={{ width: TOTAL_WIDTH }}>
+      {ROUND_LABELS.map(({ round, col }) => (
+        <span
+          key={col}
+          className="absolute text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
+          style={{ left: colX(col), width: VAR.card }}
+        >
+          {round}
+        </span>
       ))}
     </div>
   );
-}
-
-function RoundLabels() {
-  const cells = COLUMN_LABELS.flatMap((label, i) => {
-    // the gap between the two SF labels is the center cross — keep it as wide
-    // as the CenterCross so the labels stay over their columns.
-    const spacer =
-      i > 0
-        ? [<div key={`s${i}`} className={i === 4 ? "flex-[2.6]" : "flex-1"} />]
-        : [];
-    return [
-      ...spacer,
-      <span
-        key={`l${i}`}
-        className="shrink-0 text-center text-[9px] font-medium tracking-wide text-muted-foreground/55 uppercase"
-        style={{ width: `calc(${VAR.flag} + ${VAR.pct} + 2px)` }}
-      >
-        {label}
-      </span>,
-    ];
-  });
-  return <div className="flex w-full">{cells}</div>;
 }
 
 const HELP_TEXT = "Each number is a team's chance to reach that match.";
@@ -388,15 +475,56 @@ function BracketHelp() {
   );
 }
 
-/** The knockout bracket as predicted: each match is a four-quadrant card (flags
- *  stacked on the outer side, probabilities inner). The two halves and the
- *  center final span the full widget width, the connectors stretching to fill. */
+/** One half's cards plus the connectors from each non-leaf card to its two
+ *  children, all in the shared absolute coordinate space. */
+function half(
+  rounds: Record<RoundKey, number[]>,
+  side: "left" | "right",
+  getSlot: SlotLookup,
+) {
+  const mirror = side === "right";
+  const colOf = (round: RoundKey) =>
+    side === "left" ? COL.left[round] : COL.right[round];
+
+  const cards = (Object.keys(rounds) as RoundKey[]).flatMap((round) =>
+    rounds[round].map((n, idx) => (
+      <PositionedCard
+        key={n}
+        number={n}
+        x={colX(colOf(round))}
+        leaf={leafCenter(round, idx)}
+        getSlot={getSlot}
+        mirror={mirror}
+      />
+    )),
+  );
+
+  const wires = (["R16", "QF", "SF"] as RoundKey[]).flatMap((round) => {
+    const childRound = CHILD_ROUND[round];
+    if (!childRound) return [];
+    const childX = colX(colOf(childRound));
+    const off = CHILD_LEAF_OFFSET[ROUND_DEPTH[round]];
+    return rounds[round].map((n, idx) => (
+      <Wire
+        key={`w${n}`}
+        parentX={colX(colOf(round))}
+        childX={childX}
+        parentLeaf={leafCenter(round, idx)}
+        off={off}
+        mirror={mirror}
+      />
+    ));
+  });
+
+  return [...wires, ...cards];
+}
+
+/** The knockout bracket as predicted. Each match is a four-quadrant card; the
+ *  inner rounds nest into the empty top/bottom of the previous column so the
+ *  whole bracket stays compact, with connectors emerging from the card edges. */
 export function BracketCard({ getSlot }: BracketCardProps) {
   const left = orderedRounds(LEFT_ROOT);
   const right = orderedRounds(RIGHT_ROOT);
-  const col = (matches: number[], mirror?: boolean) => (
-    <RoundColumn matches={matches} getSlot={getSlot} mirror={mirror} />
-  );
 
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
@@ -409,27 +537,17 @@ export function BracketCard({ getSlot }: BracketCardProps) {
         </span>
         <BracketHelp />
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:19px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:28px]">
-        <RoundLabels />
-        <div
-          className="mt-1.5 flex w-full items-stretch"
-          style={{ height: `calc(${VAR.leaf} * 8)` }}
-        >
-          {col(left.R32)}
-          <ConnectorColumn pairs={4} />
-          {col(left.R16)}
-          <ConnectorColumn pairs={2} />
-          {col(left.QF)}
-          <ConnectorColumn pairs={1} />
-          {col(left.SF)}
-          <CenterCross getSlot={getSlot} />
-          {col(right.SF, true)}
-          <ConnectorColumn pairs={1} mirror />
-          {col(right.QF, true)}
-          <ConnectorColumn pairs={2} mirror />
-          {col(right.R16, true)}
-          <ConnectorColumn pairs={4} mirror />
-          {col(right.R32, true)}
+      <div className="overflow-x-auto px-2 py-3 [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:14px] [--lane:6px] [--leaf:40px] [--ov:calc(var(--card)*0.42)] [--pct:20px] sm:[--flag:17px] sm:[--lane:9px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--lane:12px] lg:[--leaf:60px] lg:[--pct:28px]">
+        <div className="mx-auto" style={{ width: TOTAL_WIDTH }}>
+          <RoundLabels />
+          <div
+            className="relative mt-1.5"
+            style={{ height: `calc(${VAR.leaf} * 8)` }}
+          >
+            {half(left, "left", getSlot)}
+            {half(right, "right", getSlot)}
+            <CenterCross getSlot={getSlot} />
+          </div>
         </div>
       </div>
     </div>
