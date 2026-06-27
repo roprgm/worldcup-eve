@@ -1,7 +1,9 @@
-// Trace a single team's projected route through the bracket: assuming it tops
-// (or, if likelier, finishes runner-up in) its group, follow the knockout graph
-// from its Round-of-32 fixture to the final, listing each round's likely
-// opponents from the prediction slots. Pure: takes a snapshot, queries nothing.
+// Trace a single team's projected route through the bracket: enter at whichever
+// Round-of-32 slot (group winner or runner-up) the market makes likelier, then
+// follow the knockout graph to the final, listing each round's likely opponents.
+// Pure: takes a snapshot, queries nothing. A team the market no longer puts in a
+// top-two group slot has no path — it's eliminated (or could only sneak through
+// as a third), and we say so rather than invent a route.
 
 import {
   knockoutMatches,
@@ -14,6 +16,11 @@ import {
 import type { Predictions } from "./index";
 
 type Side = "home" | "away";
+
+// Below this, a team isn't a credible group winner/runner-up — no path is drawn.
+const MIN_ENTRY_PROBABILITY = 0.01;
+// Below this group-advance chance we call the team out rather than a longshot.
+const ELIMINATED_ADVANCE = 0.01;
 
 export interface PathOpponent {
   code: string;
@@ -33,10 +40,18 @@ export interface TeamPath {
   code: string;
   name: string;
   group: GroupLetter;
-  /** The group finish the path assumes — whichever the market deems likelier. */
-  placement: "first" | "second";
   steps: PathStep[]; // R32 → Final
 }
+
+export type TeamPathResult =
+  | ({ status: "path" } & TeamPath)
+  | {
+      status: "out";
+      code: string;
+      name: string;
+      group: GroupLetter;
+      advance: number;
+    };
 
 const opponentView = (c: {
   code: string;
@@ -64,6 +79,20 @@ function entryMatch(
   return undefined;
 }
 
+// The team's own probability of occupying that R32 entry slot — 0 when the slot
+// doesn't exist or the market gives the team no chance there (e.g. eliminated).
+function entryProbability(
+  predictions: Pick<Predictions, "slots">,
+  code: string,
+  entry: { match: KnockoutMatch; side: Side } | undefined,
+): number {
+  if (!entry) return 0;
+  const slot = predictions.slots.find(
+    (s) => s.match === entry.match.number && s.side === entry.side,
+  );
+  return slot?.candidates.find((c) => c.code === code)?.probability ?? 0;
+}
+
 // Which side of the next match our team feeds — the one whose ref is the winner
 // of the match it just came from.
 function nextSide(next: KnockoutMatch, fromMatch: number): Side {
@@ -87,23 +116,10 @@ function opponentsFor(
     .sort((a, b) => b.probability - a.probability);
 }
 
-/** Build the team's projected path, or `undefined` if the code never reaches a
- *  Round-of-32 slot (it isn't a top-two group finisher anywhere). */
-export function teamPath(
-  predictions: Pick<Predictions, "slots" | "groups">,
-  code: string,
-): TeamPath | undefined {
-  const team = teamById[code];
-  if (!team) return undefined;
-
-  const odds = predictions.groups
-    .find((g) => g.letter === team.group)
-    ?.teams.find((t) => t.code === code);
-  const placement = odds && odds.second > odds.first ? "second" : "first";
-
-  const entry = entryMatch(team.group, placement);
-  if (!entry) return undefined;
-
+function walk(
+  predictions: Pick<Predictions, "slots">,
+  entry: { match: KnockoutMatch; side: Side },
+): PathStep[] {
   const steps: PathStep[] = [];
   let current: KnockoutMatch | undefined = entry.match;
   let side = entry.side;
@@ -121,6 +137,49 @@ export function teamPath(
     side = nextSide(next, current.number);
     current = next;
   }
+  return steps;
+}
 
-  return { code, name: team.name, group: team.group, placement, steps };
+/** A friendly sentence for a team with no projected path. */
+export function outMessage(out: { name: string; advance: number }): string {
+  return out.advance < ELIMINATED_ADVANCE
+    ? `${out.name} is out of the tournament, so there's no road to the final to show.`
+    : `${out.name} isn't projected to win or finish runner-up in its group, so there's no clear path to the final to show.`;
+}
+
+/** Build the team's projected path, the "out" verdict when it has none, or
+ *  `undefined` for an unknown team code. */
+export function teamPath(
+  predictions: Pick<Predictions, "slots" | "groups">,
+  code: string,
+): TeamPathResult | undefined {
+  const team = teamById[code];
+  if (!team) return undefined;
+
+  const advance =
+    predictions.groups
+      .find((g) => g.letter === team.group)
+      ?.teams.find((t) => t.code === code)?.advance ?? 0;
+
+  const firstEntry = entryMatch(team.group, "first");
+  const secondEntry = entryMatch(team.group, "second");
+  const pFirst = entryProbability(predictions, code, firstEntry);
+  const pSecond = entryProbability(predictions, code, secondEntry);
+
+  // Enter at whichever top-two slot the market makes likelier; that's all the
+  // placement we need — we don't surface "winner"/"runner-up".
+  const entry = pFirst >= pSecond ? firstEntry : secondEntry;
+  const probability = Math.max(pFirst, pSecond);
+
+  if (!entry || probability < MIN_ENTRY_PROBABILITY) {
+    return { status: "out", code, name: team.name, group: team.group, advance };
+  }
+
+  return {
+    status: "path",
+    code,
+    name: team.name,
+    group: team.group,
+    steps: walk(predictions, entry),
+  };
 }

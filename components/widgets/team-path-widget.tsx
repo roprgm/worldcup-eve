@@ -6,7 +6,7 @@ import {
 } from "@/components/widgets/team-path-card";
 import { usePredictions } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
-import { teamPath } from "@/lib/predictions/team-path";
+import { outMessage, teamPath } from "@/lib/predictions/team-path";
 import { teamById, type Round } from "@/lib/tournament";
 
 const ROUND_LABEL: Record<Round, string> = {
@@ -18,25 +18,29 @@ const ROUND_LABEL: Record<Round, string> = {
   FINAL: "Final",
 };
 
-interface PathView {
-  team: { code: string; name: string };
-  placementLabel: string;
-  steps: PathStepView[];
-}
+type PathView =
+  | { status: "path"; steps: PathStepView[] }
+  | { status: "out"; subtitle: string; note: string };
 
 function pathView(
   predictions: Predictions,
   code: string,
 ): PathView | undefined {
-  const path = teamPath(predictions, code);
-  if (!path) return undefined;
+  const result = teamPath(predictions, code);
+  if (!result) return undefined;
+
+  if (result.status === "out") {
+    return {
+      status: "out",
+      subtitle:
+        result.advance < 0.01 ? "Out of the tournament" : "Unlikely to advance",
+      note: outMessage(result),
+    };
+  }
+
   return {
-    team: { code: path.code, name: path.name },
-    placementLabel:
-      path.placement === "first"
-        ? `Group ${path.group} winner`
-        : `Group ${path.group} runner-up`,
-    steps: path.steps.map((step) => ({
+    status: "path",
+    steps: result.steps.map((step) => ({
       roundLabel: ROUND_LABEL[step.round],
       matchNumber: step.matchNumber,
       opponents: step.opponents,
@@ -45,8 +49,9 @@ function pathView(
 }
 
 /** Connected path card: fetches the shared predictions and renders the team's
- *  projected road to the final. The header shows immediately from static team
- *  data; the per-round opponents fill in once the market loads. */
+ *  projected road to the final — or an "out" state when the market no longer
+ *  puts the team on a knockout path. The header shows immediately from static
+ *  team data; the per-round opponents fill in once the market loads. */
 export function TeamPathWidget({ code }: { code: string }) {
   const view = usePredictions((predictions) => pathView(predictions, code));
   const team = teamById[code];
@@ -54,8 +59,9 @@ export function TeamPathWidget({ code }: { code: string }) {
   return (
     <TeamPathCard
       team={team ? { code: team.id, name: team.name } : undefined}
-      placementLabel={view?.placementLabel}
-      steps={view?.steps}
+      subtitle={view?.status === "out" ? view.subtitle : undefined}
+      steps={view?.status === "path" ? view.steps : undefined}
+      note={view?.status === "out" ? view.note : undefined}
     />
   );
 }

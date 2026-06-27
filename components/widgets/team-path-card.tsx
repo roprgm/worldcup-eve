@@ -22,9 +22,12 @@ export interface PathStepView {
 
 interface TeamPathCardProps {
   team?: { code: string; name: string };
-  placementLabel?: string;
+  /** Header line under the team name, e.g. "Road to the final · …". */
+  subtitle?: string;
   /** `undefined` while the predictions load — the card shows skeleton steps. */
   steps?: PathStepView[];
+  /** When set, the team has no path (eliminated): shown instead of steps. */
+  note?: string;
 }
 
 function formatPct(p: number): string {
@@ -137,10 +140,10 @@ function StepsSkeleton() {
 
 function CardHeader({
   team,
-  placementLabel,
+  subtitle,
 }: {
   team?: { code: string; name: string };
-  placementLabel?: string;
+  subtitle?: string;
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-surface-divider px-3 py-2">
@@ -149,8 +152,8 @@ function CardHeader({
         <p className="truncate text-sm font-semibold text-foreground">
           {team?.name ?? "—"}
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          Road to the final{placementLabel ? ` · ${placementLabel}` : ""}
+        <p className="truncate text-[11px] text-muted-foreground">
+          {subtitle ?? "Road to the final"}
         </p>
       </div>
       <Trophy className="ml-auto size-4 text-pick" />
@@ -159,17 +162,21 @@ function CardHeader({
 }
 
 /** A team's projected knockout route — likely opponents at each round from the
- *  Round of 32 to the final. Steps are `undefined` while the market loads. */
+ *  Round of 32 to the final. Steps are `undefined` while the market loads; a
+ *  `note` replaces them when the team has no path (eliminated). */
 export function TeamPathCard({
   team,
-  placementLabel,
+  subtitle,
   steps,
+  note,
 }: TeamPathCardProps) {
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
-      <CardHeader team={team} placementLabel={placementLabel} />
+      <CardHeader team={team} subtitle={subtitle} />
       <div className="px-3 pt-3">
-        {steps === undefined ? (
+        {note !== undefined ? (
+          <p className="pb-3 text-[13px] text-muted-foreground">{note}</p>
+        ) : steps === undefined ? (
           <StepsSkeleton />
         ) : (
           steps.map((step, i) => (

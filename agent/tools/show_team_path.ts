@@ -4,7 +4,7 @@ import { z } from "zod";
 import { codeFor } from "@/agent/lib/team-aliases";
 import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { getPredictions } from "@/lib/predictions";
-import { teamPath } from "@/lib/predictions/team-path";
+import { outMessage, teamPath } from "@/lib/predictions/team-path";
 import { teams } from "@/lib/tournament";
 
 const ROUND_LABEL: Record<string, string> = {
@@ -15,11 +15,11 @@ const ROUND_LABEL: Record<string, string> = {
   FINAL: "Final",
 };
 
-const percent = (v: number) => Math.round(v * 1000) / 10;
+const percent = (v: number) => Math.round(v * 100);
 
 export default defineTool({
   description:
-    'Show the user a widget of a team\'s projected path to the final: the likely opponents it would meet at each knockout round (Round of 32 → Final), assuming its most likely group finish. Use for questions like "who could X face on the way to the final" or "show X\'s road to the final".',
+    'Show the user a widget of a team\'s projected path to the final: the likely opponents it would meet at each knockout round (Round of 32 → Final). Use for questions like "who could X face on the way to the final" or "show X\'s road to the final".',
   inputSchema: z.object({
     team: z.string().describe("A country name or code, e.g. Argentina or ARG."),
   }),
@@ -34,25 +34,29 @@ export default defineTool({
     }
 
     const snapshot = await getPredictions();
-    const path = teamPath(snapshot, code);
-    if (!path) {
+    const result = teamPath(snapshot, code);
+    if (!result) {
       return { error: `No projected path available for ${team}.` };
     }
+    if (result.status === "out") {
+      // A real "this team is done" answer — no widget, just the note.
+      return { note: outMessage(result) };
+    }
 
+    // Compact, one-line-per-round content: enough for a caption, small enough
+    // that the model just summarizes it instead of re-listing every candidate.
     return {
-      updatedAt: snapshot.updatedAt,
-      code: path.code,
-      team: path.name,
-      group: path.group,
-      placement: path.placement,
-      rounds: path.steps.map((step) => ({
-        round: ROUND_LABEL[step.round] ?? step.round,
-        matchNumber: step.matchNumber,
-        opponents: step.opponents.slice(0, 4).map((o) => ({
-          team: o.name,
-          chancePercent: percent(o.probability),
-        })),
-      })),
+      team: result.name,
+      group: result.group,
+      rounds: result.steps.map((step) => {
+        const top = step.opponents[0];
+        return {
+          round: ROUND_LABEL[step.round] ?? step.round,
+          likelyOpponent: top
+            ? `${top.name} (${percent(top.probability)}%)`
+            : "to be decided",
+        };
+      }),
     };
   },
   toModelOutput: widgetModelOutput,
