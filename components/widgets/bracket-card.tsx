@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "cnfast";
 import { Info, Trophy } from "lucide-react";
+import { useState } from "react";
 
 import { Flag } from "@/components/flags";
 import {
@@ -350,6 +353,42 @@ function RoundLabels() {
   return <div className="flex w-full">{cells}</div>;
 }
 
+const HELP_TEXT =
+  "Each number is a team's chance to reach that match — not to win it. Green marks teams effectively through (≥99%).";
+
+/** The header info affordance. Native `title` only surfaces on hover, so on
+ *  touch we toggle a small popover on tap; a transparent backdrop dismisses it. */
+function BracketHelp() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative ml-auto shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="How to read this bracket"
+        aria-expanded={open}
+        className="flex cursor-pointer items-center text-muted-foreground/55 transition-colors hover:text-muted-foreground"
+      >
+        <Info className="size-3.5" />
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute top-full right-0 z-20 mt-1.5 w-56 rounded-md border border-surface-border bg-surface-2 p-2 text-[10px] leading-relaxed text-muted-foreground shadow-lg">
+            {HELP_TEXT}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** The knockout bracket as predicted: each match is a four-quadrant card (flags
  *  stacked on the outer side, probabilities inner). The two halves and the
  *  center final span the full widget width, the connectors stretching to fill. */
@@ -366,16 +405,10 @@ export function BracketCard({ getSlot }: BracketCardProps) {
         <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
         </span>
-        <span className="hidden truncate text-[10px] text-muted-foreground/55 sm:inline">
-          · chance to reach each match
+        <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
+          · chances to reach each stage
         </span>
-        <span
-          className="ml-auto flex shrink-0 cursor-help"
-          title="Each number is a team's chance to reach that match — not to win it. Green marks teams effectively through (≥99%)."
-          aria-label="How to read this bracket"
-        >
-          <Info className="size-3.5 text-muted-foreground/55" />
-        </span>
+        <BracketHelp />
       </div>
       <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:19px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:28px]">
         <RoundLabels />
