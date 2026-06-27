@@ -4,7 +4,7 @@ import { Trophy } from "lucide-react";
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const MAX_OPPONENTS = 4;
+const MAX_OPPONENTS = 6;
 const MIN_PROBABILITY = 0.01;
 const SKELETON_STEPS = ["a", "b", "c", "d", "e"];
 
@@ -16,7 +16,8 @@ interface Opponent {
 
 export interface PathStepView {
   roundLabel: string;
-  matchNumber: number;
+  /** P(team reaches this round), shown as a muted "reach NN%". */
+  reachProbability: number;
   opponents: Opponent[];
 }
 
@@ -94,7 +95,7 @@ function Step({ step, last }: { step: PathStepView; last: boolean }) {
             {step.roundLabel}
           </p>
           <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-            #{step.matchNumber}
+            reach {formatPct(step.reachProbability)}
           </span>
         </div>
         <div className="mt-1 space-y-1">
@@ -181,7 +182,7 @@ export function TeamPathCard({
         ) : (
           steps.map((step, i) => (
             <Step
-              key={step.matchNumber}
+              key={step.roundLabel}
               step={step}
               last={i === steps.length - 1}
             />

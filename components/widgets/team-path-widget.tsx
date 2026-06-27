@@ -32,8 +32,7 @@ function pathView(
   if (result.status === "out") {
     return {
       status: "out",
-      subtitle:
-        result.advance < 0.01 ? "Out of the tournament" : "Unlikely to advance",
+      subtitle: "Out of the tournament",
       note: outMessage(result),
     };
   }
@@ -42,7 +41,7 @@ function pathView(
     status: "path",
     steps: result.steps.map((step) => ({
       roundLabel: ROUND_LABEL[step.round],
-      matchNumber: step.matchNumber,
+      reachProbability: step.reachProbability,
       opponents: step.opponents,
     })),
   };

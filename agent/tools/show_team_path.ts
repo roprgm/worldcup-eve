@@ -48,15 +48,13 @@ export default defineTool({
     return {
       team: result.name,
       group: result.group,
-      rounds: result.steps.map((step) => {
-        const top = step.opponents[0];
-        return {
-          round: ROUND_LABEL[step.round] ?? step.round,
-          likelyOpponent: top
-            ? `${top.name} (${percent(top.probability)}%)`
-            : "to be decided",
-        };
-      }),
+      rounds: result.steps.map((step) => ({
+        round: ROUND_LABEL[step.round] ?? step.round,
+        reachPercent: percent(step.reachProbability),
+        possibleOpponents: step.opponents
+          .slice(0, 4)
+          .map((o) => `${o.name} (${percent(o.probability)}%)`),
+      })),
     };
   },
   toModelOutput: widgetModelOutput,
