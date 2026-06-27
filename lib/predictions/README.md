@@ -60,6 +60,7 @@ This is a deliberately minimal hook; wire it to your platform's real cache
 | `reach`           | per-team P(reach R16 / QF / SF / Final), plus the market champion price |
 | `groupScores`     | most-likely exact scoreline per unplayed group fixture, by id (`"A1"`..) |
 | `matchOdds`       | two-way home/away win chance per group fixture with a priced market    |
+| `matchWinOdds`    | BT win distribution per knockout match (73–104); head-to-head once decided |
 
 Teams are FIFA 3-letter codes (`BRA`, `ARG`, …). Probabilities are in `[0, 1]`,
 rounded to four decimals.

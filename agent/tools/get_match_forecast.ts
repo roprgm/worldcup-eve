@@ -3,27 +3,109 @@ import { z } from "zod";
 
 import { codeFor } from "@/agent/lib/team-aliases";
 import { getPredictions } from "@/lib/predictions";
-import { groupFixture, groupMatches } from "@/lib/tournament";
+import type { Predictions } from "@/lib/predictions";
+import {
+  groupFixture,
+  groupMatches,
+  knockoutMatches,
+  matchByNumber,
+} from "@/lib/tournament";
 
 function percent(value: number): number {
   return Math.round(value * 1000) / 10;
 }
 
+// A knockout slot counts as decided once its leading team is all but certain;
+// only then is the matchup a real head-to-head rather than a field of candidates.
+const SETTLED = 0.99;
+
+function settledTeam(
+  snapshot: Predictions,
+  match: number,
+  side: "home" | "away",
+): string | undefined {
+  const top = snapshot.slots.find((s) => s.match === match && s.side === side)
+    ?.candidates[0];
+  return top && top.probability >= SETTLED ? top.code : undefined;
+}
+
+// Two-way win odds for a decided knockout match, from the BT winner distribution.
+function knockoutForecast(
+  snapshot: Predictions,
+  match: number,
+  homeCode: string,
+  awayCode: string,
+) {
+  const byCode = new Map(
+    (snapshot.matchWinOdds[match] ?? []).map((c) => [c.code, c.probability]),
+  );
+  const home = byCode.get(homeCode) ?? 0;
+  const away = byCode.get(awayCode) ?? 0;
+  const total = home + away;
+  if (total <= 0) return undefined;
+  return {
+    updatedAt: snapshot.updatedAt,
+    match,
+    round: matchByNumber[match]?.round,
+    home: homeCode,
+    away: awayCode,
+    homeWinPercent: percent(home / total),
+    awayWinPercent: percent(away / total),
+  };
+}
+
+// The decided knockout match between two teams, in either bracket orientation.
+function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
+  for (const m of knockoutMatches) {
+    if (m.round === "TP") continue; // the play-off isn't in the BT winner map
+    const home = settledTeam(snapshot, m.number, "home");
+    const away = settledTeam(snapshot, m.number, "away");
+    if (!home || !away) continue;
+    if (
+      (home === codeA && away === codeB) ||
+      (home === codeB && away === codeA)
+    ) {
+      return knockoutForecast(snapshot, m.number, home, away);
+    }
+  }
+  return undefined;
+}
+
 export default defineTool({
   description:
-    "Predicted scoreline and two-way win odds for an upcoming group-stage match. Give it the two teams or the group match number (1-72).",
+    "Predicted scoreline and two-way win odds for an upcoming group match (1-72), or the head-to-head win odds for a knockout match (73-104) once both teams are decided. Give it the two teams or the match number.",
   inputSchema: z.object({
     matchId: z
       .number()
       .int()
       .min(1)
-      .max(72)
+      .max(104)
       .optional()
-      .describe("Group match number, 1-72."),
+      .describe("FIFA match number, 1-104."),
     teamA: z.string().optional().describe("First team name or code."),
     teamB: z.string().optional().describe("Second team name or code."),
   }),
   async execute({ matchId, teamA, teamB }) {
+    const snapshot = await getPredictions();
+
+    // Knockout match by number: read the decided sides from the bracket slots.
+    if (matchId && matchId > 72) {
+      const home = settledTeam(snapshot, matchId, "home");
+      const away = settledTeam(snapshot, matchId, "away");
+      const forecast =
+        home && away
+          ? knockoutForecast(snapshot, matchId, home, away)
+          : undefined;
+      return (
+        forecast ?? {
+          updatedAt: snapshot.updatedAt,
+          match: matchId,
+          error:
+            "No head-to-head odds yet — the matchup isn't decided (use show_knockout_match for who might play).",
+        }
+      );
+    }
+
     const match = matchId
       ? groupMatches.find((m) => m.number === matchId)
       : undefined;
@@ -42,13 +124,16 @@ export default defineTool({
 
     const fixture = groupFixture(codeA, codeB);
     if (!fixture) {
+      // Not a group pairing — try a decided knockout matchup before giving up.
+      const knockout = knockoutBetween(snapshot, codeA, codeB);
+      if (knockout) return knockout;
       return {
-        error: "Not an upcoming group match.",
+        error:
+          "No forecast available (not a group fixture, and not a decided knockout matchup).",
         requested: { teamA: codeA, teamB: codeB },
       };
     }
 
-    const snapshot = await getPredictions();
     const score = snapshot.groupScores[fixture.id];
     const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
     if (!score && !odds) {
