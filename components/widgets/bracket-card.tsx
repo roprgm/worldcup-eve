@@ -268,35 +268,40 @@ function PositionedCard({
   );
 }
 
-/** Connector from a parent card to its two children: a vertical bus at the
- *  children's inner edge spanning both child centres, plus a horizontal arm at
- *  the parent's centre line. Drawn behind the cards (z-0); where the columns
- *  nest, the parent masks the overlap and the lines emerge from its edges. */
+/** Connector from a parent card to its two children: a vertical bus spanning
+ *  both child centres, plus a horizontal arm at the parent's centre line. Drawn
+ *  behind the cards (z-0), so each child only shows the bus past its edge. With
+ *  `fromBottom` the bus sits at the child's centre, so the line leaves the lower
+ *  edge of the upper child (and the upper edge of the lower one) instead of
+ *  running down its inner side. */
 function Wire({
   parentX,
   childX,
   parentLeaf,
   off,
   mirror,
+  fromBottom,
 }: {
   parentX: string;
   childX: string;
   parentLeaf: number;
   off: number;
   mirror?: boolean;
+  fromBottom?: boolean;
 }) {
   const armY = `calc(${parentLeaf} * ${VAR.leaf})`;
   const childInner = mirror ? childX : `calc(${childX} + ${VAR.card})`;
+  const busX = fromBottom ? `calc(${childX} + ${VAR.card} / 2)` : childInner;
   const parentOuter = mirror ? `calc(${parentX} + ${VAR.card})` : parentX;
   const a = parentOuter;
-  const b = childInner;
+  const b = busX;
   return (
     <>
       <span
         aria-hidden
         className="absolute z-0 w-px bg-border-strong"
         style={{
-          left: childInner,
+          left: busX,
           top: `calc(${armY} - ${off} * ${VAR.leaf})`,
           height: `calc(2 * ${off} * ${VAR.leaf})`,
         }}
@@ -517,6 +522,8 @@ function half(
         parentLeaf={leafCenter(round, idx)}
         off={off}
         mirror={mirror}
+        // children that are R16 / QF (parent QF / SF) drop from the box bottom
+        fromBottom={ROUND_DEPTH[round] >= 2}
       />
     ));
   });
