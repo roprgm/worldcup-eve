@@ -135,20 +135,16 @@ function PctCell({
   slot,
   lead,
   certain,
-  mirror,
 }: {
   slot: BracketSlot | undefined;
   lead: boolean;
   certain?: boolean;
-  mirror?: boolean;
 }) {
   const p = slot?.probability;
   return (
     <span
       className={cn(
-        "flex items-center text-[8px] leading-none tabular-nums sm:text-[10px] lg:text-[11px]",
-        // the check centres in the column's free space; numbers hug the flag
-        certain ? "justify-center" : mirror ? "justify-end" : "justify-start",
+        "flex items-center justify-center text-[8px] leading-none tabular-nums sm:text-[10px] lg:text-[11px]",
         certain
           ? "font-semibold text-pick"
           : lead
@@ -210,21 +206,11 @@ function MatchCard({
 
   const flagHome = <FlagCell slot={home} dim={!homeLeads && !homeCertain} />;
   const pctHome = (
-    <PctCell
-      slot={home}
-      lead={homeLeads}
-      certain={homeCertain}
-      mirror={mirror}
-    />
+    <PctCell slot={home} lead={homeLeads} certain={homeCertain} />
   );
   const flagAway = <FlagCell slot={away} dim={homeLeads && !awayCertain} />;
   const pctAway = (
-    <PctCell
-      slot={away}
-      lead={!homeLeads}
-      certain={awayCertain}
-      mirror={mirror}
-    />
+    <PctCell slot={away} lead={!homeLeads} certain={awayCertain} />
   );
 
   return (
@@ -574,7 +560,7 @@ export function BracketCard({ getSlot }: BracketCardProps) {
         </span>
         <BracketHelp />
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:14px] [--lane:6px] [--leaf:40px] [--pct:20px] sm:[--flag:17px] sm:[--lane:9px] sm:[--leaf:52px] sm:[--pct:24px] lg:[--flag:20px] lg:[--lane:12px] lg:[--leaf:60px] lg:[--pct:28px]">
+      <div className="overflow-x-auto px-2 py-3 [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:14px] [--lane:6px] [--leaf:40px] [--pct:18px] sm:[--flag:17px] sm:[--lane:9px] sm:[--leaf:52px] sm:[--pct:22px] lg:[--flag:20px] lg:[--lane:12px] lg:[--leaf:60px] lg:[--pct:26px]">
         <div
           className="w-full"
           style={{ "--step": STEP_VALUE } as CSSProperties}
