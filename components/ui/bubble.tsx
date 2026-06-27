@@ -1,16 +1,18 @@
 import { cn } from "cnfast";
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "secondary";
+type Variant = "secondary" | "ghost";
 type Align = "start" | "end";
 
+// Variants follow shadcn/ui's Bubble: a framed bubble sizes to its content (up
+// to most of the row), while `ghost` is unframed and fills the row — used for
+// assistant replies so their markdown and widgets lay out naturally.
 const variants: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground",
-  secondary: "border border-surface-divider bg-surface-2 text-foreground",
+  secondary:
+    "w-fit max-w-[85%] rounded-2xl border border-surface-divider bg-surface-2 px-3.5 py-2 text-base leading-relaxed whitespace-pre-wrap text-foreground sm:max-w-[80%]",
+  ghost: "min-w-0 flex-1",
 };
 
-/** A chat bubble: sizes to its content up to most of the row, with the tail
- *  corner squared off on the sender's side. */
 export function Bubble({
   variant = "secondary",
   align = "end",
@@ -21,9 +23,10 @@ export function Bubble({
     <div
       data-align={align}
       className={cn(
-        "w-fit max-w-[85%] rounded-xl px-3 py-1.5 text-base leading-relaxed whitespace-pre-wrap sm:max-w-[80%]",
-        align === "end" ? "rounded-br-sm" : "rounded-bl-sm",
         variants[variant],
+        // Square the tail corner on the sender's side.
+        variant === "secondary" &&
+          (align === "end" ? "rounded-br-md" : "rounded-bl-md"),
         className,
       )}
       {...props}

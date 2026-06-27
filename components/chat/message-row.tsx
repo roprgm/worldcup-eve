@@ -13,11 +13,7 @@ import {
 import { BallIcon } from "@/components/icons";
 import { Bubble } from "@/components/ui/bubble";
 import { Loader } from "@/components/ui/loader";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-} from "@/components/ui/message";
+import { Message, MessageAvatar } from "@/components/ui/message";
 import { Response } from "@/components/ui/response";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
@@ -44,9 +40,9 @@ export function PendingRow({ label }: { label: string }) {
   return (
     <Message align="start">
       <AssistantAvatar streaming />
-      <MessageContent className="pt-0.5">
+      <Bubble variant="ghost" className="pt-0.5">
         <ActivityIndicator label={label} />
-      </MessageContent>
+      </Bubble>
     </Message>
   );
 }
@@ -61,7 +57,9 @@ export function MessageRow({
   if (message.role === "user") {
     return (
       <Message align="end">
-        <Bubble>{messageText(message)}</Bubble>
+        <Bubble variant="secondary" align="end">
+          {messageText(message)}
+        </Bubble>
       </Message>
     );
   }
@@ -70,9 +68,9 @@ export function MessageRow({
   return (
     <Message align="start">
       <AssistantAvatar streaming={streaming} />
-      <MessageContent className="pt-0.5">
+      <Bubble variant="ghost" className="pt-0.5">
         <AssistantBody message={message} busy={busy} />
-      </MessageContent>
+      </Bubble>
     </Message>
   );
 }

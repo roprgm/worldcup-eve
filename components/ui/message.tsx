@@ -41,9 +41,3 @@ export function MessageAvatar({
     </div>
   );
 }
-
-/** Message body. Fills the row by default; pass alignment-specific classes for
- *  bubbles. */
-export function MessageContent({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("min-w-0 flex-1", className)} {...props} />;
-}
