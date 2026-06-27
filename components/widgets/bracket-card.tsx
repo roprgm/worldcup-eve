@@ -397,7 +397,7 @@ export function BracketCard({ getSlot, championCode }: BracketCardProps) {
       <div className="flex h-7 items-center border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-foreground/70">
         Bracket
       </div>
-      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:32px] [--pct:23px] sm:[--flag:17px] sm:[--leaf:38px] sm:[--pct:30px] lg:[--flag:20px] lg:[--leaf:44px] lg:[--pct:38px]">
+      <div className="overflow-x-auto px-2 py-3 [--flag:13px] [--leaf:38px] [--pct:23px] sm:[--flag:17px] sm:[--leaf:52px] sm:[--pct:30px] lg:[--flag:20px] lg:[--leaf:60px] lg:[--pct:38px]">
         <RoundLabels />
         <div
           className="mt-1.5 flex w-full items-stretch"
