@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const MAX_OPPONENTS = 4;
+const MAX_OPPONENTS = 3;
 const MIN_PROBABILITY = 0.01;
 const SKELETON_STEPS = ["a", "b", "c", "d", "e"];
 
@@ -104,7 +104,7 @@ function Step({
             to be decided
           </p>
         ) : (
-          <div className="mt-1 space-y-0.5">
+          <div className="mt-1 space-y-px">
             {opponents.map((opponent) => (
               <OpponentRow key={opponent.code} opponent={opponent} />
             ))}
