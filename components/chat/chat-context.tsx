@@ -7,7 +7,6 @@ import {
   type ReactNode,
   useCallback,
   useContext,
-  useRef,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
@@ -20,18 +19,10 @@ type ChatContextValue = {
   start: (message: string) => void;
 };
 
-// A starter chat to seed from: the prior events render immediately, and the
-// transcript is replayed as model context so the agent continues seamlessly.
-export type ChatSeed = {
-  events: Agent["events"];
-  transcript: string;
-};
-
 type SavedChat = {
   id: string;
   session?: Agent["session"];
   events?: Agent["events"];
-  transcript?: string;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -59,39 +50,18 @@ function loadChat(): SavedChat | null {
   return urlId && urlId !== saved.id ? null : saved;
 }
 
-export function ChatProvider({
-  children,
-  seed,
-}: {
-  children: ReactNode;
-  seed?: ChatSeed;
-}) {
-  // A seeded starter ignores any saved chat and starts fresh from the seed.
-  const [restored] = useState(() => (seed ? null : loadChat()));
-  // Prior conversation injected as model context every turn: a fresh durable
-  // session has no server-side history, so this is what lets a starter continue.
-  const transcript = seed?.transcript ?? restored?.transcript;
-  const adopted = useRef(false);
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const [restored] = useState(loadChat);
 
   const agent = useEveAgent({
-    initialSession: seed ? undefined : restored?.session,
-    initialEvents: seed ? seed.events : restored?.events,
-    prepareSend: (input) => {
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (!transcript) return { ...input, clientContext: { timeZone } };
-      // A seeded starter runs a fresh session with no server-side history, so
-      // replay the prior conversation as plain context messages (not a JSON
-      // blob) the model reads as the chat so far and continues from.
-      return {
-        ...input,
-        clientContext: [
-          `Current user's time zone: ${timeZone}.`,
-          `You are continuing an ongoing chat. The conversation so far:\n\n${transcript}\n\n` +
-            `Continue it naturally and resolve references like "it", "they", or "the group" ` +
-            `against this history. Don't ask the user to repeat what's above.`,
-        ],
-      };
-    },
+    initialSession: restored?.session,
+    initialEvents: restored?.events,
+    prepareSend: (input) => ({
+      ...input,
+      clientContext: {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    }),
     // Persist when a turn settles, keyed by the chat in the URL. Skip empty
     // turns so a failed first message can't clobber the saved chat.
     onFinish: ({ session, events }) => {
@@ -99,7 +69,7 @@ export function ChatProvider({
       if (id && events.length > 0) {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ id, session, events, transcript }),
+          JSON.stringify({ id, session, events }),
         );
       }
     },
@@ -109,12 +79,6 @@ export function ChatProvider({
     (text: string) => {
       const message = text.trim();
       if (!message) return;
-      // On its first turn a starter adopts a normal `/chat/<id>` URL so it
-      // persists and later resumes like any other local chat.
-      if (seed && !adopted.current) {
-        adopted.current = true;
-        window.history.pushState(null, "", `/chat/${newChatId()}`);
-      }
       // While a question is parked, a plain message would be dropped as
       // "ignored"; route it back as the answer to the pending request.
       const question = activeQuestion(agent.data.messages);
@@ -123,7 +87,7 @@ export function ChatProvider({
         : { message };
       void agent.send(payload).catch(() => {});
     },
-    [agent, seed],
+    [agent],
   );
 
   const start = useCallback(
