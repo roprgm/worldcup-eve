@@ -1,9 +1,13 @@
+"use client";
+
 import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CellPath, PathOpponent } from "@/lib/predictions/team-path";
+import type { Round } from "@/lib/tournament";
 
 // One team's chance of reaching each knockout round, all 0–1.
 export interface StageOddsRow {
@@ -22,16 +26,37 @@ export interface StageOddsRow {
   eliminated: boolean;
 }
 
-// The stage columns, in bracket order. `key` indexes StageOddsRow; the labels
-// are kept short so six columns fit a phone without scrolling.
+/** Resolve the breakdown behind a cell (team + round); `undefined` if there's
+ *  nothing to explain (R32, the cup, or a team that can't get there). */
+export type ResolveBreakdown = (
+  code: string,
+  round: Round,
+) => CellPath | undefined;
+
+// The stage columns, in bracket order. `key` indexes StageOddsRow; `round` marks
+// the reach columns whose cell opens a why-this-number breakdown (R32 is the
+// group result and the cup its own market, so neither carries one).
 const STAGES = [
   { key: "r32", label: "R32" },
-  { key: "r16", label: "R16" },
-  { key: "qf", label: "QF" },
-  { key: "sf", label: "SF" },
-  { key: "final", label: "Final" },
+  { key: "r16", label: "R16", round: "R16" },
+  { key: "qf", label: "QF", round: "QF" },
+  { key: "sf", label: "SF", round: "SF" },
+  { key: "final", label: "Final", round: "FINAL" },
   { key: "champion", label: "Cup" },
-] as const satisfies ReadonlyArray<{ key: keyof StageOddsRow; label: string }>;
+] as const satisfies ReadonlyArray<{
+  key: keyof StageOddsRow;
+  label: string;
+  round?: Round;
+}>;
+
+const ROUND_LABEL: Record<Round, string> = {
+  R32: "Round of 32",
+  R16: "Round of 16",
+  QF: "Quarter-finals",
+  SF: "Semi-finals",
+  TP: "Third place",
+  FINAL: "Final",
+};
 
 const ROW_SKELETON = Array.from({ length: 16 }, (_, i) => `row-${i}`);
 
@@ -50,6 +75,8 @@ function formatPct(value: number): string {
   if (p < 9.95) return `${p.toFixed(1)}%`;
   return `${Math.round(p)}%`;
 }
+
+const roundPct = (p: number) => `${Math.round(p * 100)}%`;
 
 // What the table is showing, surfaced in the header. A field cut (the whole
 // field, or its Top-N) toggles between the two; a fixed team list just labels how
@@ -124,7 +151,7 @@ function HeatCell({
   if (reached)
     return (
       <span
-        className="flex h-7 items-center justify-center rounded-[3px] text-pick"
+        className="flex h-7 w-full items-center justify-center rounded-[3px] text-pick"
         style={{
           backgroundColor: "color-mix(in oklab, var(--pick) 22%, transparent)",
         }}
@@ -136,7 +163,7 @@ function HeatCell({
   if (eliminated)
     return (
       <span
-        className="flex h-7 items-center justify-center rounded-[3px] text-muted-foreground/50"
+        className="flex h-7 w-full items-center justify-center rounded-[3px] text-muted-foreground/50"
         style={{
           backgroundColor:
             "color-mix(in oklab, var(--muted-foreground) 9%, transparent)",
@@ -151,7 +178,7 @@ function HeatCell({
   return (
     <span
       className={cn(
-        "flex h-7 items-center justify-center rounded-[3px] text-[11px] tabular-nums @lg:text-[12px]",
+        "flex h-7 w-full items-center justify-center rounded-[3px] text-[11px] tabular-nums @lg:text-[12px]",
         strong ? "font-semibold text-foreground" : "text-muted-foreground",
       )}
       style={{
@@ -171,35 +198,144 @@ function ColumnLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function StageRow({ row }: { row: StageOddsRow }) {
+// The likely opponents in one match, biggest first — a single locked-in opponent
+// drops its "100%".
+function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
+  const top = opponents.filter((o) => o.probability >= 0.05).slice(0, 3);
+  if (!top.length)
+    return <span className="text-muted-foreground/60">to be decided</span>;
+  const locked = top.length === 1 && top[0].probability >= 0.99;
   return (
-    <StageGrid className="h-7">
-      <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
-        <Flag code={row.code} size={14} />
-        <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
-          <span className="@lg:hidden">{row.code}</span>
-          <span className="hidden @lg:inline">{row.name ?? row.code}</span>
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {top.map((o) => (
+        <span key={o.code} className="flex items-center gap-1">
+          <Flag code={o.code} size={12} />
+          <span className="font-medium">{o.code}</span>
+          {!locked && (
+            <span className="text-muted-foreground tabular-nums">
+              {roundPct(o.probability)}
+            </span>
+          )}
         </span>
-      </span>
-      {STAGES.map((stage, idx) => (
-        <HeatCell
-          key={stage.key}
-          value={row[stage.key]}
-          reached={idx <= row.reachedIdx}
-          eliminated={row.eliminated}
-        />
       ))}
-    </StageGrid>
+    </span>
+  );
+}
+
+// The why-this-number panel under a clicked cell: the matches the team must win
+// to reach the round, each with its likely opponent and the running reach.
+function CellExplain({ path }: { path: CellPath }) {
+  return (
+    <div className="rounded-md bg-surface-2/30 px-2.5 py-2 text-[11px]">
+      <p className="mb-1.5 text-muted-foreground">
+        To reach the {ROUND_LABEL[path.targetRound]},{" "}
+        <span className="text-foreground">{path.name}</span> must get past
+        {path.dependsOnGroup ? " (depends on its group finish)" : ""}:
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {path.legs.map((leg) => (
+          <div
+            key={leg.round}
+            className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-2"
+          >
+            <span className="text-muted-foreground/80">
+              {ROUND_LABEL[leg.round]}
+            </span>
+            <OpponentList opponents={leg.opponents} />
+            <span className="text-foreground tabular-nums">
+              {roundPct(leg.reachNext)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StageRow({
+  row,
+  openRound,
+  onToggle,
+  resolve,
+}: {
+  row: StageOddsRow;
+  openRound: Round | null;
+  onToggle: (round: Round) => void;
+  resolve?: ResolveBreakdown;
+}) {
+  const path = openRound ? resolve?.(row.code, openRound) : undefined;
+
+  return (
+    <div>
+      <StageGrid className="h-7">
+        <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
+          <Flag code={row.code} size={14} />
+          <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
+            <span className="@lg:hidden">{row.code}</span>
+            <span className="hidden @lg:inline">{row.name ?? row.code}</span>
+          </span>
+        </span>
+        {STAGES.map((stage, idx) => {
+          const reached = idx <= row.reachedIdx;
+          const cell = (
+            <HeatCell
+              value={row[stage.key]}
+              reached={reached}
+              eliminated={row.eliminated}
+            />
+          );
+          // Only an open prediction in a reach column with a real chance has a
+          // story to tell.
+          const interactive =
+            Boolean(resolve) &&
+            "round" in stage &&
+            !reached &&
+            !row.eliminated &&
+            row[stage.key] >= 0.005;
+          if (!interactive) return <span key={stage.key}>{cell}</span>;
+
+          const isOpen = openRound === stage.round;
+          return (
+            <button
+              key={stage.key}
+              type="button"
+              aria-expanded={isOpen}
+              onClick={() => onToggle(stage.round)}
+              className={cn(
+                "block w-full rounded-[3px] transition-shadow hover:ring-1 hover:ring-pick/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isOpen && "ring-1 ring-pick/60",
+              )}
+            >
+              {cell}
+            </button>
+          );
+        })}
+      </StageGrid>
+      {path && (
+        <div className="pt-1 pb-0.5">
+          <CellExplain path={path} />
+        </div>
+      )}
+    </div>
   );
 }
 
 type StageOddsCardProps =
   | { loading: true }
-  | { loading?: false; rows: StageOddsRow[]; header: StageOddsHeader };
+  | {
+      loading?: false;
+      rows: StageOddsRow[];
+      header: StageOddsHeader;
+      resolveBreakdown?: ResolveBreakdown;
+    };
 
 /** A heat-map table of each team's chance to reach every knockout round and win
- *  the cup — the "road to the final" at a glance. */
+ *  the cup — the "road to the final" at a glance. Clicking a reach cell opens the
+ *  matches behind that number. */
 export function StageOddsCard(props: StageOddsCardProps) {
+  // One open cell at a time, keyed by team + round.
+  const [open, setOpen] = useState<{ code: string; round: Round } | null>(null);
+
   return (
     <Card
       title="Chance to reach each round"
@@ -222,7 +358,21 @@ export function StageOddsCard(props: StageOddsCardProps) {
                 <Skeleton className="h-5 w-full" />
               </div>
             ))
-          : props.rows.map((row) => <StageRow key={row.code} row={row} />)}
+          : props.rows.map((row) => (
+              <StageRow
+                key={row.code}
+                row={row}
+                openRound={open?.code === row.code ? open.round : null}
+                onToggle={(round) =>
+                  setOpen((cur) =>
+                    cur && cur.code === row.code && cur.round === round
+                      ? null
+                      : { code: row.code, round },
+                  )
+                }
+                resolve={props.resolveBreakdown}
+              />
+            ))}
       </div>
     </Card>
   );

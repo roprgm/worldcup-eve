@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 
 import {
+  type ResolveBreakdown,
   StageOddsCard,
   type StageOddsRow,
 } from "@/components/widgets/stage-odds-card";
 import { usePredictions, useResults } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
+import { cellPath } from "@/lib/predictions/team-path";
 import type { Results } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
 
@@ -121,7 +123,11 @@ export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
     [predictions, results],
   );
 
-  if (!all) return <StageOddsCard loading />;
+  if (!all || !predictions) return <StageOddsCard loading />;
+
+  // Lazily explain a cell on click, from the same snapshot the table is built on.
+  const resolveBreakdown: ResolveBreakdown = (code, round) =>
+    cellPath(predictions, code, round);
 
   if (hasList) {
     const wanted = new Set(teams);
@@ -130,6 +136,7 @@ export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
       <StageOddsCard
         rows={rows}
         header={{ toggleable: false, count: rows.length }}
+        resolveBreakdown={resolveBreakdown}
       />
     );
   }
@@ -145,6 +152,7 @@ export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
         top: topCount,
         onToggle: () => setShowAll((v) => !v),
       }}
+      resolveBreakdown={resolveBreakdown}
     />
   );
 }
