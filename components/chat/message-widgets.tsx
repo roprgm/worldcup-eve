@@ -10,6 +10,7 @@ import {
 import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
 import { TeamPathWidget } from "@/components/widgets/team-path-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
 import { codeFor } from "@/agent/lib/team-aliases";
@@ -70,6 +71,8 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
     }
     case "show_thirds_ranking":
       return { key: "thirds", render: () => <ThirdsRankingWidget /> };
+    case "show_stage_odds":
+      return { key: "stage-odds", render: () => <StageOddsWidget /> };
     case "show_bracket":
       return { key: "bracket", render: () => <BracketWidget /> };
     case "show_matches": {
