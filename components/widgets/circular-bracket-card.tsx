@@ -1,22 +1,18 @@
 "use client";
 
 import { cn } from "cnfast";
-import { Info, Trophy } from "lucide-react";
+import { ChevronDown, Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
-import {
-  type BracketSlot,
-  MatchCard,
-  type SlotLookup,
-} from "@/components/widgets/bracket-card";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
-// The knockout bracket folded into a circle: every match is one of the app's
-// MatchCard subcards, the Round-of-32 on the outer ring and each round nested
-// one ring inward, the champion in the centre. Geometry is computed once in a
-// 1000×1000 space (the SVG viewBox the connectors use); the cards overlay as
-// HTML positioned by percentage, so the whole thing scales with the square.
+// The knockout bracket as a ring, in the spirit of the source artwork: the 32
+// Round-of-32 teams around the outside, connectors merging inward to the trophy
+// at the centre. Every node shows a flag once its team is locked in; until then
+// it's a chevron that opens its chances. Geometry is computed once in a
+// 1000×1000 space (the SVG viewBox); flags/buttons overlay as HTML positioned by
+// percentage, so the whole thing scales with the square container.
 
 const SIZE = 1000;
 const C = SIZE / 2;
@@ -24,10 +20,15 @@ const C = SIZE / 2;
 // Each half spans 180°−2·GAP, leaving a GAP wedge at top and bottom so the two
 // halves read apart and the finalists meet on the horizontal centre axis.
 const GAP = 18;
+const R_FLAG = 432; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
-// One ring per round; the outer ring nearly fills the square so the bracket
-// reads big while the cards themselves stay packed tight.
-const RING: Record<RoundKey, number> = { R32: 426, R16: 306, QF: 188, SF: 98 };
+const RING: Record<RoundKey, number> = { R32: 326, R16: 240, QF: 156, SF: 82 };
+const ROUND_LABEL: Record<RoundKey, string> = {
+  R32: "Round of 32",
+  R16: "Round of 16",
+  QF: "Quarter-final",
+  SF: "Semi-final",
+};
 const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
   R16: "R32",
   QF: "R16",
@@ -36,6 +37,11 @@ const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
 
 const LEFT = { root: 101, start: 180 + GAP, end: 360 - GAP };
 const RIGHT = { root: 102, start: GAP, end: 180 - GAP };
+
+// A team this likely is treated as locked in — shown as a flag, not a chevron.
+const CONFIRMED = 0.99;
+
+type Side = "home" | "away";
 
 // Round coordinates to a fixed precision: trig can differ in the last ULP
 // between the server and browser JS engines, and the raw floats would otherwise
@@ -65,103 +71,140 @@ function childMatches(m: KnockoutMatch): [number, number] | null {
   return null;
 }
 
-/** The R32 matches under a half-root, in DFS order — the order they wrap around
- *  the arc so the tree never crosses itself. */
-function leafMatches(root: number): number[] {
-  const out: number[] = [];
+/** The R32 leaf slots under a half-root, in DFS order — the order they wrap
+ *  around the arc, each match's home flag then its away flag. */
+function leafSlots(root: number): { match: number; side: Side }[] {
+  const out: { match: number; side: Side }[] = [];
   const visit = (n: number) => {
     const kids = childMatches(matchByNumber[n]);
     if (kids) {
       visit(kids[0]);
       visit(kids[1]);
     } else {
-      out.push(n);
+      out.push({ match: n, side: "home" }, { match: n, side: "away" });
     }
   };
   visit(root);
   return out;
 }
 
-// One straight connector. `owner` is the match whose winner flows along it, so
-// the card can light up the champion's path.
+// What flows along a connector, so the card can light up the champion's path: a
+// Round-of-32 team slot, or the winner of an inner match.
+type Owner =
+  | { kind: "slot"; match: number; side: Side }
+  | { kind: "match"; match: number };
+
 interface Seg {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
-  owner: number;
+  owner: Owner;
 }
-interface CardPos {
+interface FlagPos {
   match: number;
+  side: Side;
   x: number;
   y: number;
-  mirror: boolean;
+}
+interface InnerNode {
+  match: number;
+  round: RoundKey;
+  x: number;
+  y: number;
 }
 interface Geometry {
-  cards: CardPos[];
+  flags: FlagPos[];
+  nodes: InnerNode[];
   segs: Seg[];
   arcs: string[];
 }
 
-/** Angles for every match under a half-root: the R32 leaves spread evenly
- *  across the arc, each inner match centred between its two children. */
+/** Angles for every node under a half-root: leaves spread evenly across the
+ *  arc, each inner node centred between its two children. */
 function halfAngles(root: number, start: number, end: number) {
-  const leaves = leafMatches(root);
+  const leaves = leafSlots(root);
   const step = (end - start) / leaves.length;
-  const angle = new Map<number, number>();
-  leaves.forEach((n, i) => {
-    angle.set(n, start + (i + 0.5) * step);
+  const flagAngle = new Map<string, number>();
+  leaves.forEach((lf, i) => {
+    flagAngle.set(`${lf.match}:${lf.side}`, start + (i + 0.5) * step);
   });
+  const nodeAngle = new Map<number, number>();
   const visit = (n: number): number => {
-    if (angle.has(n)) return angle.get(n)!;
-    const [a, b] = childMatches(matchByNumber[n])!;
-    const mid = (visit(a) + visit(b)) / 2;
-    angle.set(n, mid);
-    return mid;
+    const kids = childMatches(matchByNumber[n]);
+    const a = kids
+      ? (visit(kids[0]) + visit(kids[1])) / 2
+      : (flagAngle.get(`${n}:home`)! + flagAngle.get(`${n}:away`)!) / 2;
+    nodeAngle.set(n, a);
+    return a;
   };
   visit(root);
-  return angle;
+  return { leaves, flagAngle, nodeAngle };
 }
 
-/** Build the skeleton: a card per match and the connectors between each match
- *  and the two it feeds from. Computed once at module load. */
+/** Build the skeleton: the outer flags, the inner match nodes, and the
+ *  connectors between them. Computed once at module load. */
 function buildGeometry(): Geometry {
-  const cards: CardPos[] = [];
+  const flags: FlagPos[] = [];
+  const nodes: InnerNode[] = [];
   const segs: Seg[] = [];
   const arcs: string[] = [];
   const sfAngle = new Map<number, number>();
 
   for (const { root, start, end } of [LEFT, RIGHT]) {
-    const mirror = root === RIGHT.root; // flags face outward on each side
-    const angle = halfAngles(root, start, end);
+    const { leaves, flagAngle, nodeAngle } = halfAngles(root, start, end);
 
-    for (const [num, ang] of angle) {
+    for (const lf of leaves) {
+      const a = flagAngle.get(`${lf.match}:${lf.side}`)!;
+      flags.push({ ...lf, ...polar(a, R_FLAG) });
+    }
+
+    for (const [num, ang] of nodeAngle) {
       const m = matchByNumber[num];
       const round = m.round as RoundKey;
       const rN = RING[round];
-      cards.push({ match: num, ...polar(ang, rN), mirror });
+      nodes.push({ match: num, round, ...polar(ang, rN) });
       if (num === root) sfAngle.set(num, ang);
 
       const kids = childMatches(m);
-      if (!kids) continue;
-      // Parent stem out to a bus between the rings, the bar across it, then a
-      // spoke down to each child card.
-      const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
-      const rBus = round2((rN + rChild) / 2);
-      const stem = polar(ang, rBus);
-      segs.push({
-        x1: polar(ang, rN).x,
-        y1: polar(ang, rN).y,
-        x2: stem.x,
-        y2: stem.y,
-        owner: num,
-      });
-      arcs.push(arcPath(rBus, angle.get(kids[0])!, angle.get(kids[1])!));
-      for (const cm of kids) {
-        const ca = angle.get(cm)!;
-        const a = polar(ca, rBus);
-        const b = polar(ca, rChild);
-        segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, owner: cm });
+      if (!kids) {
+        // R32: a spoke out to each flag, the bar joining the two flags.
+        for (const side of ["home", "away"] as Side[]) {
+          const fa = flagAngle.get(`${num}:${side}`)!;
+          const inner = polar(fa, rN);
+          const outer = polar(fa, R_FLAG);
+          segs.push({
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
+            owner: { kind: "slot", match: num, side },
+          });
+        }
+        arcs.push(
+          arcPath(
+            rN,
+            flagAngle.get(`${num}:home`)!,
+            flagAngle.get(`${num}:away`)!,
+          ),
+        );
+      } else {
+        const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
+        for (const cm of kids) {
+          const ca = nodeAngle.get(cm)!;
+          const inner = polar(ca, rN);
+          const outer = polar(ca, rChild);
+          segs.push({
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
+            owner: { kind: "match", match: cm },
+          });
+        }
+        arcs.push(
+          arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
+        );
       }
     }
   }
@@ -169,31 +212,57 @@ function buildGeometry(): Geometry {
   // The final: each semi runs straight to the centre, where the champion sits.
   for (const sf of [LEFT.root, RIGHT.root]) {
     const p = polar(sfAngle.get(sf)!, RING.SF);
-    segs.push({ x1: C, y1: C, x2: p.x, y2: p.y, owner: sf });
+    segs.push({
+      x1: C,
+      y1: C,
+      x2: p.x,
+      y2: p.y,
+      owner: { kind: "match", match: sf },
+    });
   }
 
-  return { cards, segs, arcs };
+  return { flags, nodes, segs, arcs };
 }
 
 const GEOMETRY = buildGeometry();
 
-/** The predicted state the card paints onto the skeleton. */
+export interface Candidate {
+  code: string;
+  name?: string;
+  probability: number;
+}
+
+/** Everything the card paints onto the skeleton: the candidates for each R32
+ *  slot, the win odds for each match, and the title odds. */
 export interface CircularBracketView {
-  getSlot: SlotLookup; // a match side's predicted team + its chance to win
-  winner: Map<number, BracketSlot>; // match number → predicted advancing team
-  champion?: BracketSlot;
+  slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
+  matchOdds: Map<number, Candidate[]>; // match → chance each team wins it
+  championOdds: Candidate[];
 }
 
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
-const formatPct = (p?: number) =>
-  p === undefined ? "··" : `${Math.round(p * 100)}%`;
+const formatPct = (p: number) => `${Math.round(p * 100)}%`;
+const lead = (odds?: Candidate[]) => odds?.[0];
+const confirmed = (odds?: Candidate[]) =>
+  (lead(odds)?.probability ?? 0) >= CONFIRMED;
 
-function Connectors({ view }: { view?: CircularBracketView }) {
-  const champ = view?.champion?.code;
-  const onChampPath = (owner: number) =>
-    champ != null && view?.winner.get(owner)?.code === champ;
+/** The team that flows along a connector, for the champion-path highlight. */
+function ownerCode(view: CircularBracketView | undefined, owner: Owner) {
+  if (!view) return undefined;
+  return owner.kind === "slot"
+    ? lead(view.slotOdds.get(`${owner.match}:${owner.side}`))?.code
+    : lead(view.matchOdds.get(owner.match))?.code;
+}
+
+function Connectors({
+  view,
+  champ,
+}: {
+  view?: CircularBracketView;
+  champ?: string;
+}) {
   return (
-    // biome-ignore lint/a11y/noSvgWithoutTitle: decorative connectors; structure is conveyed by the labelled cards it links.
+    // biome-ignore lint/a11y/noSvgWithoutTitle: decorative connectors; structure is conveyed by the labelled nodes it links.
     <svg
       viewBox={`0 0 ${SIZE} ${SIZE}`}
       className="absolute inset-0 h-full w-full overflow-visible"
@@ -209,7 +278,7 @@ function Connectors({ view }: { view?: CircularBracketView }) {
         />
       ))}
       {GEOMETRY.segs.map((s, i) => {
-        const on = onChampPath(s.owner);
+        const on = champ != null && ownerCode(view, s.owner) === champ;
         return (
           <line
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
@@ -228,67 +297,272 @@ function Connectors({ view }: { view?: CircularBracketView }) {
   );
 }
 
-/** A match subcard pinned at its node, centred on (x, y). Opaque, so it masks
- *  the connectors that pass behind it — just like the linear bracket. */
-function PositionedMatch({
-  pos,
-  view,
-}: {
-  pos: CardPos;
-  view?: CircularBracketView;
-}) {
-  const onPath =
-    view?.champion?.code != null &&
-    view.winner.get(pos.match)?.code === view.champion.code;
+/** A single team's chance, as a flag + code + bar + percentage — the row style
+ *  used across the prediction widgets. */
+function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   return (
-    <div
-      className={cn(
-        "absolute -translate-x-1/2 -translate-y-1/2 rounded-[4px]",
-        onPath && "ring-1 ring-pick",
-      )}
-      style={{ left: pct(pos.x), top: pct(pos.y), width: "var(--card)" }}
-    >
-      <MatchCard
-        number={pos.match}
-        getSlot={view?.getSlot ?? (() => undefined)}
-        mirror={pos.mirror}
-      />
+    <div className="flex h-5 items-center gap-1.5">
+      <Flag code={c.code} size={14} />
+      <span
+        title={c.name}
+        className={cn(
+          "w-7 shrink-0 text-[11px] font-semibold tracking-wide",
+          top ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {c.code}
+      </span>
+      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+        <span
+          className={cn(
+            "h-full rounded-[1px]",
+            top ? "bg-pick" : "bg-muted-foreground/30",
+          )}
+          style={{ width: formatPct(c.probability) }}
+        />
+      </span>
+      <span
+        className={cn(
+          "min-w-8 text-right text-[11px] tabular-nums",
+          top ? "font-semibold text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {formatPct(c.probability)}
+      </span>
     </div>
   );
 }
 
-/** The predicted champion at the centre, in the app's champion-card idiom: a
- *  trophy, the flag, the full name in the pick colour, and the title odds. */
-function ChampionChip({ view }: { view?: CircularBracketView }) {
-  const champ = view?.champion;
+/** The chances popover, anchored to its node and opening toward the centre so
+ *  it stays inside the widget. */
+function OddsPopover({
+  title,
+  odds,
+  x,
+  y,
+}: {
+  title: string;
+  odds: Candidate[];
+  x: number;
+  y: number;
+}) {
+  const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 6);
+  const horizontal =
+    x < C ? { left: "calc(100% + 6px)" } : { right: "calc(100% + 6px)" };
+  const vertical = y < C ? { top: "-6px" } : { bottom: "-6px" };
   return (
     <div
-      className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 rounded-xl border border-pick/40 bg-card px-2.5 py-1.5 shadow-lg ring-1 ring-pick/10"
+      className="absolute z-40 w-44 rounded-md border border-surface-border bg-surface-2 p-2 shadow-lg"
+      style={{ ...horizontal, ...vertical }}
+    >
+      <p className="mb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+        {title}
+      </p>
+      <div className="space-y-1">
+        {shown.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground/50 italic">
+            no market
+          </p>
+        ) : (
+          shown.map((c, i) => <OddsRow key={c.code} c={c} top={i === 0} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A small expander shown where a team isn't locked in yet: a chevron that opens
+ *  that node's chances. */
+function ChevronButton({
+  open,
+  onClick,
+}: {
+  open: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Show chances"
+      aria-expanded={open}
+      className={cn(
+        "flex size-[var(--node)] items-center justify-center rounded-full border bg-surface-2 transition-colors",
+        open
+          ? "border-pick/50 text-pick"
+          : "border-surface-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <ChevronDown
+        className={cn("size-3 transition-transform", open && "rotate-180")}
+      />
+    </button>
+  );
+}
+
+interface NodeProps {
+  openId: string | null;
+  setOpen: (id: string | null) => void;
+  champ?: string;
+}
+
+/** An outer Round-of-32 slot: the team's flag once the group is decided, else a
+ *  chevron onto the candidates for that spot. */
+function SlotNode({
+  pos,
+  view,
+  openId,
+  setOpen,
+  champ,
+}: NodeProps & { pos: FlagPos; view?: CircularBracketView }) {
+  const id = `slot:${pos.match}:${pos.side}`;
+  const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
+  const top = lead(odds);
+  const isOpen = openId === id;
+  const isChamp = top?.code != null && top.code === champ;
+  return (
+    <div
+      className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
+      style={{ left: pct(pos.x), top: pct(pos.y) }}
+    >
+      {confirmed(odds) && top ? (
+        <Flag
+          code={top.code}
+          size="var(--cf)"
+          className={cn("block rounded-full", isChamp && "ring-2 ring-pick")}
+        />
+      ) : (
+        <ChevronButton
+          open={isOpen}
+          onClick={() => setOpen(isOpen ? null : id)}
+        />
+      )}
+      {isOpen && odds && (
+        <OddsPopover
+          title="Reaches this match"
+          odds={odds}
+          x={pos.x}
+          y={pos.y}
+        />
+      )}
+    </div>
+  );
+}
+
+/** An inner match: the winner's flag once it's played, else a chevron onto the
+ *  chance each team wins it. */
+function MatchNode({
+  node,
+  view,
+  openId,
+  setOpen,
+  champ,
+}: NodeProps & { node: InnerNode; view?: CircularBracketView }) {
+  const id = `match:${node.match}`;
+  const odds = view?.matchOdds.get(node.match);
+  const top = lead(odds);
+  const isOpen = openId === id;
+  const isChamp = top?.code != null && top.code === champ;
+  return (
+    <div
+      className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
+      style={{ left: pct(node.x), top: pct(node.y) }}
+    >
+      {confirmed(odds) && top ? (
+        <Flag
+          code={top.code}
+          size="var(--cfi)"
+          className={cn(
+            "block rounded-full ring-1 ring-surface-border",
+            isChamp && "ring-2 ring-pick",
+          )}
+        />
+      ) : (
+        <ChevronButton
+          open={isOpen}
+          onClick={() => setOpen(isOpen ? null : id)}
+        />
+      )}
+      {isOpen && odds && (
+        <OddsPopover
+          title={`${ROUND_LABEL[node.round]} · wins`}
+          odds={odds}
+          x={node.x}
+          y={node.y}
+        />
+      )}
+    </div>
+  );
+}
+
+/** The centre: the trophy, with the champion's flag once decided, otherwise a
+ *  chevron onto the title odds. */
+function ChampionNode({
+  view,
+  openId,
+  setOpen,
+}: NodeProps & { view?: CircularBracketView }) {
+  const odds = view?.championOdds;
+  const top = lead(odds);
+  const isOpen = openId === "champion";
+  const done = confirmed(odds) && top;
+  return (
+    <div
+      className="absolute z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-xl border border-pick/40 bg-card px-2.5 py-1.5 shadow-lg ring-1 ring-pick/10"
       style={{ left: "50%", top: "50%" }}
     >
       <Trophy
-        className={cn(
-          "size-4",
-          champ ? "text-pick" : "text-muted-foreground/40",
-        )}
+        className={cn("size-4", top ? "text-pick" : "text-muted-foreground/40")}
       />
-      <Flag
-        code={champ?.code}
-        size="var(--flag)"
-        className="block rounded-full"
-      />
-      <span className="text-[11px] font-semibold text-pick">
-        {champ?.name ?? champ?.code ?? "—"}
-      </span>
-      <span className="text-[10px] tabular-nums text-muted-foreground">
-        {formatPct(champ?.probability)}
-      </span>
+      {done ? (
+        <>
+          <Flag
+            code={top.code}
+            size="var(--cf)"
+            className="block rounded-full"
+          />
+          <span className="text-[11px] font-semibold text-pick">
+            {top.name ?? top.code}
+          </span>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(isOpen ? null : "champion")}
+          aria-label="Show title odds"
+          aria-expanded={isOpen}
+          className="flex items-center gap-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground"
+        >
+          Title odds
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform",
+              isOpen && "rotate-180",
+            )}
+          />
+        </button>
+      )}
+      {isOpen && odds && (
+        <div className="absolute top-full left-1/2 z-40 mt-1.5 w-44 -translate-x-1/2 rounded-md border border-surface-border bg-surface-2 p-2 shadow-lg">
+          <p className="mb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+            Champion
+          </p>
+          <div className="space-y-1">
+            {odds
+              .filter((c) => c.probability >= 0.01)
+              .slice(0, 6)
+              .map((c, i) => (
+                <OddsRow key={c.code} c={c} top={i === 0} />
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const HELP_TEXT =
-  "The knockout bracket folded into a circle: the Round-of-32 on the outside, each round nested one ring inward, the champion in the centre. The number by a flag is that team's chance to win that match; the highlighted line is the predicted champion's road to the title.";
+  "The knockout bracket as a ring: the Round of 32 on the outside, merging inward to the trophy. A locked-in team shows its flag; until then, open the chevron to see that match's chances.";
 
 /** Header info affordance — a popover on tap (native `title` is hover-only). */
 function CircularBracketHelp() {
@@ -322,9 +596,11 @@ function CircularBracketHelp() {
   );
 }
 
-/** The knockout bracket as a circle of our match subcards: the structure
- *  renders immediately, picks and the champion's path fill in with the market. */
+/** The knockout bracket as a ring of flags and chevrons. Structure renders
+ *  immediately; flags lock in and chances open as the market resolves. */
 export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
+  const [openId, setOpen] = useState<string | null>(null);
+  const champ = lead(view?.championOdds)?.code;
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
@@ -332,18 +608,49 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           Prediction bracket
         </span>
         <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
-          · each team's chance to win its match
+          · open a node to see its chances
         </span>
         <CircularBracketHelp />
       </div>
       {/* Below the min-width the circle would cram, so it scrolls instead. */}
       <div className="overflow-x-auto px-3 py-4">
-        <div className="relative mx-auto aspect-square w-full min-w-[440px] max-w-[680px] [--card:calc(var(--flag)+var(--pct)+8px)] [--flag:13px] [--pct:16px] sm:[--flag:15px] sm:[--pct:18px] lg:[--flag:16px] lg:[--pct:20px]">
-          <Connectors view={view} />
-          {GEOMETRY.cards.map((pos) => (
-            <PositionedMatch key={pos.match} pos={pos} view={view} />
+        <div className="relative mx-auto aspect-square w-full min-w-[460px] max-w-[680px] [--cf:22px] [--cfi:16px] [--node:18px] sm:[--cf:26px] sm:[--cfi:18px] sm:[--node:20px] lg:[--cf:30px] lg:[--cfi:20px] lg:[--node:22px]">
+          <Connectors view={view} champ={champ} />
+          {openId !== null && (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden
+              className="absolute inset-0 z-20 cursor-default"
+              onClick={() => setOpen(null)}
+            />
+          )}
+          {GEOMETRY.nodes.map((node) => (
+            <MatchNode
+              key={node.match}
+              node={node}
+              view={view}
+              openId={openId}
+              setOpen={setOpen}
+              champ={champ}
+            />
           ))}
-          <ChampionChip view={view} />
+          {GEOMETRY.flags.map((pos) => (
+            <SlotNode
+              key={`${pos.match}:${pos.side}`}
+              pos={pos}
+              view={view}
+              openId={openId}
+              setOpen={setOpen}
+              champ={champ}
+            />
+          ))}
+          <ChampionNode
+            view={view}
+            openId={openId}
+            setOpen={setOpen}
+            champ={champ}
+          />
         </div>
       </div>
     </div>

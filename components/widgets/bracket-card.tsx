@@ -188,9 +188,8 @@ function FlagCell({
 
 /** One match as a four-quadrant card: the two flags stacked on the outer side,
  *  their probabilities on the (wider) inner side. Opaque so the connectors that
- *  pass behind it (the columns nest) stay hidden until they clear the edge.
- *  Driven by the `--flag`/`--pct` CSS vars, so any container can size it. */
-export function MatchCard({
+ *  pass behind it (the columns nest) stay hidden until they clear the edge. */
+function MatchCard({
   number,
   getSlot,
   mirror,
