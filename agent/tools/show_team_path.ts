@@ -55,6 +55,18 @@ export default defineTool({
         likelyOpponent: step.opponents[0]
           ? `${step.opponents[0].name} (${percent(step.opponents[0].probability)}%)`
           : "to be decided",
+        // Every knockout venue is already fixed by match number; list each one
+        // the team could play at this round (more than one only when its
+        // bracket slot still hinges on the group result).
+        venue: step.venues.length
+          ? step.venues
+              .map((v) =>
+                step.venues.length > 1
+                  ? `${v.venue} (${percent(v.probability)}%)`
+                  : v.venue,
+              )
+              .join(", ")
+          : "to be decided",
       })),
     };
   },

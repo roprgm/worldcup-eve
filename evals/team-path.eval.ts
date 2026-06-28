@@ -12,5 +12,8 @@ export default defineEval({
     t.judge.autoevals.closedQA(
       "Does the answer describe possible opponents on the way to the final?",
     );
+    t.judge.autoevals.closedQA(
+      "Does the answer avoid claiming the knockout-stage stadiums are undecided, TBD, or not yet announced?",
+    );
   },
 });
