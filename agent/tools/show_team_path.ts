@@ -19,7 +19,7 @@ const percent = (v: number) => Math.round(v * 100);
 
 export default defineTool({
   description:
-    'Show the user a widget of a team\'s projected path to the final: the likely opponents it would meet at each knockout round (Round of 32 → Final). Use for questions like "who could X face on the way to the final" or "show X\'s road to the final".',
+    'Show the user a widget of a team\'s projected path to the final: the stadium and likely opponent at each knockout round (Round of 32 → Final). Each round\'s venue is fixed by the fixture, so this is also the tool for "where / in which stadium does X play its Round of 32 / Round of 16 / etc.", not just "who could X face" or "show X\'s road to the final".',
   inputSchema: z.object({
     team: z.string().describe("A country name or code, e.g. Argentina or ARG."),
   }),
