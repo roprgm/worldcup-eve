@@ -32,7 +32,7 @@ export default function PredictionsPage() {
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
         <Section title="Road to the final">
           <CardGridFrame className="space-y-3">
-            <StageOddsWidget />
+            <StageOddsWidget top={5} />
             <BracketWidget />
           </CardGridFrame>
         </Section>
