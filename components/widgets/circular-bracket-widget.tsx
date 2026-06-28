@@ -41,11 +41,17 @@ function circularView(predictions: Predictions): CircularBracketView {
     if (fed) winner.set(m.number, fed);
   }
 
+  // Each team's chance to win each match (the BT head-to-head split), keyed
+  // "match:code" — the per-flag number the card shows on the outer ring.
+  const win = new Map<string, number>();
+  for (const [match, candidates] of Object.entries(predictions.matchWinOdds))
+    for (const c of candidates) win.set(`${match}:${c.code}`, c.probability);
+
   const top = predictions.bracketChampion[0];
   const champion = top ? slotOf(top.code, top.probability) : undefined;
   if (champion) winner.set(104, champion);
 
-  return { slots, winner, champion };
+  return { slots, winner, win, champion };
 }
 
 /** Connected circular bracket: fetches the shared predictions and paints the

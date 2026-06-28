@@ -20,9 +20,10 @@ const C = SIZE / 2;
 // Each half spans 180°−2·GAP, leaving a GAP wedge at the top and bottom so the
 // two halves read apart and the finalists meet on the horizontal centre axis.
 const GAP = 18;
-const R_FLAG = 430; // outer ring: the 32 team flags
+const R_LABEL = 450; // outermost band: each team's chance label
+const R_FLAG = 404; // ring of the 32 team flags
 type RoundKey = "R32" | "R16" | "QF" | "SF";
-const RING: Record<RoundKey, number> = { R32: 322, R16: 240, QF: 158, SF: 82 };
+const RING: Record<RoundKey, number> = { R32: 308, R16: 228, QF: 150, SF: 78 };
 const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
   R16: "R32",
   QF: "R16",
@@ -97,6 +98,8 @@ interface FlagPos {
   side: Side;
   x: number;
   y: number;
+  lx: number; // chance-label position (just outside the flag)
+  ly: number;
 }
 interface NodeDot {
   match: number;
@@ -147,7 +150,8 @@ function buildGeometry(): Geometry {
 
     for (const lf of leaves) {
       const a = flagAngle.get(`${lf.match}:${lf.side}`)!;
-      flags.push({ ...lf, ...polar(a, R_FLAG) });
+      const label = polar(a, R_LABEL);
+      flags.push({ ...lf, ...polar(a, R_FLAG), lx: label.x, ly: label.y });
     }
 
     for (const [num, ang] of nodeAngle) {
@@ -222,6 +226,7 @@ const GEOMETRY = buildGeometry();
 export interface CircularBracketView {
   slots: Map<string, BracketSlot>; // "match:side" → predicted team
   winner: Map<number, BracketSlot>; // match number → predicted advancing team
+  win: Map<string, number>; // "match:code" → chance that team wins the match
   champion?: BracketSlot;
 }
 
@@ -286,26 +291,47 @@ function Connectors({ view }: { view?: CircularBracketView }) {
   );
 }
 
+/** One outer team: its flag on the flag ring and, just outside it, the chance
+ *  that team reaches this Round-of-32 match. The predicted loser of the pair is
+ *  dimmed; the champion's flag is ringed. */
 function FlagNode({ pos, view }: { pos: FlagPos; view?: CircularBracketView }) {
   const slot = view?.slots.get(`${pos.match}:${pos.side}`);
   const winner = view?.winner.get(pos.match)?.code;
   const isChampion = slot?.code != null && slot.code === view?.champion?.code;
   const dim = winner != null && slot?.code != null && slot.code !== winner;
+  // The chance this team wins its opening match (advances a ring) — far more
+  // telling than its near-certain chance of merely being here.
+  const p = slot?.code ? view?.win.get(`${pos.match}:${slot.code}`) : undefined;
   return (
-    <div
-      className="absolute -translate-x-1/2 -translate-y-1/2"
-      style={{ left: pct(pos.x), top: pct(pos.y) }}
-    >
-      <Flag
-        code={slot?.code}
-        size="var(--cf)"
+    <>
+      <div
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ left: pct(pos.x), top: pct(pos.y) }}
+      >
+        <Flag
+          code={slot?.code}
+          size="var(--cf)"
+          className={cn(
+            "block rounded-full",
+            dim && "opacity-40",
+            isChampion && "ring-2 ring-pick",
+          )}
+        />
+      </div>
+      <span
         className={cn(
-          "block rounded-full",
-          dim && "opacity-40",
-          isChampion && "ring-2 ring-pick",
+          "absolute -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none tabular-nums sm:text-[11px] lg:text-xs",
+          isChampion
+            ? "font-semibold text-pick"
+            : dim
+              ? "text-muted-foreground/55"
+              : "font-semibold text-foreground/80",
         )}
-      />
-    </div>
+        style={{ left: pct(pos.lx), top: pct(pos.ly) }}
+      >
+        {p === undefined ? "··" : `${Math.round(p * 100)}%`}
+      </span>
+    </>
   );
 }
 
@@ -333,7 +359,7 @@ function ChampionChip({ view }: { view?: CircularBracketView }) {
 }
 
 const HELP_TEXT =
-  "The bracket from the outside in: each pair of flags meets, the winner advances one ring toward the centre. The highlighted path is the predicted champion's road to the title.";
+  "The bracket from the outside in: each pair of flags meets and the favourite advances one ring toward the centre. The number by a flag is that team's chance to win its match; the centre shows the title odds, and the highlighted line is the predicted champion's road to it.";
 
 /** Header info affordance — a popover on tap (native `title` is hover-only). */
 function CircularBracketHelp() {
@@ -377,12 +403,12 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           Prediction bracket
         </span>
         <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
-          · the road to the title
+          · each team's chance to advance
         </span>
         <CircularBracketHelp />
       </div>
       <div className="px-3 py-4">
-        <div className="relative mx-auto aspect-square w-full max-w-[560px] [--cf:18px] sm:[--cf:22px] lg:[--cf:26px]">
+        <div className="relative mx-auto aspect-square w-full max-w-[820px] [--cf:20px] sm:[--cf:26px] lg:[--cf:30px]">
           <Connectors view={view} />
           {GEOMETRY.flags.map((pos) => (
             <FlagNode key={`${pos.match}:${pos.side}`} pos={pos} view={view} />
