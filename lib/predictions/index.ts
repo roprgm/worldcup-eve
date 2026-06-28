@@ -336,9 +336,10 @@ export async function buildPredictions(
 // Cached snapshot shared by the predictions API route and the agent. The fit is
 // the cost (~2s), so we cache the result in the Vercel Runtime Cache
 // (cross-instance, with a transparent in-memory fallback elsewhere) and reuse
-// the fit anchor across the rare rebuilds. A cron (see vercel.json) refreshes
-// the snapshot every 2 minutes so reads stay warm and never hit a cold build.
-const PREDICTIONS_TTL = 120; // 2 minutes, matched to the proactive cron refresh
+// the fit anchor across the rare rebuilds. An eve schedule
+// (agent/schedules/refresh-predictions) refreshes the snapshot every minute so
+// reads stay warm and never hit a cold build.
+const PREDICTIONS_TTL = 120; // 2 minutes — longer than the 1-min refresh so a late/skipped tick still finds a warm value
 const anchor: PredictionCache = {};
 const predictionsCache = getCache({ namespace: "predictions" });
 
