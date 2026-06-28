@@ -19,10 +19,10 @@ const C = SIZE / 2;
 
 // Each half spans 180°−2·GAP, leaving a GAP wedge at top and bottom so the two
 // halves read apart and the finalists meet on the horizontal centre axis.
-const GAP = 18;
-const R_FLAG = 432; // outer ring: the 32 team slots
+const GAP = 10;
+const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
-const RING: Record<RoundKey, number> = { R32: 326, R16: 240, QF: 156, SF: 82 };
+const RING: Record<RoundKey, number> = { R32: 332, R16: 248, QF: 166, SF: 92 };
 const ROUND_LABEL: Record<RoundKey, string> = {
   R32: "Round of 32",
   R16: "Round of 16",
@@ -246,6 +246,35 @@ const lead = (odds?: Candidate[]) => odds?.[0];
 const confirmed = (odds?: Candidate[]) =>
   (lead(odds)?.probability ?? 0) >= CONFIRMED;
 
+/** A flag cropped to a circle (the app's flag sprite is 4:3) — closer to the
+ *  source artwork and cleaner at the sizes this widget uses. `size` is any CSS
+ *  length, so callers can pass a container-relative unit and let it scale. */
+function RoundFlag({
+  code,
+  size,
+  className,
+}: {
+  code?: string;
+  size: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "relative block shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-surface-border",
+        className,
+      )}
+      style={{ width: size, height: size }}
+    >
+      <Flag
+        code={code}
+        size={`calc(${size} * 4 / 3)`}
+        className="absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0"
+      />
+    </span>
+  );
+}
+
 /** The team that flows along a connector, for the champion-path highlight. */
 function ownerCode(view: CircularBracketView | undefined, owner: Owner) {
   if (!view) return undefined;
@@ -302,7 +331,7 @@ function Connectors({
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   return (
     <div className="flex h-5 items-center gap-1.5">
-      <Flag code={c.code} size={14} />
+      <RoundFlag code={c.code} size="14px" />
       <span
         title={c.name}
         className={cn(
@@ -426,10 +455,10 @@ function SlotNode({
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
       {confirmed(odds) && top ? (
-        <Flag
+        <RoundFlag
           code={top.code}
           size="var(--cf)"
-          className={cn("block rounded-full", isChamp && "ring-2 ring-pick")}
+          className={cn(isChamp && "ring-2 ring-pick")}
         />
       ) : (
         <ChevronButton
@@ -469,13 +498,10 @@ function MatchNode({
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
       {confirmed(odds) && top ? (
-        <Flag
+        <RoundFlag
           code={top.code}
           size="var(--cfi)"
-          className={cn(
-            "block rounded-full ring-1 ring-surface-border",
-            isChamp && "ring-2 ring-pick",
-          )}
+          className={cn(isChamp && "ring-2 ring-pick")}
         />
       ) : (
         <ChevronButton
@@ -516,11 +542,7 @@ function ChampionNode({
       />
       {done ? (
         <>
-          <Flag
-            code={top.code}
-            size="var(--cf)"
-            className="block rounded-full"
-          />
+          <RoundFlag code={top.code} size="var(--cf)" />
           <span className="text-[11px] font-semibold text-pick">
             {top.name ?? top.code}
           </span>
@@ -612,9 +634,10 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
         </span>
         <CircularBracketHelp />
       </div>
-      {/* Below the min-width the circle would cram, so it scrolls instead. */}
-      <div className="overflow-x-auto px-3 py-4">
-        <div className="relative mx-auto aspect-square w-full min-w-[460px] max-w-[680px] [--cf:22px] [--cfi:16px] [--node:18px] sm:[--cf:26px] sm:[--cfi:18px] sm:[--node:20px] lg:[--cf:30px] lg:[--cfi:20px] lg:[--node:22px]">
+      <div className="px-2 py-4 sm:px-3">
+        {/* Sizes are container-relative (cqw), so the whole ring fits any width
+            without scrolling and the flags scale up with it. */}
+        <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.4cqw,46px)] [--cfi:clamp(15px,5cqw,30px)] [--node:clamp(18px,4.6cqw,24px)] [container-type:inline-size]">
           <Connectors view={view} champ={champ} />
           {openId !== null && (
             <button
