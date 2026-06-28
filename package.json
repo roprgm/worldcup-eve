@@ -12,7 +12,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "start": "node scripts/start.mjs",
-    "sync:markets": "bun run lib/predictions/sync.ts",
+    "sync:markets": "bun --preload ./scripts/proxy-fetch.ts lib/predictions/sync.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -42,7 +42,8 @@
     "just-bash": "^3.0.1",
     "microsandbox": "^0.5.7",
     "tailwindcss": "^4.3.1",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "undici": "^6"
   },
   "overrides": {
     "ai": "7.0.0-beta.178"

@@ -36,3 +36,11 @@ the relevant guide before changing agent code.
 - Merge `className` values with `cn` from [`cnfast`](https://github.com/aidenybai/cnfast) (a fast
   drop-in for `clsx` + `tailwind-merge`). Use it for any conditional or combined class names instead
   of template literals or ternaries — e.g. `cn("dark", isActive && "px-4")`.
+
+## Standalone Bun scripts behind a proxy
+
+Bun's native `fetch` breaks against HTTP/2 origins through an `HTTPS_PROXY` CONNECT tunnel
+(ECONNRESET); Node's `fetch` works because it is undici (HTTP/1.1). Next.js runs under Node, so
+only scripts launched with `bun` directly are affected. Preload `scripts/proxy-fetch.ts` for any
+such network script — it swaps the global `fetch` for undici's `ProxyAgent` when a proxy is set
+and is a no-op otherwise. See the `sync:markets` script for the `bun --preload` wiring.
