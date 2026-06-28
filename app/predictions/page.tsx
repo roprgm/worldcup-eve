@@ -4,6 +4,7 @@ import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
 import {
   groupLetters,
@@ -19,7 +20,6 @@ const roundMatches = (round: Round) =>
     .sort((a, b) => a.number - b.number);
 
 const knockoutSections = [
-  { id: "R32", title: "Round of 32", matches: roundMatches("R32") },
   { id: "R16", title: "Round of 16", matches: roundMatches("R16") },
   { id: "QF", title: "Quarter-finals", matches: roundMatches("QF") },
   { id: "SF", title: "Semi-finals", matches: roundMatches("SF") },
@@ -53,6 +53,12 @@ export default function PredictionsPage() {
 
         <Section title="Bracket">
           <BracketWidget />
+        </Section>
+
+        <Section title="Road to the final">
+          <CardGridFrame>
+            <StageOddsWidget />
+          </CardGridFrame>
         </Section>
 
         {knockoutSections.map((section) => (
