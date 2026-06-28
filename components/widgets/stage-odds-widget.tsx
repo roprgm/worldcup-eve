@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   StageOddsCard,
@@ -96,14 +96,55 @@ function stageRows(
     .sort((a, b) => b.champion - a.champion || b.final - a.final);
 }
 
-/** Every contender ranked by title odds, with its chance to reach each round and
- *  a check on the rounds it has already reached. */
-export function StageOddsWidget() {
+interface StageOddsWidgetProps {
+  /** Show only these teams (FIFA codes); omit for the whole field. */
+  teams?: string[];
+  /** Cap the field to its N most likely (default 5 when toggled on). */
+  top?: number;
+}
+
+const DEFAULT_TOP = 5;
+
+/** Teams ranked by title odds with their chance to reach each round and a check
+ *  on the rounds they've reached. Defaults to the whole field; `teams` pins it to
+ *  a fixed list, `top` opens it on a Top-N cut the user can expand. */
+export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
+  const hasList = Boolean(teams?.length);
+  // Field view starts on the Top-N cut only when a `top` was requested; the team
+  // list ignores it. State depends on props alone, so the loading→loaded swap
+  // never resets it.
+  const [showAll, setShowAll] = useState(!(top != null) || hasList);
   const predictions = usePredictions();
   const results = useResults();
-  const rows = useMemo(
+  const all = useMemo(
     () => (predictions ? stageRows(predictions, results) : undefined),
     [predictions, results],
   );
-  return rows ? <StageOddsCard rows={rows} /> : <StageOddsCard loading />;
+
+  if (!all) return <StageOddsCard loading />;
+
+  if (hasList) {
+    const wanted = new Set(teams);
+    const rows = all.filter((row) => wanted.has(row.code));
+    return (
+      <StageOddsCard
+        rows={rows}
+        header={{ toggleable: false, count: rows.length }}
+      />
+    );
+  }
+
+  const topCount = top ?? DEFAULT_TOP;
+  const rows = showAll ? all : all.slice(0, topCount);
+  return (
+    <StageOddsCard
+      rows={rows}
+      header={{
+        toggleable: true,
+        showAll,
+        top: topCount,
+        onToggle: () => setShowAll((v) => !v),
+      }}
+    />
+  );
 }

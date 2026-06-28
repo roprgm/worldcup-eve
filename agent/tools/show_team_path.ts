@@ -19,7 +19,7 @@ const percent = (v: number) => Math.round(v * 100);
 
 export default defineTool({
   description:
-    'Show the user a widget of a team\'s projected path to the final: the stadium and likely opponent at each knockout round (Round of 32 → Final). Each round\'s venue is fixed by the fixture, so this is also the tool for "where / in which stadium does X play its Round of 32 / Round of 16 / etc.", not just "who could X face" or "show X\'s road to the final".',
+    'Show the user a widget of a SINGLE team\'s projected path to the final: the likely OPPONENT and the stadium at each knockout round (Round of 32 → Final). This is the tool for "who could X face / play next", possible rivals, or "where / in which stadium does X play its Round of 32 / Round of 16 / etc." — each round\'s venue is fixed by the fixture. For how LIKELY teams are to reach a round or win the cup (percentages, a ranking, the top favourites, or several teams compared), use show_stage_odds instead.',
   inputSchema: z.object({
     team: z.string().describe("A country name or code, e.g. Argentina or ARG."),
   }),

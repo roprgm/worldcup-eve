@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { codeFor } from "@/agent/lib/team-aliases";
 import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { getPredictions } from "@/lib/predictions";
 import { teamById } from "@/lib/tournament";
@@ -10,23 +11,47 @@ const teamName = (code: string) => teamById[code]?.name ?? code;
 
 export default defineTool({
   description:
-    'Show the user the road-to-the-final widget: ONE table covering EVERY remaining team at once, with each team\'s chance to reach each knockout round (Round of 32 → Final) and to win the cup, ranked by title odds. Use ONLY when the question is about the whole field together — e.g. "every team\'s chance to reach the final", "all teams\' odds to win the cup", "the road to the final for everyone". Do NOT use it for one or a few named teams (use show_team_path), nor for the bracket matchups layout (use show_bracket).',
-  inputSchema: z.object({}),
-  async execute() {
+    "Show the user the road-to-the-final widget: a ranked table of teams' chances (in %) to reach each knockout round (Round of 32 → Final) and to win the cup. This is the tool for how LIKELY teams are to advance or go all the way — for the whole field, the top favourites, or a chosen set of teams. Inputs (both optional): `top` to show only the N most likely (e.g. top: 5 for \"who's most likely to reach the final\"), and `teams` to show only those teams (e.g. teams: ['Argentina','Spain'] for \"odds of Argentina and Spain to reach the final\"); pass neither for every team. Do NOT use this for a single team's projected OPPONENTS, the stadium/city it plays a round, or its match-by-match route — that is show_team_path. Do NOT use it for the bracket matchup layout — that is show_bracket.",
+  inputSchema: z.object({
+    teams: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Country names or codes to show only those rows, e.g. ['Argentina','ESP'].",
+      ),
+    top: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Show only the N most likely teams by title odds, e.g. 5."),
+  }),
+  async execute({ teams, top }) {
     const snapshot = await getPredictions();
+    const ranked = [...snapshot.reach].sort(
+      (a, b) => b.mktChampion - a.mktChampion,
+    );
 
-    // Title-odds leaders only — a one-line caption; the widget shows the full
-    // table, so there's no need to list every team here.
-    const favorites = [...snapshot.reach]
-      .sort((a, b) => b.mktChampion - a.mktChampion)
-      .slice(0, 5)
-      .map((t) => ({
+    const wanted = teams
+      ?.map((t) => codeFor(t))
+      .filter((c): c is string => Boolean(c));
+    if (teams?.length && !wanted?.length) {
+      return { error: "Unknown team.", requested: { teams } };
+    }
+
+    // Just the rows the widget shows, for a one-line caption — the listed teams,
+    // or the leaders (capped, since the widget already renders the full table).
+    const picked = wanted?.length
+      ? ranked.filter((t) => wanted.includes(t.code))
+      : ranked.slice(0, Math.min(top ?? 5, 8));
+
+    return {
+      teams: picked.map((t) => ({
         team: teamName(t.code),
         winCupPercent: percent(t.mktChampion),
         reachFinalPercent: percent(t.final),
-      }));
-
-    return { favorites };
+      })),
+    };
   },
   toModelOutput: widgetModelOutput,
 });

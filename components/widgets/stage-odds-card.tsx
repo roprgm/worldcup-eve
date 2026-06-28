@@ -51,25 +51,50 @@ function formatPct(value: number): string {
   return `${Math.round(p)}%`;
 }
 
+// What the table is showing, surfaced in the header. A field cut (the whole
+// field, or its Top-N) toggles between the two; a fixed team list just labels how
+// many it shows.
+export type StageOddsHeader =
+  | { toggleable: true; showAll: boolean; top: number; onToggle: () => void }
+  | { toggleable: false; count: number };
+
 function Card({
   title,
-  hint,
+  header,
   children,
 }: {
   title: string;
-  hint?: string;
+  header?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
-        {hint && (
-          <span className="shrink-0 text-muted-foreground/60">{hint}</span>
-        )}
+        {header}
       </div>
       {children}
     </div>
+  );
+}
+
+// Right side of the header: a button toggling field ⇄ Top-N, or a static count
+// for a fixed list.
+function HeaderControl({ header }: { header: StageOddsHeader }) {
+  if (!header.toggleable)
+    return (
+      <span className="shrink-0 text-muted-foreground/60">
+        {header.count} {header.count === 1 ? "country" : "countries"}
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      onClick={header.onToggle}
+      className="shrink-0 rounded-sm text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {header.showAll ? "All teams" : `Top ${header.top}`}
+    </button>
   );
 }
 
@@ -170,13 +195,18 @@ function StageRow({ row }: { row: StageOddsRow }) {
 
 type StageOddsCardProps =
   | { loading: true }
-  | { loading?: false; rows: StageOddsRow[] };
+  | { loading?: false; rows: StageOddsRow[]; header: StageOddsHeader };
 
 /** A heat-map table of each team's chance to reach every knockout round and win
  *  the cup — the "road to the final" at a glance. */
 export function StageOddsCard(props: StageOddsCardProps) {
   return (
-    <Card title="Chance to reach each round">
+    <Card
+      title="Chance to reach each round"
+      header={
+        props.loading ? undefined : <HeaderControl header={props.header} />
+      }
+    >
       <div className="@container flex flex-col gap-1 px-2.5 py-2">
         <StageGrid className="pb-1">
           <span className="pl-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
