@@ -16,7 +16,7 @@ const involvesTeam = (code: string | null, query: string) => {
 
 export default defineTool({
   description:
-    "The stadium/venue for World Cup matches. Filter by team, match numbers, or venue to keep the answer small. For kickoff times use get_match_schedule.",
+    "The stadium/venue for World Cup matches. Filter by team, match numbers, or venue to keep the answer small. The team filter covers the group stage; for where a team plays its knockout rounds use show_team_path. For kickoff times use get_match_schedule.",
   inputSchema: z.object({
     team: z
       .string()
