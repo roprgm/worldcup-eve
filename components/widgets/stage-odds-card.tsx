@@ -2,7 +2,14 @@
 
 import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -198,16 +205,16 @@ function ColumnLabel({ children }: { children: ReactNode }) {
   );
 }
 
-// The likely opponents in one match, biggest first — a single locked-in opponent
-// drops its "100%".
+// Every plausible opponent in one match, biggest first — a single locked-in
+// opponent drops its "100%".
 function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
-  const top = opponents.filter((o) => o.probability >= 0.05).slice(0, 3);
-  if (!top.length)
+  const shown = opponents.filter((o) => o.probability >= 0.05);
+  if (!shown.length)
     return <span className="text-muted-foreground/60">to be decided</span>;
-  const locked = top.length === 1 && top[0].probability >= 0.99;
+  const locked = shown.length === 1 && shown[0].probability >= 0.99;
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-      {top.map((o) => (
+      {shown.map((o) => (
         <span key={o.code} className="flex items-center gap-1">
           <Flag code={o.code} size={12} />
           <span className="font-medium">{o.code}</span>
@@ -222,11 +229,12 @@ function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
   );
 }
 
-// The why-this-number panel under a clicked cell: the matches the team must win
-// to reach the round, each with its likely opponent and the running reach.
+// The why-this-number content: the matches the team must win to reach the round,
+// each with its likely opponents and the running reach. Chrome comes from the
+// popover that hosts it.
 function CellExplain({ path }: { path: CellPath }) {
   return (
-    <div className="rounded-md bg-surface-2/30 px-2.5 py-2 text-[11px]">
+    <div className="text-[11px]">
       <p className="mb-1.5 text-muted-foreground">
         To reach the {ROUND_LABEL[path.targetRound]},{" "}
         <span className="text-foreground">{path.name}</span> must get past
@@ -236,13 +244,13 @@ function CellExplain({ path }: { path: CellPath }) {
         {path.legs.map((leg) => (
           <div
             key={leg.round}
-            className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-2"
+            className="grid grid-cols-[4.5rem_1fr_auto] items-start gap-2"
           >
-            <span className="text-muted-foreground/80">
+            <span className="pt-px text-muted-foreground/80">
               {ROUND_LABEL[leg.round]}
             </span>
             <OpponentList opponents={leg.opponents} />
-            <span className="text-foreground tabular-nums">
+            <span className="pt-px text-foreground tabular-nums">
               {roundPct(leg.reachNext)}
             </span>
           </div>
@@ -252,71 +260,137 @@ function CellExplain({ path }: { path: CellPath }) {
   );
 }
 
+// A click-opened tooltip anchored to a cell. Portaled to the body and positioned
+// fixed, so it floats over the table without shifting layout or being clipped by
+// the card. Re-places on scroll/resize, follows the anchor, and closes on an
+// outside click, Escape, or the anchor leaving the page.
+function CellPopover({
+  anchor,
+  onClose,
+  children,
+}: {
+  anchor: HTMLElement;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = ref.current;
+      if (!el) return;
+      if (!anchor.isConnected) return onClose();
+      const a = anchor.getBoundingClientRect();
+      const { offsetWidth: w, offsetHeight: h } = el;
+      const margin = 8;
+      const left = Math.min(
+        Math.max(margin, a.left + a.width / 2 - w / 2),
+        window.innerWidth - w - margin,
+      );
+      const below = a.bottom + 6;
+      const top =
+        below + h > window.innerHeight - margin && a.top - h - 6 > margin
+          ? a.top - h - 6
+          : below;
+      setPos({ top, left });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [anchor, onClose]);
+
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!ref.current?.contains(target) && !anchor.contains(target)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [anchor, onClose]);
+
+  return createPortal(
+    <div
+      ref={ref}
+      role="dialog"
+      style={{
+        top: pos?.top ?? 0,
+        left: pos?.left ?? 0,
+        visibility: pos ? "visible" : "hidden",
+      }}
+      className="fixed z-50 max-h-[60vh] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl"
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 function StageRow({
   row,
   openRound,
   onToggle,
-  resolve,
+  canExplain,
 }: {
   row: StageOddsRow;
   openRound: Round | null;
-  onToggle: (round: Round) => void;
-  resolve?: ResolveBreakdown;
+  onToggle: (round: Round, anchor: HTMLElement) => void;
+  canExplain: boolean;
 }) {
-  const path = openRound ? resolve?.(row.code, openRound) : undefined;
-
   return (
-    <div>
-      <StageGrid className="h-7">
-        <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
-          <Flag code={row.code} size={14} />
-          <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
-            <span className="@lg:hidden">{row.code}</span>
-            <span className="hidden @lg:inline">{row.name ?? row.code}</span>
-          </span>
+    <StageGrid className="h-7">
+      <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
+        <Flag code={row.code} size={14} />
+        <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
+          <span className="@lg:hidden">{row.code}</span>
+          <span className="hidden @lg:inline">{row.name ?? row.code}</span>
         </span>
-        {STAGES.map((stage, idx) => {
-          const reached = idx <= row.reachedIdx;
-          const cell = (
-            <HeatCell
-              value={row[stage.key]}
-              reached={reached}
-              eliminated={row.eliminated}
-            />
-          );
-          // Only an open prediction in a reach column with a real chance has a
-          // story to tell.
-          const interactive =
-            Boolean(resolve) &&
-            "round" in stage &&
-            !reached &&
-            !row.eliminated &&
-            row[stage.key] >= 0.005;
-          if (!interactive) return <span key={stage.key}>{cell}</span>;
+      </span>
+      {STAGES.map((stage, idx) => {
+        const reached = idx <= row.reachedIdx;
+        const cell = (
+          <HeatCell
+            value={row[stage.key]}
+            reached={reached}
+            eliminated={row.eliminated}
+          />
+        );
+        // Only an open prediction in a reach column with a real chance has a
+        // story to tell.
+        const interactive =
+          canExplain &&
+          "round" in stage &&
+          !reached &&
+          !row.eliminated &&
+          row[stage.key] >= 0.005;
+        if (!interactive) return <span key={stage.key}>{cell}</span>;
 
-          const isOpen = openRound === stage.round;
-          return (
-            <button
-              key={stage.key}
-              type="button"
-              aria-expanded={isOpen}
-              onClick={() => onToggle(stage.round)}
-              className={cn(
-                "block w-full rounded-[3px] transition-shadow hover:ring-1 hover:ring-pick/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isOpen && "ring-1 ring-pick/60",
-              )}
-            >
-              {cell}
-            </button>
-          );
-        })}
-      </StageGrid>
-      {path && (
-        <div className="pt-1 pb-0.5">
-          <CellExplain path={path} />
-        </div>
-      )}
-    </div>
+        const isOpen = openRound === stage.round;
+        return (
+          <button
+            key={stage.key}
+            type="button"
+            aria-expanded={isOpen}
+            onClick={(e) => onToggle(stage.round, e.currentTarget)}
+            className={cn(
+              "block w-full rounded-[3px] transition-shadow hover:ring-1 hover:ring-pick/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              isOpen && "ring-1 ring-pick/60",
+            )}
+          >
+            {cell}
+          </button>
+        );
+      })}
+    </StageGrid>
   );
 }
 
@@ -333,8 +407,17 @@ type StageOddsCardProps =
  *  the cup — the "road to the final" at a glance. Clicking a reach cell opens the
  *  matches behind that number. */
 export function StageOddsCard(props: StageOddsCardProps) {
-  // One open cell at a time, keyed by team + round.
-  const [open, setOpen] = useState<{ code: string; round: Round } | null>(null);
+  // The cell whose breakdown is open (team + round + the clicked cell to anchor
+  // the popover to); null when none.
+  const [open, setOpen] = useState<{
+    code: string;
+    round: Round;
+    anchor: HTMLElement;
+  } | null>(null);
+
+  const resolve = props.loading ? undefined : props.resolveBreakdown;
+  const breakdown =
+    open && resolve ? resolve(open.code, open.round) : undefined;
 
   return (
     <Card
@@ -363,17 +446,22 @@ export function StageOddsCard(props: StageOddsCardProps) {
                 key={row.code}
                 row={row}
                 openRound={open?.code === row.code ? open.round : null}
-                onToggle={(round) =>
+                onToggle={(round, anchor) =>
                   setOpen((cur) =>
                     cur && cur.code === row.code && cur.round === round
                       ? null
-                      : { code: row.code, round },
+                      : { code: row.code, round, anchor },
                   )
                 }
-                resolve={props.resolveBreakdown}
+                canExplain={Boolean(resolve)}
               />
             ))}
       </div>
+      {open && breakdown && (
+        <CellPopover anchor={open.anchor} onClose={() => setOpen(null)}>
+          <CellExplain path={breakdown} />
+        </CellPopover>
+      )}
     </Card>
   );
 }
