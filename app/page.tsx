@@ -14,7 +14,7 @@ const SUGGESTIONS = [
   "Who are the best third-placed teams?",
   "Who is most likely to play in match 100?",
   "Where did Argentina play their last match?",
-  "Who got the red card in Belgium vs Iran?",
+  "What is the predicted bracket to the finals?",
 ];
 
 function EmptyState() {

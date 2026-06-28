@@ -7,6 +7,7 @@ import {
   ChatMatches,
   type MatchesScope,
 } from "@/components/chat/chat-matches-widget";
+import { BracketWidget } from "@/components/widgets/bracket-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { TeamPathWidget } from "@/components/widgets/team-path-widget";
@@ -69,6 +70,8 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
     }
     case "show_thirds_ranking":
       return { key: "thirds", render: () => <ThirdsRankingWidget /> };
+    case "show_bracket":
+      return { key: "bracket", render: () => <BracketWidget /> };
     case "show_matches": {
       const numbers = Array.isArray(args.matches)
         ? args.matches.filter((n): n is number => typeof n === "number")
