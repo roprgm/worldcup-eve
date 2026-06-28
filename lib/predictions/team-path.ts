@@ -1,0 +1,169 @@
+// A team's projected route to the final: one compact path, with each round's
+// likely opponents from the prediction slots (which already fold in confirmed
+// results). When the group isn't settled the team can enter the bracket at more
+// than one Round-of-32 slot — different opponents per finish — so per round we
+// blend those routes weighted by the team's presence, and flag `dependsOnGroup`
+// so the UI can note that the chances hinge on the group result. Pure: takes a
+// snapshot, queries nothing.
+
+import {
+  knockoutMatches,
+  teamById,
+  type GroupLetter,
+  type Round,
+} from "../tournament";
+import type { Predictions } from "./index";
+
+type Side = "home" | "away";
+type Placement = "first" | "second" | "third";
+
+// The rounds of a run to the final, in order (the third-place play-off is not
+// part of any team's "path to the final").
+const PATH_ROUNDS: Round[] = ["R32", "R16", "QF", "SF", "FINAL"];
+
+// Below this Round-of-32 presence the team can't reach the knockouts — it's out.
+const MIN_REACH = 0.005;
+// A group finish only counts toward the fork above this chance.
+const MIN_PLACEMENT = 0.05;
+
+export interface PathOpponent {
+  code: string;
+  name: string;
+  probability: number; // P(this is the opponent | team reaches the round)
+}
+
+export interface PathStep {
+  round: Round;
+  reachProbability: number; // P(team reaches this round)
+  opponents: PathOpponent[]; // sorted high→low; ~sums to 1
+}
+
+export interface TeamPath {
+  code: string;
+  name: string;
+  group: GroupLetter;
+  /** True when more than one group finish is still in play, so the opponents
+   *  blend those routes and hinge on where the team finishes its group. */
+  dependsOnGroup: boolean;
+  steps: PathStep[]; // R32 → Final
+}
+
+export type TeamPathResult =
+  | ({ status: "path" } & TeamPath)
+  | { status: "out"; code: string; name: string; group: GroupLetter };
+
+const opponentView = (code: string, probability: number): PathOpponent => ({
+  code,
+  name: teamById[code]?.name ?? code,
+  probability,
+});
+
+const slotCandidates = (
+  predictions: Pick<Predictions, "slots">,
+  match: number,
+  side: Side,
+) =>
+  predictions.slots.find((s) => s.match === match && s.side === side)
+    ?.candidates ?? [];
+
+const teamProbIn = (
+  predictions: Pick<Predictions, "slots">,
+  match: number,
+  side: Side,
+  code: string,
+) =>
+  slotCandidates(predictions, match, side).find((c) => c.code === code)
+    ?.probability ?? 0;
+
+const placementOf = (kind: string): Placement | undefined =>
+  kind === "winner"
+    ? "first"
+    : kind === "runner"
+      ? "second"
+      : kind === "third"
+        ? "third"
+        : undefined;
+
+// Opponents the team could meet in one round: across every match it might occupy
+// there, blend the other side's candidates weighted by the team's presence, then
+// normalize to "given the team reaches this round, who does it face".
+function roundStep(
+  predictions: Pick<Predictions, "slots">,
+  code: string,
+  round: Round,
+): PathStep {
+  let reach = 0;
+  const weight = new Map<string, number>();
+
+  for (const match of knockoutMatches) {
+    if (match.round !== round) continue;
+    for (const side of ["home", "away"] as const) {
+      const here = teamProbIn(predictions, match.number, side, code);
+      if (here <= 0) continue;
+      reach += here;
+      const opponentSide: Side = side === "home" ? "away" : "home";
+      for (const c of slotCandidates(predictions, match.number, opponentSide)) {
+        if (c.probability <= 0) continue;
+        weight.set(c.code, (weight.get(c.code) ?? 0) + here * c.probability);
+      }
+    }
+  }
+
+  const opponents =
+    reach > 0
+      ? [...weight]
+          .map(([c, w]) => opponentView(c, w / reach))
+          .sort((a, b) => b.probability - a.probability)
+      : [];
+
+  return { round, reachProbability: reach, opponents };
+}
+
+// The set of group finishes (1st / 2nd / 3rd) that still have a real chance —
+// more than one means the path forks on the group result.
+function livePlacements(
+  predictions: Pick<Predictions, "slots">,
+  code: string,
+): Set<Placement> {
+  const placements = new Set<Placement>();
+  for (const match of knockoutMatches) {
+    if (match.round !== "R32") continue;
+    for (const side of ["home", "away"] as const) {
+      const p = teamProbIn(predictions, match.number, side, code);
+      if (p < MIN_PLACEMENT) continue;
+      const placement = placementOf(match[side].kind);
+      if (placement) placements.add(placement);
+    }
+  }
+  return placements;
+}
+
+/** A friendly sentence for a team with no projected path. */
+export function outMessage(out: { name: string }): string {
+  return `${out.name} is out of the tournament, so there's no road to the final to show.`;
+}
+
+/** Build the team's projected path, the "out" verdict when it can't reach the
+ *  knockouts, or `undefined` for an unknown team code. */
+export function teamPath(
+  predictions: Pick<Predictions, "slots">,
+  code: string,
+): TeamPathResult | undefined {
+  const team = teamById[code];
+  if (!team) return undefined;
+
+  const steps = PATH_ROUNDS.map((round) => roundStep(predictions, code, round));
+  const r32 = steps[0];
+  if (!r32 || r32.reachProbability < MIN_REACH) {
+    return { status: "out", code, name: team.name, group: team.group };
+  }
+
+  return {
+    status: "path",
+    code,
+    name: team.name,
+    group: team.group,
+    dependsOnGroup: livePlacements(predictions, code).size > 1,
+    steps,
+  };
+}

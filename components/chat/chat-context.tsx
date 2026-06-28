@@ -82,6 +82,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // While a question is parked, a plain message would be dropped as
       // "ignored"; route it back as the answer to the pending request.
       const question = activeQuestion(agent.data.messages);
+      // Don't start a new message while a turn is still running — the user must
+      // let it finish or hit stop first. (eve's store also throws here; this
+      // makes the no-op explicit so a stray submit can't interleave a turn.)
+      if (
+        !question &&
+        (agent.status === "submitted" || agent.status === "streaming")
+      )
+        return;
       const payload = question
         ? { inputResponses: [{ requestId: question.requestId, text: message }] }
         : { message };
