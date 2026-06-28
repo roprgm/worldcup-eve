@@ -336,10 +336,9 @@ export async function buildPredictions(
 // Cached snapshot shared by the predictions API route and the agent. The fit is
 // the cost (~2s), so we cache the result in the Vercel Runtime Cache
 // (cross-instance, with a transparent in-memory fallback elsewhere) and reuse
-// the fit anchor across the rare rebuilds. An eve schedule
-// (agent/schedules/refresh-predictions) refreshes the snapshot every minute so
-// reads stay warm and never hit a cold build.
-const PREDICTIONS_TTL = 120; // 2 minutes — longer than the 1-min refresh so a late/skipped tick still finds a warm value
+// the fit anchor across the rare rebuilds. An eve schedule refreshes it every
+// minute so reads stay warm.
+const PREDICTIONS_TTL = 120; // 2 min, longer than the 1-min refresh to survive a late tick
 const anchor: PredictionCache = {};
 const predictionsCache = getCache({ namespace: "predictions" });
 
@@ -368,9 +367,8 @@ function thirdSlotDistsFromResults(results: Results): Map<string, Dist> {
   return dists;
 }
 
-// Rebuild the snapshot from scratch and write it to the cache, regardless of
-// any existing entry. The cron calls this every 2 minutes so the cache is
-// refreshed before it expires and users never wait on a cold build.
+// Rebuild the snapshot and write it to the cache; the schedule calls this to
+// keep reads warm.
 export async function refreshPredictions(): Promise<Predictions> {
   // Real results sharpen the Round-of-32 third-place slots; fall back to the
   // market heuristic if the results feed is unavailable.
