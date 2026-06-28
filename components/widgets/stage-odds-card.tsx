@@ -15,6 +15,9 @@ export interface StageOddsRow {
   sf: number; // P(reach Semi-finals)
   final: number; // P(reach Final)
   champion: number; // P(win the cup)
+  // Highest stage index (see STAGES) the team has actually reached per real
+  // results; -1 if none yet. Those cells show a check instead of a prediction.
+  reachedIdx: number;
 }
 
 // The stage columns, in bracket order. `key` indexes StageOddsRow; the labels
@@ -77,9 +80,11 @@ function StageGrid({
 }
 
 // A heat-mapped probability cell: the green deepens with the chance, so a column
-// reads at a glance. A near-certain stage shows a check instead of "100%".
-function HeatCell({ value }: { value: number }) {
-  if (value >= 0.999)
+// reads at a glance. A stage the team has *actually* reached (per results) shows
+// a check; a stage that is still a prediction always shows its number — even at
+// 100%.
+function HeatCell({ value, reached }: { value: number; reached: boolean }) {
+  if (reached)
     return (
       <span
         className="flex h-7 items-center justify-center rounded-[3px] text-pick"
@@ -87,7 +92,7 @@ function HeatCell({ value }: { value: number }) {
           backgroundColor: "color-mix(in oklab, var(--pick) 22%, transparent)",
         }}
       >
-        <Check className="size-3.5" aria-label="Qualified" />
+        <Check className="size-3.5" aria-label="Reached" />
       </span>
     );
 
@@ -126,8 +131,12 @@ function StageRow({ row }: { row: StageOddsRow }) {
           <span className="hidden @lg:inline">{row.name ?? row.code}</span>
         </span>
       </span>
-      {STAGES.map((stage) => (
-        <HeatCell key={stage.key} value={row[stage.key]} />
+      {STAGES.map((stage, idx) => (
+        <HeatCell
+          key={stage.key}
+          value={row[stage.key]}
+          reached={idx <= row.reachedIdx}
+        />
       ))}
     </StageGrid>
   );
