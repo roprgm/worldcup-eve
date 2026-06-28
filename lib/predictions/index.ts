@@ -336,8 +336,9 @@ export async function buildPredictions(
 // Cached snapshot shared by the predictions API route and the agent. The fit is
 // the cost (~2s), so we cache the result in the Vercel Runtime Cache
 // (cross-instance, with a transparent in-memory fallback elsewhere) and reuse
-// the fit anchor across the rare rebuilds.
-const PREDICTIONS_TTL = 60; // tune later (KV / longer partial caches) to optimize the BT fit
+// the fit anchor across the rare rebuilds. A cron (see vercel.json) refreshes
+// the snapshot every 2 minutes so reads stay warm and never hit a cold build.
+const PREDICTIONS_TTL = 120; // 2 minutes, matched to the proactive cron refresh
 const anchor: PredictionCache = {};
 const predictionsCache = getCache({ namespace: "predictions" });
 
@@ -366,9 +367,10 @@ function thirdSlotDistsFromResults(results: Results): Map<string, Dist> {
   return dists;
 }
 
-export async function getPredictions(): Promise<Predictions> {
-  const hit = await predictionsCache.get("snapshot");
-  if (hit != null) return hit as Predictions;
+// Rebuild the snapshot from scratch and write it to the cache, regardless of
+// any existing entry. The cron calls this every 2 minutes so the cache is
+// refreshed before it expires and users never wait on a cold build.
+export async function refreshPredictions(): Promise<Predictions> {
   // Real results sharpen the Round-of-32 third-place slots; fall back to the
   // market heuristic if the results feed is unavailable.
   const thirdSlotDists = await getMatchResults()
@@ -380,6 +382,12 @@ export async function getPredictions(): Promise<Predictions> {
     tags: ["predictions"],
   });
   return data;
+}
+
+export async function getPredictions(): Promise<Predictions> {
+  const hit = await predictionsCache.get("snapshot");
+  if (hit != null) return hit as Predictions;
+  return refreshPredictions();
 }
 
 export type { MatchOdds, Scoreline } from "./group-markets";
