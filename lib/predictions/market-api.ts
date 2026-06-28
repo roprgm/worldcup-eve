@@ -21,10 +21,29 @@ const window = (perWindow: number) =>
 const clobLimiter = window(8000);
 const gammaLimiter = window(3500);
 
+// Retry transient network failures (dropped sockets, resets) with backoff. HTTP
+// error responses are returned as-is — only thrown fetch errors are retried.
+async function fetchRetry(
+  url: string,
+  init?: RequestInit,
+  attempts = 4,
+): Promise<Response> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      lastError = error;
+      await new Promise((r) => setTimeout(r, 250 * 2 ** i));
+    }
+  }
+  throw lastError;
+}
+
 const clobFetch = (path: string, init?: RequestInit) =>
-  clobLimiter.schedule(() => fetch(`${CLOB}${path}`, init));
+  clobLimiter.schedule(() => fetchRetry(`${CLOB}${path}`, init));
 export const gammaFetch = (path: string, init?: RequestInit) =>
-  gammaLimiter.schedule(() => fetch(`${GAMMA}${path}`, init));
+  gammaLimiter.schedule(() => fetchRetry(`${GAMMA}${path}`, init));
 
 export interface CatalogMarket {
   kind: string;

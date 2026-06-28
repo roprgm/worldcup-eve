@@ -30,12 +30,14 @@ import {
   simulate,
   type ReachObs,
   type Strengths,
+  type WinnerOverride,
 } from "./bradley-terry";
 import {
   fetchGroupMarkets,
   type MatchOdds,
   type Scoreline,
 } from "./group-markets";
+import { fetchKnockoutMarkets, pairKey } from "./knockout-markets";
 import { getMatchResults, type Results } from "../results";
 
 export interface Candidate {
@@ -66,6 +68,16 @@ export interface TeamReach {
   btChampion: number; // P(win the Final) — BT model
   mktChampion: number; // P(champion) — direct market
 }
+export interface KnockoutOdds {
+  match: number; // FIFA match number (73–104)
+  home: string; // FIFA code
+  away: string;
+  homeWin: number; // P(home wins in regulation)
+  draw: number | null; // P(draw in regulation), null if unpriced
+  awayWin: number; // P(away wins in regulation)
+  homeAdvance: number; // P(home advances) — two-way, homeAdvance + awayAdvance = 1
+  awayAdvance: number;
+}
 export interface Predictions {
   updatedAt: string; // ISO timestamp
   catalogGeneratedAt: string;
@@ -78,6 +90,13 @@ export interface Predictions {
   groupScores: Record<string, Scoreline>;
   /** Live two-way (home/away) win chance per group fixture with a market. */
   matchOdds: MatchOdds[];
+  /** Most-likely exact scoreline per decided knockout match with a per-game
+   *  market, by FIFA match number (oriented to the bracket's home/away). */
+  knockoutScores: Record<number, Scoreline>;
+  /** Direct per-game market read for each decided knockout match: the
+   *  regulation three-way (home/draw/away) and the two-way advance odds it
+   *  implies. The market's own answer — no BT inference. */
+  knockoutOdds: KnockoutOdds[];
   /** BT win distribution per knockout match (73–104, excl. the third-place
    *  play-off): the teams that could win it, sorted high→low. For a decided
    *  matchup this is the head-to-head win split. */
@@ -102,6 +121,77 @@ export interface PredictionCache {
   anchor?: Strengths;
 }
 
+// A slot's team once it is all but certain (group stage decided), else null.
+function decidedTeam(dist?: Dist): string | null {
+  if (!dist) return null;
+  let best: string | null = null;
+  let bestP = 0;
+  for (const [code, p] of dist)
+    if (p > bestP) {
+      bestP = p;
+      best = code;
+    }
+  return best != null && bestP >= 0.99 ? best : null;
+}
+
+// For every knockout match whose two sides are decided and that Polymarket
+// prices as a per-game market, read that market directly: the winner override
+// for the simulation (two-way advance), the most-likely scoreline, and the raw
+// three-way odds. Matches with an unresolved slot or no market are left to BT.
+function knockoutMarketOverride(
+  r32Slots: Map<string, Dist>,
+  markets: Awaited<ReturnType<typeof fetchKnockoutMarkets>>,
+): {
+  override: WinnerOverride;
+  scores: Record<number, Scoreline>;
+  odds: KnockoutOdds[];
+} {
+  const override: WinnerOverride = new Map();
+  const scores: Record<number, Scoreline> = {};
+  const odds: KnockoutOdds[] = [];
+
+  for (const m of knockoutMatches) {
+    if (m.round !== "R32") continue; // only R32 games are decided & priced for now
+    const home = decidedTeam(r32Slots.get(`${m.number}:home`));
+    const away = decidedTeam(r32Slots.get(`${m.number}:away`));
+    if (!home || !away) continue;
+    const market = markets.byPair.get(pairKey(home, away));
+    if (!market) continue;
+
+    const homeAdv = market.advance[home];
+    const awayAdv = market.advance[away];
+    if (homeAdv != null && awayAdv != null)
+      override.set(
+        m.number,
+        new Map([
+          [home, homeAdv],
+          [away, awayAdv],
+        ]),
+      );
+
+    if (market.score) {
+      // The catalog stores goals as (teams[0]=`a`, teams[1]=`b`); orient to ours.
+      const [t0] = market.teams;
+      scores[m.number] =
+        t0 === home
+          ? { h: market.score.a, a: market.score.b }
+          : { h: market.score.b, a: market.score.a };
+    }
+
+    odds.push({
+      match: m.number,
+      home,
+      away,
+      homeWin: round4(market.win[home] ?? 0),
+      draw: market.draw == null ? null : round4(market.draw),
+      awayWin: round4(market.win[away] ?? 0),
+      homeAdvance: round4(homeAdv ?? 0),
+      awayAdvance: round4(awayAdv ?? 0),
+    });
+  }
+  return { override, scores, odds };
+}
+
 export async function buildPredictions(
   cache: PredictionCache = {},
   // Optional override for the Round-of-32 third-place slots, keyed "match:side"
@@ -109,9 +199,10 @@ export async function buildPredictions(
   // heuristic for those slots; other slots are untouched.
   thirdSlotDists?: Map<string, Dist>,
 ): Promise<Predictions> {
-  const [prices, groupMarkets] = await Promise.all([
+  const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
     fetchPrices(),
     fetchGroupMarkets(),
+    fetchKnockoutMarkets(),
   ]);
 
   const r32Slots = buildR32Slots(prices);
@@ -123,9 +214,20 @@ export async function buildPredictions(
   const reachObs: ReachObs = new Map(
     teamCodes.map((t) => [t, reachObsFor(prices, t)]),
   );
-  cache.anchor ??= anchorStrengths(r32Slots, reachObs);
-  const strengths = fitStrengths(r32Slots, reachObs, cache.anchor);
-  const winners = simulate(r32Slots, strengths);
+
+  // Once an R32 slot is decided, Polymarket prices that exact matchup directly.
+  // Pin those matches to the market's two-way advance odds (instead of inferring
+  // them from the fit) and capture the market's scoreline + three-way read. The
+  // override also feeds the rest of the bracket, so R16→Final start from it.
+  const {
+    override: r32Override,
+    scores: knockoutScores,
+    odds: knockoutOdds,
+  } = knockoutMarketOverride(r32Slots, knockoutMarkets);
+
+  cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
+  const strengths = fitStrengths(r32Slots, reachObs, cache.anchor, r32Override);
+  const winners = simulate(r32Slots, strengths, r32Override);
 
   // Third-place play-off: simulate() skips it, so derive its two slots here as
   // the beaten semi-finalists (teams reaching a semi, minus its winners).
@@ -225,6 +327,8 @@ export async function buildPredictions(
     reach,
     groupScores: groupMarkets.scores,
     matchOdds: groupMarkets.odds,
+    knockoutScores,
+    knockoutOdds,
     matchWinOdds,
   };
 }

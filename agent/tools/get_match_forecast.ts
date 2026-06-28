@@ -43,6 +43,9 @@ function knockoutForecast(
   const away = byCode.get(awayCode) ?? 0;
   const total = home + away;
   if (total <= 0) return undefined;
+  // For R32, matchWinOdds and the scoreline come straight from the per-game
+  // market; deeper rounds are still the BT model's inference.
+  const score = snapshot.knockoutScores[match];
   return {
     updatedAt: snapshot.updatedAt,
     match,
@@ -51,6 +54,7 @@ function knockoutForecast(
     away: awayCode,
     homeWinPercent: percent(home / total),
     awayWinPercent: percent(away / total),
+    predictedScore: score ? { home: score.h, away: score.a } : undefined,
   };
 }
 

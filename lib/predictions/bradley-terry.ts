@@ -33,8 +33,19 @@ function matchWinner(home: Dist, away: Dist, s: Strengths): Dist {
   return out;
 }
 
-/** Propagate strengths through the full knockout bracket (skips the play-off). */
-export function simulate(r32Slots: R32Slots, s: Strengths): Map<number, Dist> {
+/** Winner distribution to substitute for a knockout match's BT result, keyed by
+ *  match number — the market's direct read of a decided matchup (e.g. R32 game
+ *  odds). Where present, it replaces the strength-derived winner and feeds the
+ *  rest of the bracket. */
+export type WinnerOverride = Map<number, Dist>;
+
+/** Propagate strengths through the full knockout bracket (skips the play-off).
+ *  `override` pins specific matches to a market-given winner distribution. */
+export function simulate(
+  r32Slots: R32Slots,
+  s: Strengths,
+  override?: WinnerOverride,
+): Map<number, Dist> {
   const winners = new Map<number, Dist>();
   const source = (ref: SlotRef, n: number, side: "home" | "away") =>
     ref.kind === "match"
@@ -42,13 +53,15 @@ export function simulate(r32Slots: R32Slots, s: Strengths): Map<number, Dist> {
       : (r32Slots.get(`${n}:${side}`) ?? new Map());
   for (const m of knockoutMatches) {
     if (m.round === "TP") continue;
+    const pinned = override?.get(m.number);
     winners.set(
       m.number,
-      matchWinner(
-        source(m.home, m.number, "home"),
-        source(m.away, m.number, "away"),
-        s,
-      ),
+      pinned ??
+        matchWinner(
+          source(m.home, m.number, "home"),
+          source(m.away, m.number, "away"),
+          s,
+        ),
     );
   }
   return winners;
@@ -92,6 +105,7 @@ function fitOnce(
   seed: number,
   steps: number,
   init?: Strengths,
+  override?: WinnerOverride,
 ): Strengths {
   const rand = mulberry32(seed);
   const teamList = [...obs.keys()];
@@ -108,8 +122,8 @@ function fitOnce(
       teamList.map((t, i) => [t, Math.exp(logS[i] - eps * delta[i])]),
     );
     const g =
-      (loss(simulate(r32Slots, sPlus), obs) -
-        loss(simulate(r32Slots, sMinus), obs)) /
+      (loss(simulate(r32Slots, sPlus, override), obs) -
+        loss(simulate(r32Slots, sMinus, override), obs)) /
       (2 * eps);
     for (let i = 0; i < n; i++) logS[i] -= lr * g * delta[i];
     lr = 0.15 / (1 + step / 150);
@@ -122,13 +136,21 @@ function fitOnce(
 export function anchorStrengths(
   r32Slots: R32Slots,
   obs: ReachObs,
+  override?: WinnerOverride,
   runs = 4,
   steps = 400,
 ): Strengths {
   const teamList = [...obs.keys()];
   const sumLog = new Map(teamList.map((t) => [t, 0]));
   for (let k = 0; k < runs; k++) {
-    const s = fitOnce(r32Slots, obs, 1009 + k * 7919, steps);
+    const s = fitOnce(
+      r32Slots,
+      obs,
+      1009 + k * 7919,
+      steps,
+      undefined,
+      override,
+    );
     for (const t of teamList)
       sumLog.set(t, sumLog.get(t)! + Math.log(s.get(t) ?? 1));
   }
@@ -141,6 +163,14 @@ export function fitStrengths(
   r32Slots: R32Slots,
   obs: ReachObs,
   base?: Strengths,
+  override?: WinnerOverride,
 ): Strengths {
-  return fitOnce(r32Slots, obs, 1, 80, base ?? anchorStrengths(r32Slots, obs));
+  return fitOnce(
+    r32Slots,
+    obs,
+    1,
+    80,
+    base ?? anchorStrengths(r32Slots, obs, override),
+    override,
+  );
 }
