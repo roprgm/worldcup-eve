@@ -8,6 +8,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_venues");
     t.noFailedActions();
-    t.messageIncludes(/Atlanta/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer name the stadium or city where the match is played?",
+    );
   },
 });

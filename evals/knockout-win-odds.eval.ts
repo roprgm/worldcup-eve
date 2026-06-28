@@ -9,6 +9,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_forecast");
     t.noFailedActions();
-    t.messageIncludes(/South Africa|Canada/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer give the win odds for the South Africa vs Canada match?",
+    );
   },
 });

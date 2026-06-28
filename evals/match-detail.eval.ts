@@ -8,6 +8,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_detail");
     t.noFailedActions();
-    t.messageIncludes(/Nathan|Ngoy|red card/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer identify which player received the red card?",
+    );
   },
 });

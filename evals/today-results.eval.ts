@@ -10,6 +10,8 @@ export default defineEval({
     t.calledTool("show_matches", { input: { scope: "today" } });
     t.notCalledTool("get_match_results");
     t.noFailedActions();
-    t.messageIncludes(/schedule|match|today/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer report the match or matches taking place today?",
+    );
   },
 });
