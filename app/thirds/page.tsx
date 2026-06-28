@@ -13,7 +13,7 @@ export default function ThirdsPage() {
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
-        <Section title="Best thirds">
+        <Section title="Best thirds" defaultOpen={false}>
           <CardGridFrame className="max-w-xl">
             <ThirdsRankingWidget />
           </CardGridFrame>
