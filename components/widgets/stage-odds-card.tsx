@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Flag } from "@/components/flags";
@@ -18,6 +18,8 @@ export interface StageOddsRow {
   // Highest stage index (see STAGES) the team has actually reached per real
   // results; -1 if none yet. Those cells show a check instead of a prediction.
   reachedIdx: number;
+  // Knocked out per real results: its not-yet-reached cells are a dash, not odds.
+  eliminated: boolean;
 }
 
 // The stage columns, in bracket order. `key` indexes StageOddsRow; the labels
@@ -39,9 +41,11 @@ const ROW_SKELETON = Array.from({ length: 16 }, (_, i) => `row-${i}`);
 const STAGE_GRID =
   "grid grid-cols-[minmax(0,1fr)_repeat(6,2.4rem)] items-center gap-1 @lg:grid-cols-[minmax(0,1fr)_repeat(6,3.25rem)] @lg:gap-1.5";
 
+// A still-alive team always keeps a sliver of a chance, so a value that rounds to
+// zero floors at "<1%" rather than reading as none. Only a confirmed-out team
+// shows a dash (handled in HeatCell).
 function formatPct(value: number): string {
   const p = value * 100;
-  if (p <= 0) return "—";
   if (p < 0.95) return "<1%";
   if (p < 9.95) return `${p.toFixed(1)}%`;
   return `${Math.round(p)}%`;
@@ -79,11 +83,19 @@ function StageGrid({
   return <div className={cn(STAGE_GRID, className)}>{children}</div>;
 }
 
-// A heat-mapped probability cell: the green deepens with the chance, so a column
-// reads at a glance. A stage the team has *actually* reached (per results) shows
-// a check; a stage that is still a prediction always shows its number — even at
-// 100%.
-function HeatCell({ value, reached }: { value: number; reached: boolean }) {
+// A heat-mapped probability cell. A stage the team has *actually* reached (per
+// results) shows a green check; a stage it is *confirmed out* of shows a muted
+// cross; anything still open shows its predicted number (floored at "<1%", never
+// 100% as a check) with the green deepening as the chance grows.
+function HeatCell({
+  value,
+  reached,
+  eliminated,
+}: {
+  value: number;
+  reached: boolean;
+  eliminated: boolean;
+}) {
   if (reached)
     return (
       <span
@@ -93,6 +105,19 @@ function HeatCell({ value, reached }: { value: number; reached: boolean }) {
         }}
       >
         <Check className="size-3.5" aria-label="Reached" />
+      </span>
+    );
+
+  if (eliminated)
+    return (
+      <span
+        className="flex h-7 items-center justify-center rounded-[3px] text-muted-foreground/50"
+        style={{
+          backgroundColor:
+            "color-mix(in oklab, var(--muted-foreground) 9%, transparent)",
+        }}
+      >
+        <X className="size-3.5" aria-label="Eliminated" />
       </span>
     );
 
@@ -136,6 +161,7 @@ function StageRow({ row }: { row: StageOddsRow }) {
           key={stage.key}
           value={row[stage.key]}
           reached={idx <= row.reachedIdx}
+          eliminated={row.eliminated}
         />
       ))}
     </StageGrid>
