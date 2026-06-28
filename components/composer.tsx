@@ -33,10 +33,11 @@ export function Composer({
           status={status}
           autoFocus={autoFocus}
         />
-        <div className="mt-2.5 flex flex-col items-center gap-1.5 text-center font-mono">
+        <div className="mt-2.5 flex items-center justify-center gap-1.5 text-center font-mono">
           <p className="text-[10.5px] tracking-wide text-subtle-foreground">
-            WC26.chat can make mistakes — verify important details
+            WC26.chat can make mistakes
           </p>
+          <span className="text-[10.5px] text-subtle-foreground/50">·</span>
           <EveAttribution />
         </div>
       </div>
