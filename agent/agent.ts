@@ -6,10 +6,10 @@ export default defineAgent({
     providerOptions: {
       // gpt-oss-120b is open-weights; route to the fastest providers that serve it.
       gateway: { order: ["cerebras", "groq", "fireworks"] },
-      // Factual World Cup lookups don't need long chains of thought. Low reasoning
-      // effort cuts latency and output-token cost; the instructions already tell the
-      // agent not to over-reason. Raise to "medium" if tool selection regresses.
-      openai: { reasoningEffort: "low" },
+      // Medium reasoning keeps tool selection and replies reliable (low let the
+      // model ramble/derail on some multi-step asks); the instructions still tell
+      // the agent not to over-reason, which caps the latency/token cost.
+      openai: { reasoningEffort: "medium" },
     },
   },
 });
