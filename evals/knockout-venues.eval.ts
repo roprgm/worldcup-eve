@@ -2,15 +2,15 @@ import { defineEval } from "eve/evals";
 
 export default defineEval({
   description:
-    "A 'road to the final' question shows the team's projected path via show_team_path.",
+    "A 'where does X play its knockout rounds' question answers with the fixed stadiums via show_team_path, never claiming they are TBD.",
   async test(t) {
-    await t.send("Show me Argentina's path to the final");
+    await t.send("¿Dónde juega Argentina los dieciseisavos y los octavos?");
 
     t.completed();
     t.calledTool("show_team_path");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
-      "Does the answer describe possible opponents on the way to the final?",
+      "Does the answer give a specific stadium for both knockout rounds asked about?",
     );
     t.judge.autoevals.closedQA(
       "Does the answer avoid claiming the knockout-stage stadiums are undecided, TBD, or not yet announced?",

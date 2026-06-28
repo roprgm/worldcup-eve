@@ -19,6 +19,8 @@ interface Opponent {
 
 export interface PathStepView {
   roundLabel: string;
+  /** The most likely stadium for this round — always known from the fixture. */
+  venue?: string;
   opponents: Opponent[];
 }
 
@@ -96,8 +98,13 @@ function Step({
         {!last && <span className="my-1 w-px flex-1 bg-surface-border" />}
       </div>
       <div className="pb-2">
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
-          {step.roundLabel}
+        <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
+          <span>{step.roundLabel}</span>
+          {step.venue && (
+            <span className="font-normal tracking-normal text-muted-foreground/55 normal-case">
+              {step.venue}
+            </span>
+          )}
         </p>
         {opponents.length === 0 ? (
           <p className="mt-1 text-[12px] text-muted-foreground/40 italic">

@@ -32,10 +32,19 @@ export interface PathOpponent {
   probability: number; // P(this is the opponent | team reaches the round)
 }
 
+export interface PathVenue {
+  venue: string;
+  probability: number; // P(team plays here | team reaches the round)
+}
+
 export interface PathStep {
   round: Round;
   reachProbability: number; // P(team reaches this round)
   opponents: PathOpponent[]; // sorted high→low; ~sums to 1
+  // The stadium(s) this round could be played at — always known, since every
+  // knockout match number has a fixed venue. More than one only when the team
+  // could still enter the bracket at different slots (see dependsOnGroup).
+  venues: PathVenue[]; // sorted high→low; ~sums to 1
 }
 
 export interface TeamPath {
@@ -94,6 +103,7 @@ function roundStep(
 ): PathStep {
   let reach = 0;
   const weight = new Map<string, number>();
+  const venueWeight = new Map<string, number>();
 
   for (const match of knockoutMatches) {
     if (match.round !== round) continue;
@@ -101,6 +111,7 @@ function roundStep(
       const here = teamProbIn(predictions, match.number, side, code);
       if (here <= 0) continue;
       reach += here;
+      venueWeight.set(match.venue, (venueWeight.get(match.venue) ?? 0) + here);
       const opponentSide: Side = side === "home" ? "away" : "home";
       for (const c of slotCandidates(predictions, match.number, opponentSide)) {
         if (c.probability <= 0) continue;
@@ -115,8 +126,14 @@ function roundStep(
           .map(([c, w]) => opponentView(c, w / reach))
           .sort((a, b) => b.probability - a.probability)
       : [];
+  const venues =
+    reach > 0
+      ? [...venueWeight]
+          .map(([venue, w]) => ({ venue, probability: w / reach }))
+          .sort((a, b) => b.probability - a.probability)
+      : [];
 
-  return { round, reachProbability: reach, opponents };
+  return { round, reachProbability: reach, opponents, venues };
 }
 
 // The set of group finishes (1st / 2nd / 3rd) that still have a real chance —
