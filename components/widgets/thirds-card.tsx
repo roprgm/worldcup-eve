@@ -7,9 +7,8 @@ import { type ReactNode, useId, useState } from "react";
 import { Flag } from "@/components/flags";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Stable keys for the skeleton placeholder rows (one per ranked third / slot).
+// Stable keys for the skeleton placeholder rows (one per ranked third).
 const RANKING_SKELETON = Array.from({ length: 12 }, (_, i) => `rank-${i}`);
-const ODDS_SKELETON = Array.from({ length: 5 }, (_, i) => `odds-${i}`);
 
 // One Round-of-32 slot a third-placed team could fill, with its chance.
 export interface ThirdSlotChance {
@@ -30,19 +29,9 @@ export interface ThirdRankingRow {
   chance: number; // 0–1, probability of finishing among the best eight thirds
 }
 
-export interface ThirdOddsCandidate {
-  code: string; // team code (a group's current third-placed team)
-  name?: string;
-  probability: number; // 0–1, chance this team fills the slot
-}
-
 type ThirdsRankingCardProps =
   | { loading: true }
   | { loading?: false; rows: ThirdRankingRow[] };
-type ThirdOddsCardProps = {
-  host: string; // group whose winner hosts the slot
-  match: number;
-} & ({ loading: true } | { loading?: false; candidates: ThirdOddsCandidate[] });
 
 function Card({
   title,
@@ -283,71 +272,6 @@ export function ThirdsRankingCard(props: ThirdsRankingCardProps) {
                 onToggle={() =>
                   setOpenGroup((g) => (g === row.group ? null : row.group))
                 }
-              />
-            ))}
-      </div>
-    </Card>
-  );
-}
-
-function OddsRow({
-  candidate,
-  lead,
-}: {
-  candidate: ThirdOddsCandidate;
-  lead: boolean;
-}) {
-  const pct = `${Math.round(candidate.probability * 100)}%`;
-  return (
-    <div className="flex h-5 items-center gap-1.5">
-      <Flag code={candidate.code} size={14} />
-      <span
-        title={candidate.name}
-        className={cn(
-          "w-9 shrink-0 text-[12px] font-semibold tracking-wide",
-          lead ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {candidate.code}
-      </span>
-      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
-        <span
-          className={cn(
-            "h-full rounded-[1px]",
-            lead ? "bg-pick" : "bg-muted-foreground/30",
-          )}
-          style={{ width: pct }}
-        />
-      </span>
-      <span
-        className={cn(
-          "w-9 text-right text-[12px] tabular-nums",
-          lead ? "font-semibold text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {pct}
-      </span>
-    </div>
-  );
-}
-
-/** One Round-of-32 third slot: which team fills it, with each candidate's
- *  chance. The header names the group winner that hosts it. */
-export function ThirdOddsCard(props: ThirdOddsCardProps) {
-  return (
-    <Card title={`Winner ${props.host}`} hint={`#${props.match}`}>
-      <div className="flex flex-col gap-1 py-2 pr-2 pl-2.5">
-        {props.loading
-          ? ODDS_SKELETON.map((key) => (
-              <div key={key} className="py-0.5">
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ))
-          : props.candidates.map((candidate, i) => (
-              <OddsRow
-                key={candidate.code}
-                candidate={candidate}
-                lead={i === 0}
               />
             ))}
       </div>
