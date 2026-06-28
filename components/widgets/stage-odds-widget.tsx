@@ -67,17 +67,13 @@ function resultFacts(results: Results): ResultFacts {
 // Join each team's per-round reach (BT model) with its group-stage advance
 // chance (the R32 column) and what the results have settled, keep everyone still
 // in the bracket, and order by title odds — the champion-market read laid out as
-// a full road-to-the-final table.
-function stageRows(
-  predictions: Predictions,
-  results?: Results,
-): StageOddsRow[] {
+// a full road-to-the-final table. Needs both inputs: without the results, settled
+// rounds would render as ~100% predictions and then flip to checks.
+function stageRows(predictions: Predictions, results: Results): StageOddsRow[] {
   const advanceByCode = new Map<string, number>();
   for (const group of predictions.groups)
     for (const team of group.teams) advanceByCode.set(team.code, team.advance);
-  const facts = results
-    ? resultFacts(results)
-    : { reached: new Map<string, number>(), eliminated: new Set<string>() };
+  const facts = resultFacts(results);
 
   return predictions.reach
     .map((team) => ({
@@ -116,8 +112,12 @@ export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
   const [showAll, setShowAll] = useState(!(top != null) || hasList);
   const predictions = usePredictions();
   const results = useResults();
+  // Wait for both: results carry the settled-round facts, so rendering on
+  // predictions alone would briefly show confirmed teams as ~100% before the
+  // checks land — a visible flip and layout shift.
   const all = useMemo(
-    () => (predictions ? stageRows(predictions, results) : undefined),
+    () =>
+      predictions && results ? stageRows(predictions, results) : undefined,
     [predictions, results],
   );
 
