@@ -150,7 +150,7 @@ type StageOddsCardProps =
  *  the cup — the "road to the final" at a glance. */
 export function StageOddsCard(props: StageOddsCardProps) {
   return (
-    <Card title="Road to the final" hint="Chance to reach each round">
+    <Card title="Chance to reach each round">
       <div className="@container flex flex-col gap-1 px-2.5 py-2">
         <StageGrid className="pb-1">
           <span className="pl-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
