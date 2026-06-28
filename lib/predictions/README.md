@@ -60,7 +60,9 @@ This is a deliberately minimal hook; wire it to your platform's real cache
 | `reach`           | per-team P(reach R16 / QF / SF / Final), plus the market champion price |
 | `groupScores`     | most-likely exact scoreline per unplayed group fixture, by id (`"A1"`..) |
 | `matchOdds`       | two-way home/away win chance per group fixture with a priced market    |
-| `matchWinOdds`    | BT win distribution per knockout match (73–104); head-to-head once decided |
+| `knockoutScores`  | most-likely exact scoreline per decided knockout match with a per-game market, by match number |
+| `knockoutOdds`    | the per-game market's direct read of each decided knockout match: regulation three-way (home/draw/away) + the two-way advance odds it implies |
+| `matchWinOdds`    | win distribution per knockout match (73–104). R32 comes straight from the per-game market; deeper rounds are the BT model |
 
 Teams are FIFA 3-letter codes (`BRA`, `ARG`, …). Probabilities are in `[0, 1]`,
 rounded to four decimals.
@@ -68,11 +70,12 @@ rounded to four decimals.
 ## How it works
 
 ```text
-fetch markets        market-api.ts    live Yes prices (CLOB midpoints + Gamma fallback)
-  → reach + R32      markets.ts        prices → reach targets and group-slot distributions
-  → fit + simulate   bradley-terry.ts  SPSA fit of 48 team strengths, then bracket simulation
-fetch group markets  group-markets.ts  exact-score (argmax) + moneyline (two-way) per fixture
-  → assemble         index.ts          everything above → one JSON snapshot
+fetch markets         market-api.ts       live Yes prices (CLOB midpoints + Gamma fallback)
+  → reach + R32       markets.ts          prices → reach targets and group-slot distributions
+fetch knockout games  knockout-markets.ts exact-score (argmax) + three-way/advance per decided KO match
+  → fit + simulate    bradley-terry.ts    SPSA fit of 48 strengths; decided R32 matches pinned to the market
+fetch group markets   group-markets.ts    exact-score (argmax) + moneyline (two-way) per group fixture
+  → assemble          index.ts            everything above → one JSON snapshot
 ```
 
 The model fits 48 latent team strengths so the simulated reach probabilities
@@ -83,17 +86,28 @@ model's `bracketChampion`. The third-place play-off (match 103) is filled from
 the simulation's beaten semi-finalists. Group fixtures get their predictions
 straight from the per-match markets (`group-markets.ts`).
 
+**Decided knockout matches aren't inferred.** Once a Round-of-32 slot is
+settled, Polymarket prices that exact matchup directly (a per-game three-way
+plus an exact-score market). For those matches we skip the BT pairwise estimate
+and pin the winner to the market's two-way **advance** odds (the regulation
+win-odds renormalised, which splits the draw in proportion to each side's win
+chance). That override feeds the rest of the bracket too, so the R16 → Final
+inference starts from the market's real R32 result instead of the fit's guess.
+As deeper rounds get decided and priced, the same path covers them.
+
 ## Files
 
 | file               | role                                                            |
 | ------------------ | --------------------------------------------------------------- |
 | `index.ts`         | `buildPredictions()` + the output types — the entry point       |
 | `markets.ts`       | futures prices → reach targets and group-slot distributions     |
-| `bradley-terry.ts` | the BT model: SPSA fit + bracket simulation                     |
-| `group-markets.ts` | per-fixture exact scoreline + two-way win odds                  |
+| `bradley-terry.ts` | the BT model: SPSA fit + bracket simulation (with winner overrides) |
+| `group-markets.ts` | per-group-fixture exact scoreline + two-way win odds            |
+| `knockout-markets.ts` | per-knockout-match exact scoreline + three-way / advance odds |
 | `market-api.ts`    | fetch live prices (rate-limited CLOB + Gamma)                   |
 | `markets.json`     | futures catalog (advance / reach / elim / champion token ids)   |
-| `group-markets.json` | per-fixture catalog (exact-score + moneyline token ids)       |
+| `group-markets.json` | per-group-fixture catalog (exact-score + moneyline token ids) |
+| `knockout-markets.json` | per-knockout-match catalog (exact-score + three-way token ids) |
 | `cli.ts`           | print a snapshot as JSON                                        |
 | `sync.ts`          | regenerate `markets.json` (build-time tool)                     |
 
@@ -122,15 +136,15 @@ until the next `sync` bakes it in. So nothing is ever missing; re-syncing just
 moves work from the runtime fallback into the static file.
 
 ```sh
-bun run lib/predictions/sync.ts   # rewrites markets.json + group-markets.json
+bun run lib/predictions/sync.ts   # rewrites markets.json + group-markets.json + knockout-markets.json
 ```
 
 `sync` discovers markets from Polymarket's Gamma API (open *and* closed events,
 so settled prices get baked), maps team labels to FIFA codes via the `tournament`
-module, and refreshes both catalogs. Run it periodically (e.g. daily, or after a
-matchday) and commit the result. `group-markets.json` holds only still-unplayed
-group fixtures — once a match is played its result comes from the `results`
-module, not a forecast.
+module, and refreshes all three catalogs. Run it periodically (e.g. daily, or
+after a matchday) and commit the result. `group-markets.json` and
+`knockout-markets.json` hold only still-unplayed fixtures — once a match is
+played its result comes from the `results` module, not a forecast.
 
 ## Notes
 

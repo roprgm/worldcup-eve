@@ -10,6 +10,7 @@ const TAGS = ["105309", "105315"]; // group futures + tournament futures
 const SERIES_ID = "11433"; // soccer-fifwc — the per-game events live here
 const OUT = new URL("./markets.json", import.meta.url);
 const GROUP_OUT = new URL("./group-markets.json", import.meta.url);
+const KNOCKOUT_OUT = new URL("./knockout-markets.json", import.meta.url);
 
 // Write a catalog with one array item per line: compact, but per-item git diffs.
 function writeCatalog(
@@ -344,6 +345,82 @@ export async function buildGroupCatalog(): Promise<{
   return { matches };
 }
 
+interface KnockoutScoreMarket {
+  a: number; // goals for teams[0]
+  b: number; // goals for teams[1]
+  token: string;
+}
+interface KnockoutCatalogMatch {
+  teams: [string, string]; // FIFA codes, in the market's own order
+  eventId: string;
+  win: Record<string, string>; // team code → "Will X win?" Yes token
+  draw?: string; // "ends in a draw" Yes token
+  scores: KnockoutScoreMarket[];
+}
+
+// Per still-open knockout fixture (R32 onward): the per-game moneyline (each
+// team's "win" Yes token plus the draw token) and the exact-score tokens. Keyed
+// by the actual team pair — the bracket position is resolved at runtime, since a
+// later-round game only exists once its feeders are decided.
+export async function buildKnockoutCatalog(): Promise<{
+  matches: KnockoutCatalogMatch[];
+}> {
+  const games = (await fetchGameEvents()).filter((e) => !e.closed);
+  const matches: KnockoutCatalogMatch[] = [];
+
+  for (const game of games) {
+    const [a, b] = (game.teams ?? []).map((t) => codeByName.get(norm(t.name)));
+    if (!a || !b) continue;
+    if (groupFixture(a, b)) continue; // a group fixture — buildGroupCatalog owns it
+
+    const win: Record<string, string> = {};
+    let draw: string | undefined;
+    for (const m of game.markets) {
+      const q = (m.question ?? "").match(
+        /^Will (.+?) win on \d{4}-\d{2}-\d{2}\?$/i,
+      );
+      if (q) {
+        const code = codeByName.get(norm(q[1]));
+        const token = code ? yesToken(m) : null;
+        if (code && token) win[code] = token;
+      } else if (/end in a draw\?$/i.test(m.question ?? "")) {
+        const token = yesToken(m);
+        if (token) draw = token;
+      }
+    }
+
+    // Exact scores from the `-exact-score` sibling, oriented to teams[0]/teams[1].
+    const exact = await fetchExactScore(game.slug);
+    const scores: KnockoutScoreMarket[] = [];
+    for (const m of exact?.markets ?? []) {
+      const t = (m.groupItemTitle ?? "").match(
+        /^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/,
+      ); // "{home} h - a {away}"
+      const homeId = t ? codeByName.get(norm(t[1])) : undefined;
+      const tokens = JSON.parse(m.clobTokenIds || "[]") as string[];
+      if (!t || !homeId || !tokens.length) continue;
+      const [hg, ag] = [Number(t[2]), Number(t[3])];
+      scores.push({
+        a: homeId === a ? hg : ag,
+        b: homeId === a ? ag : hg,
+        token: tokens[0],
+      });
+    }
+
+    if (Object.keys(win).length || scores.length)
+      matches.push({
+        teams: [a, b],
+        eventId: exact?.id ?? game.id,
+        win,
+        ...(draw ? { draw } : {}),
+        scores,
+      });
+  }
+
+  matches.sort((x, y) => x.teams.join().localeCompare(y.teams.join()));
+  return { matches };
+}
+
 // Run as a script: write both catalogs and report coverage.
 if ((import.meta as { main?: boolean }).main) {
   const stamp = new Date().toISOString();
@@ -374,5 +451,15 @@ if ((import.meta as { main?: boolean }).main) {
   const withOdds = matches.filter((m) => m.moneyline).length;
   console.log(
     `Wrote group-markets.json: ${matches.length} open fixtures (${withOdds} with moneyline)`,
+  );
+
+  const knockout = await buildKnockoutCatalog();
+  writeCatalog(KNOCKOUT_OUT, "matches", stamp, knockout.matches);
+  const withMoneyline = knockout.matches.filter(
+    (m) => Object.keys(m.win).length >= 2,
+  ).length;
+  const withScores = knockout.matches.filter((m) => m.scores.length).length;
+  console.log(
+    `Wrote knockout-markets.json: ${knockout.matches.length} open fixtures (${withMoneyline} with moneyline, ${withScores} with exact scores)`,
   );
 }
