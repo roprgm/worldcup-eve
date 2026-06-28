@@ -4,6 +4,11 @@ A minimal example agent built with [eve](https://github.com/vercel/eve). See `RE
 what each file demonstrates. The full eve docs are bundled at `node_modules/eve/docs/` — read
 the relevant guide before changing agent code.
 
+## Production logs
+
+Deployed to Vercel as project `wc26-chat` (domain `wc26.chat`) under scope `labs-lite`. Check prod
+logs with: `vercel logs wc26.chat --environment production --scope labs-lite --token "$VERCEL_TOKEN"`.
+
 ## Component organization
 
 - `components/ai-elements/` — vendored primitives from the
