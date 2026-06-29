@@ -9,6 +9,7 @@
 // documented on the interfaces below.
 
 import { Flag } from "@/components/flags";
+import { Card } from "@/components/ui/card";
 
 import { cn } from "cnfast";
 
@@ -235,7 +236,7 @@ export function MatchWidget({
   prediction,
 }: MatchWidgetProps) {
   return (
-    <div className="flex h-36 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
+    <Card className="flex h-36 flex-col">
       <div className="flex h-7 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-foreground/70">
           #{number}
@@ -259,6 +260,6 @@ export function MatchWidget({
         </div>
         <TeamColumn team={away} status={status} />
       </div>
-    </div>
+    </Card>
   );
 }

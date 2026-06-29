@@ -3,6 +3,7 @@ import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Flag } from "@/components/flags";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type ResultStatus = "predicted" | "final" | "live";
@@ -141,7 +142,7 @@ function GroupCardShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
+    <Card className="flex min-w-0 flex-col">
       <div className="flex h-6 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {(live || predicted) && (
@@ -152,7 +153,7 @@ function GroupCardShell({
         )}
       </div>
       {children}
-    </div>
+    </Card>
   );
 }
 

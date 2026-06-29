@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MessageSquarePlus } from "lucide-react";
 import { BallIcon, GitHubIcon } from "@/components/icons";
 import { SiteNav } from "@/components/site-nav";
+import { buttonVariants } from "@/components/ui/button";
 
 export function Header() {
   return (
@@ -29,7 +30,11 @@ export function Header() {
             href="/"
             aria-label="New chat"
             title="New chat"
-            className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-surface text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground sm:w-auto sm:gap-1.5 sm:px-2.5"
+            className={buttonVariants({
+              variant: "outline",
+              size: "icon",
+              className: "sm:w-auto sm:px-2.5",
+            })}
           >
             <MessageSquarePlus className="size-4" />
             <span className="hidden sm:inline">New chat</span>
@@ -41,7 +46,7 @@ export function Header() {
             rel="noreferrer"
             aria-label="Open GitHub repository"
             title="GitHub repository"
-            className="flex size-8 items-center justify-center rounded-md text-subtle-foreground transition-colors hover:bg-surface hover:text-foreground"
+            className={buttonVariants({ variant: "ghost", size: "icon" })}
           >
             <GitHubIcon className="size-[20px]" />
           </a>
