@@ -2,16 +2,10 @@
 
 import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
-import {
-  type ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
+import { Popover } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CellPath, PathOpponent } from "@/lib/predictions/team-path";
 import type { Round } from "@/lib/tournament";
@@ -249,104 +243,6 @@ function CellExplain({ path }: { path: CellPath }) {
   );
 }
 
-// Tooltip anchored to a cell, portaled and fixed so the card can't clip it and
-// it shifts no layout. Follows the anchor; closes on outside click or Escape.
-function CellPopover({
-  anchor,
-  onClose,
-  children,
-}: {
-  anchor: HTMLElement;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{
-    top: number;
-    left: number;
-    side: "top" | "bottom";
-    arrow: number; // caret offset from the popover's left edge
-  } | null>(null);
-
-  useLayoutEffect(() => {
-    const place = () => {
-      const el = ref.current;
-      if (!el) return;
-      if (!anchor.isConnected) return onClose();
-      const a = anchor.getBoundingClientRect();
-      const { offsetWidth: w, offsetHeight: h } = el;
-      const margin = 8;
-      const center = a.left + a.width / 2;
-      const left = Math.min(
-        Math.max(margin, center - w / 2),
-        window.innerWidth - w - margin,
-      );
-      const above = a.top - h - 6;
-      const flip =
-        a.bottom + 6 + h > window.innerHeight - margin && above > margin;
-      const top = flip ? above : a.bottom + 6;
-      const arrow = Math.min(Math.max(center - left, 14), w - 14);
-      setPos({ top, left, side: flip ? "bottom" : "top", arrow });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [anchor, onClose]);
-
-  useEffect(() => {
-    const onPointer = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (!ref.current?.contains(target) && !anchor.contains(target)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [anchor, onClose]);
-
-  return createPortal(
-    <div
-      ref={ref}
-      style={{
-        top: pos?.top ?? 0,
-        left: pos?.left ?? 0,
-        visibility: pos ? "visible" : "hidden",
-      }}
-      className={cn(
-        "fixed z-50 w-[min(20rem,calc(100vw-1rem))]",
-        pos && "animate-pop-in",
-      )}
-    >
-      <div
-        role="dialog"
-        className="max-h-[60vh] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl"
-      >
-        {children}
-      </div>
-      {pos && (
-        <span
-          aria-hidden
-          style={{ left: pos.arrow - 4 }}
-          className={cn(
-            "absolute size-2 rotate-45 border-border-strong bg-card",
-            pos.side === "top"
-              ? "-top-1 border-t border-l"
-              : "-bottom-1 border-r border-b",
-          )}
-        />
-      )}
-    </div>,
-    document.body,
-  );
-}
-
 function StageRow({
   row,
   openRound,
@@ -468,13 +364,14 @@ export function StageOddsCard(props: StageOddsCardProps) {
       </div>
       {open && breakdown && (
         // Key per cell so it replays its entrance when moving between cells.
-        <CellPopover
+        <Popover
           key={`${open.code}:${open.round}`}
           anchor={open.anchor}
           onClose={() => setOpen(null)}
+          className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
         >
           <CellExplain path={breakdown} />
-        </CellPopover>
+        </Popover>
       )}
     </Card>
   );
