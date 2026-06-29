@@ -630,7 +630,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           key={open.id}
           anchor={open.anchor}
           onClose={() => setOpen(null)}
-          className="w-48 p-2.5"
+          className="w-56 p-2.5"
         >
           <OddsList
             title={content.title}
