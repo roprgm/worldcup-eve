@@ -253,15 +253,20 @@ function RoundFlag({
   code,
   size,
   className,
+  dim,
 }: {
   code?: string;
   size: string;
   className?: string;
+  /** Fade the flag into the card background — for predicted (not-yet-settled)
+   *  spots. The circle stays opaque, so the connectors behind it stay hidden. */
+  dim?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "relative block shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-surface-border",
+        "relative block shrink-0 overflow-hidden rounded-full ring-1 ring-surface-border",
+        dim ? "bg-card" : "bg-muted",
         className,
       )}
       style={{ width: size, height: size }}
@@ -269,7 +274,10 @@ function RoundFlag({
       <Flag
         code={code}
         size={`calc(${size} * 4 / 3)`}
-        className="absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0"
+        className={cn(
+          "absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0",
+          dim && "opacity-40",
+        )}
       />
     </span>
   );
@@ -406,13 +414,12 @@ function PendingNode({
         aria-expanded={open}
         className="block rounded-full"
       >
+        {/* dim fades the flag into the card bg without revealing the lines. */}
         <RoundFlag
           code={code}
           size="calc(var(--cf) * 0.82)"
-          className={cn(
-            "opacity-45 transition-opacity",
-            open && "opacity-90 ring-2 ring-pick",
-          )}
+          dim={!open}
+          className={cn(open && "ring-2 ring-pick")}
         />
       </button>
     );
