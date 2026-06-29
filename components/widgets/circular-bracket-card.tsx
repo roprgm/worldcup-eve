@@ -481,9 +481,9 @@ function OddsList({
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
     <>
-      <p className="text-[11px] font-medium tracking-wide text-foreground/80">
-        {title}
-      </p>
+  <p className="text-[12px] font-medium tracking-wide text-foreground/80">
+  {title}
+  </p>
       {subtitle && (
         <p className="mb-1.5 text-[10px] text-muted-foreground/70">
           {subtitle}
@@ -564,7 +564,7 @@ function UnsettledNode({
         className={cn(
           "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors duration-300 ease-out",
           open
-            ? "border-foreground/80 text-foreground"
+            ? "border-foreground/65 text-foreground"
             : "border-surface-border text-muted-foreground group-hover:text-foreground",
         )}
         style={{
@@ -591,7 +591,7 @@ function UnsettledNode({
             faded
             className={cn(
               "transition-[filter] group-hover:brightness-110",
-              open ? "ring-foreground/80" : "ring-surface-divider",
+              open ? "ring-foreground/65" : "ring-surface-divider",
             )}
           />
         </span>
@@ -867,7 +867,7 @@ export function CircularBracketCard({
         <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
         </span>
-        <span className="min-w-0 truncate text-[11px] text-muted-foreground/55">
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
           · tap a node to see its chances
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
