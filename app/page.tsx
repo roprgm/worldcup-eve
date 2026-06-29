@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
@@ -69,20 +69,14 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { agent, start } = useChat();
+  const { start } = useChat();
   const pathname = usePathname();
   const [input, setInput] = useState("");
-  const lastPathname = useRef<string | null>(null);
 
   const handleSubmit = useCallback(() => {
     start(input);
     setInput("");
   }, [start, input]);
-
-  useEffect(() => {
-    if (pathname === "/" && lastPathname.current !== "/") agent.reset();
-    lastPathname.current = pathname;
-  }, [agent, pathname]);
 
   if (pathname.startsWith("/chat/")) return <ChatView />;
 
