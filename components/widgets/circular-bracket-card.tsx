@@ -3,7 +3,15 @@
 import { cn } from "cnfast";
 import { addMinutes, format } from "date-fns";
 import { Info, Trophy } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import {
+  type CSSProperties,
+  createContext,
+  type ReactNode,
+  type RefCallback,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 
 import {
   CellPathExplain,
@@ -12,6 +20,12 @@ import {
 import { Flag } from "@/components/flags";
 import { Card } from "@/components/ui/card";
 import { Popover } from "@/components/ui/popover";
+import {
+  type Cursor,
+  type ProximityField,
+  type ProximityNode,
+  useProximityField,
+} from "@/hooks/use-proximity-field";
 import type { CellPath } from "@/lib/predictions/team-path";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
@@ -105,7 +119,7 @@ function polar(deg: number, r: number): { x: number; y: number } {
  *  edge: the outer flags appear first, nodes nearer the centre last. */
 function rippleDelay(x: number, y: number): number {
   const r = Math.hypot(x - C, y - C);
-  return round2((1 - r / R_FLAG) * 0.3);
+  return round2((1 - r / R_FLAG) * 0.5);
 }
 
 /** SVG arc along radius `r` from `a1` to `a2` (the bar joining a node's two
@@ -443,10 +457,11 @@ function Connectors({ view }: { view?: CircularBracketView }) {
 }
 
 /** A single team's chance, as a flag + code + bar + percentage — the row style
- *  used across the prediction widgets. */
+ *  used across the prediction widgets. Rows fade in and their bars sweep out
+ *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   return (
-    <div className="flex h-5 items-center gap-1.5">
+    <div className="animate-fade-in flex h-5 items-center gap-1.5">
       <RoundFlag code={c.code} size="14px" />
       <span
         title={c.name}
@@ -457,10 +472,10 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       >
         {c.code}
       </span>
-      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
         <span
           className={cn(
-            "h-full rounded-[1px]",
+            "animate-bar-grow h-full origin-left rounded-[1px]",
             top ? "bg-pick" : "bg-muted-foreground/30",
           )}
           style={{ width: formatPct(c.probability) }}
@@ -643,18 +658,97 @@ function FlagNode({
 }
 
 /** A node still waiting on its data: a plain pulsing circle, kept distinct from
- *  the "?" so loading never reads as an undecided match. */
-function NodeSkeleton({ size }: { size: string }) {
+ *  the "?" so loading never reads as an undecided match. Sits under the real node
+ *  and fades out as it arrives, so it pulses only while `pulse` is set. */
+function NodeSkeleton({
+  size,
+  pulse = true,
+  className,
+  style,
+}: {
+  size: string;
+  pulse?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
     <span
-      className="block animate-pulse rounded-full bg-surface-2 ring-1 ring-surface-border"
-      style={{ width: `calc(${size})`, height: `calc(${size})` }}
+      className={cn(
+        "block rounded-full bg-surface-2 ring-1 ring-surface-border",
+        pulse && "animate-pulse",
+        className,
+      )}
+      style={{ width: `calc(${size})`, height: `calc(${size})`, ...style }}
     />
   );
 }
 
 // Every outer/inner node is the same size; only the centre champion differs.
 const NODE_SIZE = "calc(var(--cf) * 0.85)";
+const NODE_FACTOR = 0.85; // node size as a fraction of --cf (matches NODE_SIZE)
+
+// ── Cursor-proximity "magnetism" ───────────────────────────────────────────
+// Nodes grow a touch as the cursor nears their centre. The growth is capped at
+// MAX_GROW px and falls off with a Gaussian in the 1000×1000 viewBox space, so a
+// node swells only when the cursor is genuinely close and the effect tapers off
+// smoothly to its neighbours.
+const MAX_GROW = 8; // px a node gains at the cursor's exact centre
+const PROXIMITY_SIGMA = 120; // Gaussian falloff radius, in viewBox units
+
+// A node's base size as a fraction of --cf, so the field can size its +MAX_GROW
+// growth exactly (a flag fills the node, an unsettled "?" is smaller).
+interface NodeMeta {
+  factor: number;
+}
+
+const ProximityContext = createContext<ProximityField<NodeMeta> | null>(null);
+
+/** The current --cf value (px) derived from the container width, matching the
+ *  `clamp(20px, 7.2cqw, 44px)` set in CSS — lets us size the +MAX_GROW growth
+ *  exactly without reading each node's box. */
+function cfPx(width: number): number {
+  return Math.max(20, Math.min((7.2 * width) / 100, 44));
+}
+
+/** Per-frame effect for the ring: scale a node up by up to MAX_GROW px, falling
+ *  off with a Gaussian in the 1000×1000 viewBox space as the cursor recedes from
+ *  its centre. A null cursor (pointer gone) resets it to its base size. */
+function scaleByProximity(
+  node: ProximityNode<NodeMeta>,
+  cursor: Cursor | null,
+  rect: DOMRect,
+): void {
+  if (!cursor) {
+    node.el.style.transform = "scale(1)";
+    return;
+  }
+  const px = (cursor.x / rect.width) * SIZE;
+  const py = (cursor.y / rect.height) * SIZE;
+  const d = Math.hypot(px - node.x, py - node.y);
+  const f = Math.exp(-(d * d) / (2 * PROXIMITY_SIGMA * PROXIMITY_SIGMA));
+  const base = cfPx(rect.width) * node.meta.factor;
+  const scale = f > 0.01 ? (base + MAX_GROW * f) / base : 1;
+  node.el.style.transform = `scale(${round2(scale)})`;
+}
+
+/** Registers a node's positioned wrapper with the proximity field and returns a
+ *  ref callback for it, so the field can scale it as the cursor approaches. */
+function useProximityRef(
+  id: string,
+  x: number,
+  y: number,
+  factor: number,
+): RefCallback<HTMLDivElement> {
+  const field = useContext(ProximityContext);
+  return useCallback(
+    (el: HTMLDivElement | null) => {
+      if (!field) return;
+      if (el) field.register(id, { x, y, meta: { factor }, el });
+      else field.unregister(id);
+    },
+    [field, id, x, y, factor],
+  );
+}
 
 /** What a node should paint, read off the view. `flagCode` means the team is
  *  locked in; otherwise `predictedCode` feeds the unsettled overlay. */
@@ -703,7 +797,10 @@ function matchModel(
 }
 
 /** One bracket node: a skeleton while its data loads, a locked-in flag once the
- *  team is known, or a tappable "?" onto the chances in between. */
+ *  team is known, or a tappable "?" onto the chances in between. The node ripples
+ *  in once on mount with the skeleton already in place; when data arrives the
+ *  skeleton fades out as the real node fades in over the same spot, so there's no
+ *  disappear-and-regrow flash between the two states. */
 function BracketNode({
   model,
   loading,
@@ -711,33 +808,61 @@ function BracketNode({
   openId,
   onToggle,
 }: NodeProps & { model: NodeModel; loading: boolean; predict?: boolean }) {
+  // Reuse the mount ripple's outside→inside timing so the nodes wave in from the
+  // edge when the data arrives, rather than all settling from skeleton at once.
+  const wave = rippleDelay(model.x, model.y);
+  // The skeleton never fades to empty: it stays opaque and shrinks to the loaded
+  // node's base size as the (opaque-based) content fades in on top, so it ends up
+  // fully covered. A flag fills the whole node; an unsettled "?" is smaller.
+  const settleScale = loading || model.flagCode ? 1 : 0.82;
+  const proximityRef = useProximityRef(model.id, model.x, model.y, NODE_FACTOR);
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(model.x), top: pct(model.y) }}
     >
-      <NodeReveal delay={rippleDelay(model.x, model.y)}>
-        {loading ? (
-          <NodeSkeleton size={NODE_SIZE} />
-        ) : model.flagCode ? (
-          <FlagNode
-            id={model.id}
-            code={model.flagCode}
+      <NodeReveal delay={wave}>
+        <div
+          ref={proximityRef}
+          className="relative grid place-items-center transition-transform duration-150 ease-out [will-change:transform]"
+          style={{ width: `calc(${NODE_SIZE})`, height: `calc(${NODE_SIZE})` }}
+        >
+          <NodeSkeleton
             size={NODE_SIZE}
-            explainable={model.explainable}
-            openId={openId}
-            onToggle={onToggle}
+            pulse={loading}
+            className="col-start-1 row-start-1 transition-transform duration-300 ease-out"
+            style={{
+              transform: `scale(${settleScale})`,
+              transitionDelay: loading ? undefined : `${wave}s`,
+            }}
           />
-        ) : (
-          <UnsettledNode
-            id={model.id}
-            code={model.predictedCode}
-            size={NODE_SIZE}
-            predict={predict}
-            openId={openId}
-            onToggle={onToggle}
-          />
-        )}
+          {!loading && (
+            <div
+              className="col-start-1 row-start-1 animate-fade-in"
+              style={{ animationDelay: `${wave}s` }}
+            >
+              {model.flagCode ? (
+                <FlagNode
+                  id={model.id}
+                  code={model.flagCode}
+                  size={NODE_SIZE}
+                  explainable={model.explainable}
+                  openId={openId}
+                  onToggle={onToggle}
+                />
+              ) : (
+                <UnsettledNode
+                  id={model.id}
+                  code={model.predictedCode}
+                  size={NODE_SIZE}
+                  predict={predict}
+                  openId={openId}
+                  onToggle={onToggle}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </NodeReveal>
     </div>
   );
@@ -752,35 +877,43 @@ function ChampionNode({
 }: NodeProps & { view?: CircularBracketView }) {
   const win = view?.decided.get(104);
   const isOpen = openId === "champion";
+  const proximityRef = useProximityRef("champion", C, C, 1);
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: "50%", top: "50%" }}
     >
       <NodeReveal delay={0}>
-        {win ? (
-          <button
-            type="button"
-            onClick={(e) => onToggle("champion", e.currentTarget)}
-            aria-label="Show title odds"
-            className="block rounded-full ring-2 ring-pick"
-          >
-            <RoundFlag code={win.code} size="var(--cf)" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => onToggle("champion", e.currentTarget)}
-            aria-label="Show title odds"
-            aria-expanded={isOpen}
-            className={cn(
-              "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
-              isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
-            )}
-          >
-            <Trophy style={{ width: "55%", height: "55%" }} />
-          </button>
-        )}
+        <div
+          ref={proximityRef}
+          className="transition-transform duration-150 ease-out [will-change:transform]"
+        >
+          {win ? (
+            <button
+              type="button"
+              onClick={(e) => onToggle("champion", e.currentTarget)}
+              aria-label="Show title odds"
+              className="block rounded-full ring-2 ring-pick"
+            >
+              <RoundFlag code={win.code} size="var(--cf)" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => onToggle("champion", e.currentTarget)}
+              aria-label="Show title odds"
+              aria-expanded={isOpen}
+              className={cn(
+                "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
+                isOpen
+                  ? "border-pick text-pick"
+                  : "border-pick/50 text-pick/80",
+              )}
+            >
+              <Trophy style={{ width: "55%", height: "55%" }} />
+            </button>
+          )}
+        </div>
       </NodeReveal>
     </div>
   );
@@ -877,7 +1010,7 @@ function CircularBracketHelp() {
 }
 
 /** Compact header switch to turn the predicted-flags overlay on or off. */
-function PredictToggle({
+export function PredictToggle({
   on,
   onChange,
 }: {
@@ -913,24 +1046,26 @@ function PredictToggle({
   );
 }
 
-/** The knockout bracket as a ring of flags and chevrons. Structure renders
- *  immediately; flags lock in and chances open as the market resolves. */
-export function CircularBracketCard({
+/** The interactive ring on its own — connectors, nodes, the centre champion and
+ *  the popover each opens on tap. Sizing is container-relative (cqw) so it fills
+ *  whatever width its parent gives it; pass `className` to cap or pad it. Used
+ *  bare on the home and wrapped in a card on the predictions page. */
+export function CircularBracketRing({
   view,
-  predict: predictDefault = false,
   teamPaths,
+  predict = false,
+  className,
 }: {
   view?: CircularBracketView;
-  /** Initial state of the predictions toggle: show the leading candidate's flag
-   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
-  predict?: boolean;
   /** Road to the final per locked-in team, making those flags tappable. */
   teamPaths?: TeamPaths;
+  /** Show the leading candidate's flag (faded) in unsettled nodes instead of "?". */
+  predict?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
-  const [predict, setPredict] = useState(predictDefault);
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
@@ -941,28 +1076,23 @@ export function CircularBracketCard({
   const teamPath = teamCode ? teamPaths?.get(teamCode) : undefined;
   const content = open && view && !teamPath ? openContent(view, open.id) : null;
 
+  const { containerRef, field, onPointerMove, onPointerLeave } =
+    useProximityField<NodeMeta>(scaleByProximity);
+
   return (
-    // `isolate` keeps the nodes' z-index inside this card so they don't paint
-    // over the page's sticky section header.
-    <Card className="isolate">
-      <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
-        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
-          Prediction bracket
-        </span>
-        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
-          · tap a node to see its chances
-        </span>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <CircularBracketHelp />
-        </div>
-      </div>
-      <div className="px-2 py-4 sm:px-3">
-        <div className="mb-2 flex justify-end px-1">
-          <PredictToggle on={predict} onChange={setPredict} />
-        </div>
-        {/* Sizes are container-relative (cqw), so the whole ring fits any width
-            without scrolling and the flags scale up with it. */}
-        <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
+    <>
+      {/* Sizes are container-relative (cqw), so the whole ring fits any width
+          without scrolling and the flags scale up with it. */}
+      <div
+        ref={containerRef}
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+        className={cn(
+          "relative mx-auto aspect-square w-full [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]",
+          className,
+        )}
+      >
+        <ProximityContext.Provider value={field}>
           <Connectors view={view} />
           {GEOMETRY.nodes.map((node) => (
             <BracketNode
@@ -985,28 +1115,71 @@ export function CircularBracketCard({
             />
           ))}
           <ChampionNode view={view} openId={openId} onToggle={onToggle} />
+        </ProximityContext.Provider>
+      </div>
+      <Popover
+        open={Boolean(open && (teamPath || content))}
+        anchor={open?.anchor ?? null}
+        onClose={() => setOpen(null)}
+        className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
+      >
+        {teamPath ? (
+          <CellPathExplain path={teamPath} />
+        ) : (
+          content && (
+            <OddsList
+              title={content.title}
+              subtitle={content.subtitle}
+              odds={content.odds}
+            />
+          )
+        )}
+      </Popover>
+    </>
+  );
+}
+
+/** The knockout bracket as a ring of flags and chevrons. Structure renders
+ *  immediately; flags lock in and chances open as the market resolves. */
+export function CircularBracketCard({
+  view,
+  predict: predictDefault = false,
+  teamPaths,
+}: {
+  view?: CircularBracketView;
+  /** Initial state of the predictions toggle: show the leading candidate's flag
+   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
+  predict?: boolean;
+  /** Road to the final per locked-in team, making those flags tappable. */
+  teamPaths?: TeamPaths;
+}) {
+  const [predict, setPredict] = useState(predictDefault);
+  return (
+    // `isolate` keeps the nodes' z-index inside this card so they don't paint
+    // over the page's sticky section header.
+    <Card className="isolate">
+      <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
+        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
+          Prediction bracket
+        </span>
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
+          · tap a node to see its chances
+        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <CircularBracketHelp />
         </div>
       </div>
-      {open && (teamPath || content) && (
-        <Popover
-          key={open.id}
-          anchor={open.anchor}
-          onClose={() => setOpen(null)}
-          className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
-        >
-          {teamPath ? (
-            <CellPathExplain path={teamPath} />
-          ) : (
-            content && (
-              <OddsList
-                title={content.title}
-                subtitle={content.subtitle}
-                odds={content.odds}
-              />
-            )
-          )}
-        </Popover>
-      )}
+      <div className="px-2 py-4 sm:px-3">
+        <div className="mb-2 flex justify-end px-1">
+          <PredictToggle on={predict} onChange={setPredict} />
+        </div>
+        <CircularBracketRing
+          view={view}
+          teamPaths={teamPaths}
+          predict={predict}
+          className="max-w-[680px]"
+        />
+      </div>
     </Card>
   );
 }

@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 export function Header() {
   return (
     <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-4 sm:px-6">
         {/* Home is the empty prompt — the new-chat screen. */}
         <Link
           href="/"
