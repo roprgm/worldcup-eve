@@ -3,12 +3,10 @@
 
 import { get, put } from "@vercel/blob";
 
-// A static read/write token, or OIDC (the runtime's token + connected store id).
+// Configured when a store is connected (BLOB_STORE_ID, read with the runtime's
+// OIDC token, which the SDK resolves itself) or a static token is set.
 const enabled = () =>
-  Boolean(
-    process.env.BLOB_READ_WRITE_TOKEN ||
-      (process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID),
-  );
+  Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
 
 /** Parse the private JSON blob at `pathname`, or null when absent/disabled. */
 export async function readJson<T>(pathname: string): Promise<T | null> {
