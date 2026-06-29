@@ -405,16 +405,44 @@ function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
   );
 }
 
+/** A node whose team isn't settled yet, in "predict" mode: the current
+ *  front-runner's flag shown faded, so it reads as a likely outcome rather than
+ *  a locked-in result. Still opens the full chances on tap. */
+function PredictedNode({
+  id,
+  code,
+  openId,
+  onToggle,
+}: NodeProps & { id: string; code: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => onToggle(id, e.currentTarget)}
+      aria-label="Show chances"
+      aria-expanded={openId === id}
+      className={cn(
+        "block rounded-full opacity-45 grayscale-[0.3] transition-opacity hover:opacity-75",
+        openId === id && "opacity-90 ring-2 ring-pick/60",
+      )}
+    >
+      <RoundFlag code={code} size="var(--cf)" className="border border-dashed border-surface-border" />
+    </button>
+  );
+}
+
 /** An outer Round-of-32 slot: the team's flag once the group is decided, else a
- *  question-mark circle onto the candidates for that spot. */
+ *  question-mark circle (or, in `predict` mode, the faded front-runner's flag)
+ *  onto the candidates for that spot. */
 function SlotNode({
   pos,
   view,
+  predict,
   openId,
   onToggle,
-}: NodeProps & { pos: FlagPos; view?: CircularBracketView }) {
+}: NodeProps & { pos: FlagPos; view?: CircularBracketView; predict?: boolean }) {
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
+  const id = `slot:${pos.match}:${pos.side}`;
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
@@ -422,12 +450,15 @@ function SlotNode({
     >
       {confirmed(odds) && top ? (
         <RoundFlag code={top.code} size="var(--cf)" />
-      ) : (
-        <UnknownNode
-          id={`slot:${pos.match}:${pos.side}`}
+      ) : predict && top ? (
+        <PredictedNode
+          id={id}
+          code={top.code}
           openId={openId}
           onToggle={onToggle}
         />
+      ) : (
+        <UnknownNode id={id} openId={openId} onToggle={onToggle} />
       )}
     </div>
   );
@@ -438,10 +469,17 @@ function SlotNode({
 function MatchNode({
   node,
   view,
+  predict,
   openId,
   onToggle,
-}: NodeProps & { node: InnerNode; view?: CircularBracketView }) {
+}: NodeProps & {
+  node: InnerNode;
+  view?: CircularBracketView;
+  predict?: boolean;
+}) {
   const win = view?.decided.get(node.match);
+  const top = lead(view?.matchOdds.get(node.match));
+  const id = `match:${node.match}`;
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
@@ -449,12 +487,15 @@ function MatchNode({
     >
       {win ? (
         <RoundFlag code={win.code} size="var(--cf)" />
-      ) : (
-        <UnknownNode
-          id={`match:${node.match}`}
+      ) : predict && top ? (
+        <PredictedNode
+          id={id}
+          code={top.code}
           openId={openId}
           onToggle={onToggle}
         />
+      ) : (
+        <UnknownNode id={id} openId={openId} onToggle={onToggle} />
       )}
     </div>
   );
@@ -577,7 +618,15 @@ function CircularBracketHelp() {
 
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
-export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
+export function CircularBracketCard({
+  view,
+  predict,
+}: {
+  view?: CircularBracketView;
+  /** Show the leading candidate's flag (faded) in unsettled nodes instead of a
+   *  "?" — reads as a prediction rather than a confirmed result. */
+  predict?: boolean;
+}) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
@@ -609,6 +658,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               key={node.match}
               node={node}
               view={view}
+              predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
@@ -618,6 +668,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               key={`${pos.match}:${pos.side}`}
               pos={pos}
               view={view}
+              predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
