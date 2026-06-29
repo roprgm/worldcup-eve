@@ -2,7 +2,25 @@ import { format, isValid } from "date-fns";
 
 import type { MatchOdds } from "@/lib/predictions";
 import type { MatchResult, Side } from "@/lib/results";
-import { teamById } from "@/lib/tournament";
+import { matchByNumber, type Round, teamById } from "@/lib/tournament";
+
+// Short header label per knockout round (group matches use "Group X" instead).
+const ROUND_LABEL: Record<Round, string> = {
+  R32: "R32",
+  R16: "R16",
+  QF: "Quarter",
+  SF: "Semifinal",
+  TP: "3rd place",
+  FINAL: "Final",
+};
+
+// Knockout matches (73–104) are labelled by round; group matches by their group.
+function phaseLabel(match: MatchResult): string | undefined {
+  const round = matchByNumber[match.n]?.round;
+  if (round) return ROUND_LABEL[round];
+  const group = teamById[match.home.code]?.group;
+  return group ? `Group ${group}` : undefined;
+}
 
 const FIFA_DAY_TIME_ZONE = "America/New_York";
 const fifaDayFormatter = new Intl.DateTimeFormat("en-US", {
@@ -98,10 +116,9 @@ function matchPrediction(match: MatchResult, chance?: MatchOdds) {
 }
 
 function currentMatchView(match: MatchResult, odds: Map<string, MatchOdds>) {
-  const group = teamById[match.home.code]?.group;
   return {
     number: match.n,
-    phaseLabel: group ? `Group ${group}` : undefined,
+    phaseLabel: phaseLabel(match),
     status: match.status,
     detail: match.detail,
     live: match.status === "live",
