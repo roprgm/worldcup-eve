@@ -1,29 +1,29 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { TOURNAMENT_DAY_ROLLOVER_UTC, tournamentDay } from "@/agent/lib/time";
-import { getMatchResults } from "@/lib/results";
+import { tournamentDay } from "@/agent/lib/time";
+import { getPredictions } from "@/lib/predictions";
 import { matchSchedule, teamById } from "@/lib/tournament";
 
-// A match counts as live for two hours from kickoff, then it is played.
+// A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
-
-type Status = "played" | "live" | "upcoming";
+// A knockout slot is "decided" once its leading team is all but certain.
+const SETTLED = 0.99;
 
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";
 
 const norm = (value: string) => value.trim().toLowerCase();
 
-// Match a team filter against either the FIFA code or the display name.
 const involvesTeam = (code: string | null, query: string) => {
   if (!code) return false;
   const q = norm(query);
   return norm(code) === q || norm(teamById[code]?.name ?? "").includes(q);
 };
 
-// Knockout slots are TBD in the static schedule; the results feed names them
-// once the bracket fills (a real FIFA code, or a slot like "2A" we ignore).
+// Knockout fixtures are TBD in the static schedule; resolve the decided ones
+// from the prediction slots (same source the forecast uses) so a team's next
+// knockout game shows up by name.
 async function resolvedKnockoutTeams(): Promise<
   Map<number, { home: string | null; away: string | null }>
 > {
@@ -32,57 +32,41 @@ async function resolvedKnockoutTeams(): Promise<
     { home: string | null; away: string | null }
   >();
   try {
-    const { matches } = await getMatchResults();
-    for (const m of matches) {
-      if (m.n <= 72) continue;
-      const home = teamById[m.home.code] ? m.home.code : null;
-      const away = teamById[m.away.code] ? m.away.code : null;
-      if (home || away) resolved.set(m.n, { home, away });
+    const { slots } = await getPredictions();
+    const settled = (match: number, side: "home" | "away") => {
+      const top = slots.find((s) => s.match === match && s.side === side)
+        ?.candidates[0];
+      return top && top.probability >= SETTLED ? top.code : null;
+    };
+    for (const m of matchSchedule) {
+      if (m.number <= 72) continue;
+      const home = settled(m.number, "home");
+      const away = settled(m.number, "away");
+      if (home || away) resolved.set(m.number, { home, away });
     }
   } catch {
-    // Results feed unavailable — fall back to the static TBD slots.
+    // Predictions unavailable — knockout sides stay TBD.
   }
   return resolved;
 }
 
-function matchStatus(kickoffAt: string, now: number): Status {
-  const kickoff = new Date(kickoffAt).getTime();
-  if (kickoff + MATCH_WINDOW_MS <= now) return "played";
-  if (kickoff <= now) return "live";
-  return "upcoming";
-}
-
-const STATUS_LABEL: Record<Status, string> = {
-  played: "already played",
-  live: "live now",
-  upcoming: "upcoming",
-};
-
-interface EffectiveMatch {
+interface Fixture {
   number: number;
   homeId: string | null;
   awayId: string | null;
   kickoffAt: string;
+  venue: string;
 }
 
-function scheduleLine(match: EffectiveMatch, now: number) {
-  const day = tournamentDay(new Date(match.kickoffAt));
-  const utcDay = match.kickoffAt.slice(0, 10);
-  const time = match.kickoffAt.slice(11, 16);
-  // Only spell out the date when the kickoff lands on the next UTC day.
-  const when =
-    utcDay === day ? `${time} UTC` : `${utcDay.slice(5)} ${time} UTC`;
-  const status = matchStatus(match.kickoffAt, now);
-  return {
-    day,
-    status,
-    text: `Match ${match.number}: ${teamName(match.homeId)} vs ${teamName(match.awayId)}, ${when} — ${STATUS_LABEL[status]}`,
-  };
+function line(m: Fixture): string {
+  const date = m.kickoffAt.slice(0, 10);
+  const time = m.kickoffAt.slice(11, 16);
+  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — ${date} ${time} UTC, ${m.venue}`;
 }
 
 export default defineTool({
   description:
-    "Look up match numbers, fixtures, and kickoff times as text — filter by team or match numbers. Each fixture is tagged already played / live now / upcoming relative to the current time, and decided knockout matchups show the real teams (TBD only while still undecided). Use this for a team's schedule or to list many matches; to display today's or in-progress matches as cards, use show_matches instead.",
+    "Match fixtures as text — kickoff times, venues and match numbers, filtered by team or match number. Splits into upcoming and already-played; use it for a team's schedule or to look up a fixture's number/kickoff. To show match cards instead, use show_matches.",
   inputSchema: z.object({
     team: z
       .string()
@@ -98,47 +82,40 @@ export default defineTool({
     const resolved = await resolvedKnockoutTeams();
     const wanted = matches && new Set(matches);
 
-    const selected: EffectiveMatch[] = matchSchedule
+    const selected: Fixture[] = matchSchedule
       .map((m) => ({
         number: m.number,
         homeId: m.homeId ?? resolved.get(m.number)?.home ?? null,
         awayId: m.awayId ?? resolved.get(m.number)?.away ?? null,
         kickoffAt: m.kickoffAt,
+        venue: m.venue,
       }))
-      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
       .filter(
         (m) =>
           !team || involvesTeam(m.homeId, team) || involvesTeam(m.awayId, team),
       )
-      .filter((m) => !wanted || wanted.has(m.number));
+      .filter((m) => !wanted || wanted.has(m.number))
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
 
     if (selected.length === 0) return "No matching matches.";
 
-    const byDay = new Map<string, string[]>();
-    let upcomingCount = 0;
-    for (const match of selected) {
-      const { day, status, text } = scheduleLine(match, now);
-      if (status !== "played") upcomingCount += 1;
-      const lines = byDay.get(day) ?? [];
-      lines.push(text);
-      byDay.set(day, lines);
-    }
-    const days = [...byDay]
-      .map(([day, lines]) => `## ${day}\n${lines.join("\n")}`)
-      .join("\n\n");
+    const played = (m: Fixture) =>
+      new Date(m.kickoffAt).getTime() + MATCH_WINDOW_MS <= now;
+    const upcoming = selected.filter((m) => !played(m));
+    const finished = selected.filter(played);
 
-    const notes = [
-      `Today is tournament day ${tournamentDay(new Date(now))}. Each fixture is tagged already played / live now / upcoming — lead with what's still to come and never present a played match as upcoming.`,
-      "Times are UTC; convert to the user's time zone when known. A day rolls over at " +
-        `${TOURNAMENT_DAY_ROLLOVER_UTC}. TBD means the team isn't decided yet.`,
+    const today = tournamentDay(new Date(now));
+    const out = [
+      `Today is ${today} (UTC). Times are UTC — convert to the user's time zone when known. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
+      "",
+      `## Upcoming\n${upcoming.length ? upcoming.map(line).join("\n") : "none"}`,
+      `## Already played\n${finished.length ? finished.map(line).join("\n") : "none"}`,
     ];
-    // When a team filter returns only finished fixtures, its remaining games (if
-    // any) live in the knockout bracket — undecided ones don't surface here yet.
-    if (team && upcomingCount === 0)
-      notes.push(
-        `No upcoming fixtures here for "${team}": its group stage is over and its next knockout opponent isn't decided yet. For where it goes next and its likely opponent, use show_team_path.`,
+    if (team && upcoming.length === 0)
+      out.push(
+        `\n${team} has no scheduled fixture left — its next game is a knockout slot that isn't decided yet. Use show_team_path for where it goes next.`,
       );
 
-    return `${notes.join("\n")}\n\n${days}`;
+    return out.join("\n");
   },
 });
