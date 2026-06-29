@@ -6,9 +6,9 @@ import type { Metadata, Viewport } from "next";
 import { preload } from "react-dom";
 import type { ReactNode } from "react";
 import { Providers } from "@/app/providers";
+import { AppShell } from "@/components/app-shell";
 import { ChatProvider } from "@/components/chat/chat-context";
 import spriteImage from "@/components/flags-sprite.png";
-import { Header } from "@/components/header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -66,10 +66,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <Providers>
           <ChatProvider>
-            <div className="flex h-dvh flex-col overflow-hidden">
-              <Header />
-              {children}
-            </div>
+            <AppShell>{children}</AppShell>
           </ChatProvider>
         </Providers>
         <Analytics />

@@ -2,23 +2,43 @@
 
 import { cn } from "cnfast";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  pushInstantPath,
+  useInstantPathname,
+} from "@/components/instant-navigation";
 
 const LAST_CHAT_KEY = "wc26:last-chat-path";
+const SAVED_CHAT_KEY = "wc26-chat";
+
+function savedChatPath() {
+  if (typeof window === "undefined") return "/";
+  const remembered = sessionStorage.getItem(LAST_CHAT_KEY);
+  if (remembered) return remembered;
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(SAVED_CHAT_KEY) ?? "null",
+    ) as { id?: string } | null;
+    return saved?.id ? `/chat/${saved.id}` : "/";
+  } catch {
+    return "/";
+  }
+}
+
+function chatHrefFor(pathname: string) {
+  return pathname.startsWith("/chat/") ? pathname : savedChatPath();
+}
 
 // The Chat link points at the chat you were last in: the current `/chat/<id>`,
 // or the one remembered across reloads, falling back to `/`.
 function useChatHref(pathname: string) {
-  const [href, setHref] = useState("/");
+  const [href, setHref] = useState(() => chatHrefFor(pathname));
 
   useEffect(() => {
     if (pathname.startsWith("/chat/")) {
       sessionStorage.setItem(LAST_CHAT_KEY, pathname);
-      setHref(pathname);
-    } else {
-      setHref(sessionStorage.getItem(LAST_CHAT_KEY) ?? "/");
     }
+    setHref(chatHrefFor(pathname));
   }, [pathname]);
 
   return href;
@@ -32,13 +52,21 @@ const linkClass = (active: boolean) =>
 
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
-  const pathname = usePathname();
+  const pathname = useInstantPathname();
   const chatHref = useChatHref(pathname);
-  const onChat = pathname === "/" || pathname.startsWith("/chat/");
+  const onChat = pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">
-      <Link href={chatHref} className={linkClass(onChat)}>
+      <Link
+        href={chatHref}
+        onClick={(event) => {
+          if (!chatHref.startsWith("/chat/")) return;
+          event.preventDefault();
+          pushInstantPath(chatHref);
+        }}
+        className={linkClass(onChat)}
+      >
         Chat
       </Link>
       <Link

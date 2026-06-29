@@ -78,8 +78,6 @@ export default function Page() {
     setInput("");
   }, [start, input]);
 
-  // `start()` swaps in a `/chat/<id>` URL with history.pushState (no route
-  // change), so the chat shows here instantly; render it off that URL.
   if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
