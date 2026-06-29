@@ -95,7 +95,7 @@ export function Popover({
       <div
         role="dialog"
         className={cn(
-          "max-h-[60vh] overflow-y-auto rounded-lg border border-border-strong bg-card shadow-xl",
+          "max-h-[60vh] overflow-y-auto rounded-lg border border-border-strong bg-card shadow-[0_3px_12px_-2px_rgba(0,0,0,0.45)]",
           className,
         )}
       >

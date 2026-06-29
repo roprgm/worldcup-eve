@@ -4,10 +4,11 @@ import { cn } from "cnfast";
 import { Check, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { CellPathExplain } from "@/components/widgets/cell-path-explain";
 import { Flag } from "@/components/flags";
 import { Popover } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CellPath, PathOpponent } from "@/lib/predictions/team-path";
+import type { CellPath } from "@/lib/predictions/team-path";
 import type { Round } from "@/lib/tournament";
 
 // Per-round reach probability (0–1); r32 is group advance, champion is the cup.
@@ -47,15 +48,6 @@ const STAGES = [
   round?: Round;
 }>;
 
-const ROUND_LABEL: Record<Round, string> = {
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarter-finals",
-  SF: "Semi-finals",
-  TP: "Third place",
-  FINAL: "Final",
-};
-
 // Match the row count the params imply, else a modest default.
 const DEFAULT_SKELETON_ROWS = 8;
 const skeletonKeys = (count?: number) =>
@@ -76,8 +68,6 @@ function formatPct(value: number): string {
   if (p < 9.95) return `${p.toFixed(1)}%`;
   return `${Math.round(p)}%`;
 }
-
-const roundPct = (p: number) => `${Math.round(p * 100)}%`;
 
 export type StageOddsHeader =
   | { toggleable: true; showAll: boolean; top: number; onToggle: () => void }
@@ -188,58 +178,6 @@ function ColumnLabel({ children }: { children: ReactNode }) {
     <span className="text-center text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
       {children}
     </span>
-  );
-}
-
-// Opponents in one match; a single locked-in one drops its "100%".
-function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
-  const shown = opponents.filter((o) => o.probability >= 0.05);
-  if (!shown.length)
-    return <span className="text-muted-foreground/60">to be decided</span>;
-  const locked = shown.length === 1 && shown[0].probability >= 0.99;
-  return (
-    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-      {shown.map((o) => (
-        <span key={o.code} className="flex items-center gap-1">
-          <Flag code={o.code} size={12} />
-          <span className="font-medium">{o.code}</span>
-          {!locked && (
-            <span className="text-muted-foreground tabular-nums">
-              {roundPct(o.probability)}
-            </span>
-          )}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-// The matches the team must win to reach the round, with the running reach.
-function CellExplain({ path }: { path: CellPath }) {
-  return (
-    <div className="text-[11px]">
-      <p className="mb-1.5 text-muted-foreground">
-        To reach the {ROUND_LABEL[path.targetRound]},{" "}
-        <span className="text-foreground">{path.name}</span> must get past
-        {path.dependsOnGroup ? " (depends on its group finish)" : ""}:
-      </p>
-      <div className="flex flex-col gap-1.5">
-        {path.legs.map((leg) => (
-          <div
-            key={leg.round}
-            className="grid grid-cols-[4.5rem_1fr_auto] items-start gap-2"
-          >
-            <span className="pt-px text-muted-foreground/80">
-              {ROUND_LABEL[leg.round]}
-            </span>
-            <OpponentList opponents={leg.opponents} />
-            <span className="pt-px text-foreground tabular-nums">
-              {roundPct(leg.reachNext)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -370,7 +308,7 @@ export function StageOddsCard(props: StageOddsCardProps) {
           onClose={() => setOpen(null)}
           className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
         >
-          <CellExplain path={breakdown} />
+          <CellPathExplain path={breakdown} />
         </Popover>
       )}
     </Card>

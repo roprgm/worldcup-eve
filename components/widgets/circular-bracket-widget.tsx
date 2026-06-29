@@ -6,17 +6,38 @@ import {
   type Candidate,
   CircularBracketCard,
   type CircularBracketView,
+  type TeamPaths,
 } from "@/components/widgets/circular-bracket-card";
 import { usePredictions, useResults } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
+import { cellPath } from "@/lib/predictions/team-path";
 import type { Results } from "@/lib/results";
-import { matchByNumber, teamById } from "@/lib/tournament";
+import { type Round, teamById } from "@/lib/tournament";
 
 const named = (c: { code: string; probability: number }): Candidate => ({
   code: c.code,
   name: teamById[c.code]?.name,
   probability: c.probability,
 });
+
+// Knockout wins → the round the team is now in, for the road-to-the-final start.
+const ROUND_BY_WINS: Round[] = ["R32", "R16", "QF", "SF", "FINAL"];
+
+// From completed knockout matches: how many each team has won (→ the round it has
+// reached) and who's been knocked out. The third-place play-off (103) isn't a
+// step toward the final, so it's skipped.
+function knockoutProgress(results?: Results) {
+  const wins = new Map<string, number>();
+  const eliminated = new Set<string>();
+  for (const m of results?.matches ?? []) {
+    if (m.status !== "final" || m.n < 73 || m.n === 103) continue;
+    const winner = m.home.winner ? m.home : m.away.winner ? m.away : null;
+    const loser = m.home.winner ? m.away : m.away.winner ? m.home : null;
+    if (winner?.code) wins.set(winner.code, (wins.get(winner.code) ?? 0) + 1);
+    if (loser?.code) eliminated.add(loser.code);
+  }
+  return { wins, eliminated };
+}
 
 // Played knockout matches, by match number → the actual winner (probability 1).
 // These come from real results and override the market's odds, so a finished
@@ -78,6 +99,25 @@ export function CircularBracketWidget() {
     () => (predictions ? circularView(predictions, results) : undefined),
     [predictions, results],
   );
+  // Road to the final per team still alive. The path starts at the round each
+  // team has actually reached (so a match already won isn't shown as a pending
+  // prediction), `minReach` of 0 keeps even the longest shots, and the eliminated
+  // are dropped outright.
+  const teamPaths = useMemo(() => {
+    if (!predictions) return undefined;
+    const { wins, eliminated } = knockoutProgress(results);
+    const map: TeamPaths = new Map();
+    for (const team of predictions.reach) {
+      if (eliminated.has(team.code)) continue;
+      const fromRound = ROUND_BY_WINS[Math.min(wins.get(team.code) ?? 0, 4)];
+      const path = cellPath(predictions, team.code, "FINAL", {
+        minReach: 0,
+        fromRound,
+      });
+      if (path) map.set(team.code, path);
+    }
+    return map;
+  }, [predictions, results]);
   // Market predictions start off; users opt in via the in-card toggle.
-  return <CircularBracketCard view={view} />;
+  return <CircularBracketCard view={view} teamPaths={teamPaths} />;
 }
