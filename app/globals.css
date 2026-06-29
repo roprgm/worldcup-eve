@@ -67,6 +67,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   --animate-fade-up: wc-fade-up 0.5s var(--ease-geist) both;
+  --animate-fade-in: wc-fade-in 0.4s var(--ease-geist) both;
   --animate-pop-in: wc-pop-in 0.14s var(--ease-geist) both;
 
   @keyframes wc-fade-up {
@@ -77,6 +78,15 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes wc-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 
