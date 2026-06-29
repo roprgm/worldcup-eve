@@ -497,20 +497,22 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
         className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50"
       >
         <span
-          className={cn(
-            "animate-bar-grow h-full origin-left",
-            top ? "bg-foreground" : "bg-foreground/60",
-          )}
+          className="animate-bar-grow h-full origin-left bg-foreground"
           style={{ width: formatPct(base) }}
         />
         {delta !== 0 && (
           <span
-            className={cn(
-              "animate-bar-grow h-full origin-left",
-              delta > 0 ? "bg-pick" : "bg-red-500",
-            )}
+            className="animate-bar-grow h-full origin-left"
             style={{ width: formatPct(Math.abs(delta)) }}
-          />
+          >
+            {/* Skeleton-style pulse so the live move reads as in-play. */}
+            <span
+              className={cn(
+                "block h-full w-full animate-pulse",
+                delta > 0 ? "bg-pick" : "bg-red-500",
+              )}
+            />
+          </span>
         )}
       </span>
       <span
