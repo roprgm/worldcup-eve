@@ -767,12 +767,12 @@ function PredictToggle({
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label="Show predictions"
+      aria-label="Show market predictions"
       onClick={() => onChange(!on)}
       className="flex cursor-pointer items-center gap-1.5"
     >
       <span className="text-[10px] font-medium text-muted-foreground/70">
-        Predict
+        Market predictions
       </span>
       <span
         className={cn(
