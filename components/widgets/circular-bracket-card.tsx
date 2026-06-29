@@ -621,7 +621,11 @@ function SlotNode({
     >
       <NodeReveal delay={rippleDelay(pos.x, pos.y)}>
         {confirmed(odds) && top ? (
-          <RoundFlag code={top.code} size={size} />
+          <RoundFlag
+            code={top.code}
+            size={size}
+            className="ring-surface-divider"
+          />
         ) : (
           <UnsettledNode
             id={id}
@@ -661,7 +665,11 @@ function MatchNode({
     >
       <NodeReveal delay={rippleDelay(node.x, node.y)}>
         {win ? (
-          <RoundFlag code={win.code} size={size} />
+          <RoundFlag
+            code={win.code}
+            size={size}
+            className="ring-surface-divider"
+          />
         ) : (
           <UnsettledNode
             id={id}
