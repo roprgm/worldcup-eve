@@ -4,22 +4,19 @@ import { cn } from "cnfast";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useChat } from "@/components/chat/chat-context";
 
-const LAST_CHAT_KEY = "wc26:last-chat-path";
-
-// The Chat link points at the chat you were last in: the current `/chat/<id>`,
-// or the one remembered across reloads, falling back to `/`.
-function useChatHref(pathname: string) {
+// The Chat link returns to the chat in memory — the current `/chat/<id>` or the
+// restored one — and falls back to the new-chat screen when there's none, so it
+// never lands on a blank conversation. Resolved in an effect to keep the
+// server-rendered href (`/`) stable through hydration.
+function useChatHref(pathname: string, chatId: string | null) {
   const [href, setHref] = useState("/");
 
   useEffect(() => {
-    if (pathname.startsWith("/chat/")) {
-      sessionStorage.setItem(LAST_CHAT_KEY, pathname);
-      setHref(pathname);
-    } else {
-      setHref(sessionStorage.getItem(LAST_CHAT_KEY) ?? "/");
-    }
-  }, [pathname]);
+    if (pathname.startsWith("/chat/")) setHref(pathname);
+    else setHref(chatId ? `/chat/${chatId}` : "/");
+  }, [pathname, chatId]);
 
   return href;
 }
@@ -33,8 +30,9 @@ const linkClass = (active: boolean) =>
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
   const pathname = usePathname();
-  const chatHref = useChatHref(pathname);
-  const onChat = pathname === "/" || pathname.startsWith("/chat/");
+  const { chatId } = useChat();
+  const chatHref = useChatHref(pathname, chatId);
+  const onChat = pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">

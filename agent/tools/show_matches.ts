@@ -24,7 +24,7 @@ function card(match: MatchResult) {
 
 export default defineTool({
   description:
-    "Show the user cards for matches — pass scope 'today' or 'live', or specific match numbers. The go-to for 'what's playing now / today'. For a long fixture list, use get_match_schedule instead.",
+    "Show the user the match card for one or more fixtures — the teams, kickoff, status/score, and win odds. This is the widget for a specific match (e.g. 'when/where do X and Y play', a result, or what's on): pass its FIFA number(s), or scope 'today' / 'live'. Get a fixture's number from get_match_schedule or get_match_forecast. For a long fixture list as text, use get_match_schedule instead.",
   inputSchema: z.object({
     scope: z
       .enum(["today", "live"])
