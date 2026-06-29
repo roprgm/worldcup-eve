@@ -595,7 +595,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           Prediction bracket
         </span>
         <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
-          · tap a node to see its chances
+          · the draw, tap a match for its chances
         </span>
         <CircularBracketHelp />
       </div>

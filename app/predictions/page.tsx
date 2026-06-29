@@ -30,7 +30,7 @@ export default function PredictionsPage() {
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
-        <Section title="Road to the final">
+        <Section title="Knockout overview">
           <CardGridFrame className="space-y-3">
             <CircularBracketWidget />
             <StageOddsWidget top={5} />
