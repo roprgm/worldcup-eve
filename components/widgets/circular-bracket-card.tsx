@@ -95,11 +95,11 @@ function polar(deg: number, r: number): { x: number; y: number } {
   return { x: round2(C + r * Math.sin(rad)), y: round2(C - r * Math.cos(rad)) };
 }
 
-/** Stagger (seconds) for a node's reveal so predictions ripple outward from the
- *  centre: nodes nearer the middle appear first, outer flags last. */
+/** Stagger (seconds) for a node's reveal so predictions ripple inward from the
+ *  edge: the outer flags appear first, nodes nearer the centre last. */
 function rippleDelay(x: number, y: number): number {
   const r = Math.hypot(x - C, y - C);
-  return round2((r / R_FLAG) * 0.3);
+  return round2((1 - r / R_FLAG) * 0.3);
 }
 
 /** SVG arc along radius `r` from `a1` to `a2` (the bar joining a node's two
@@ -583,13 +583,13 @@ function UnsettledNode({
         <span
           aria-hidden
           className={cn(
-            "absolute inset-0 transition-[opacity,transform] duration-300 ease-out",
+            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-[opacity,transform] duration-300 ease-out",
             showFlag ? "scale-100 opacity-100" : "scale-50 opacity-0",
           )}
         >
           <RoundFlag
             code={code}
-            size={size}
+            size={`calc(${size} * 0.82)`}
             faded
             className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
           />
