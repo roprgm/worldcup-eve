@@ -35,12 +35,13 @@ const newChatId = () => Math.random().toString(36).slice(2, 10);
 const chatIdFromPath = (path: string) =>
   path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-// Restore the saved chat into memory so the agent can show it again — except
-// under a different `/chat/<id>` than the one saved, where a fresh id must stay
-// empty. The home screen renders its new-chat UI off the URL, so a restored chat
-// sits in memory there without showing until the user returns to it via the nav.
+// Restore the saved chat only when reloading its own `/chat/<id>` URL. Every
+// other page (home, predictions, a fresh id) starts empty, so an old chat is
+// never resurrected into memory where it could bleed into a new one.
 function loadChat(): SavedChat | null {
   if (typeof window === "undefined") return null;
+  const urlId = chatIdFromPath(window.location.pathname);
+  if (!urlId) return null;
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   let saved: SavedChat;
@@ -49,8 +50,7 @@ function loadChat(): SavedChat | null {
   } catch {
     return null;
   }
-  const urlId = chatIdFromPath(window.location.pathname);
-  return urlId && urlId !== saved.id ? null : saved;
+  return saved.id === urlId ? saved : null;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -108,16 +108,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const start = useCallback(
     (text: string) => {
-      if (!text.trim()) return;
+      const message = text.trim();
+      if (!message) return;
       const id = newChatId();
-      agent.reset(); // start fresh even if a previous chat is still in context
-      send(text); // optimistic message lands before the view swaps in
+      // Reset clears the prior conversation synchronously at the store; then send
+      // a plain message straight to the agent. Going through `send` here would
+      // read a pre-reset snapshot and could misroute the first message as an
+      // answer to a question parked in the old chat — that is the context bleed.
+      agent.reset();
       setChatId(id);
       // Update the URL without a route navigation: the conversation already
       // renders from shared context, so a real navigation only adds a flicker.
       window.history.pushState(null, "", `/chat/${id}`);
+      void agent.send({ message }).catch(() => {}); // optimistic message lands now
     },
-    [agent, send],
+    [agent],
   );
 
   return (
