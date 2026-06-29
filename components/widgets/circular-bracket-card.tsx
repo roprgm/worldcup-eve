@@ -3,7 +3,7 @@
 import { cn } from "cnfast";
 import { addMinutes, format } from "date-fns";
 import { Info, Trophy } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Popover } from "@/components/ui/popover";
@@ -507,74 +507,94 @@ interface NodeProps {
   onToggle: (id: string, anchor: HTMLElement) => void;
 }
 
-/** A node whose team isn't settled yet: a full-size circle with a question mark,
- *  the same footprint as a flag, that opens its chances on tap. */
-function UnknownNode({
-  id,
-  size = "var(--cf)",
-  openId,
-  onToggle,
-}: NodeProps & { id: string; size?: string }) {
+/** Wraps a node so it plays the outward "ripple" reveal once on mount. The
+ *  animation lives on this inner element (not the positioning wrapper) so it
+ *  never clashes with the wrapper's centring transform. */
+function NodeReveal({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: ReactNode;
+}) {
   return (
-    <button
-      type="button"
-      onClick={(e) => onToggle(id, e.currentTarget)}
-      aria-label="Show chances"
-      aria-expanded={openId === id}
-      className={cn(
-        "flex items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
-        openId === id
-          ? "border-pick/60 text-pick"
-          : "border-surface-border text-muted-foreground hover:text-foreground",
-      )}
-      style={{
-        width: `calc(${size} * 0.7)`,
-        height: `calc(${size} * 0.7)`,
-        fontSize: `calc(${size} * 0.42)`,
-      }}
+    <div
+      className="animate-predict-in"
+      style={{ animationDelay: `${delay}s` }}
     >
-      ?
-    </button>
+      {children}
+    </div>
   );
 }
 
-/** A node whose team isn't settled yet, in "predict" mode: the current
- *  front-runner's flag shown faded, so it reads as a likely outcome rather than
- *  a locked-in result. Still opens the full chances on tap. */
-function PredictedNode({
+/** A node whose team isn't settled yet. It always contains both layers — the
+ *  "?" placeholder and the predicted front-runner's faded flag — stacked on top
+ *  of each other, and cross-fades between them when `predict` toggles, so the
+ *  two states morph into one another rather than popping in and out. */
+function UnsettledNode({
   id,
   code,
   size = "var(--cf)",
-  delay = 0,
+  predict,
   openId,
   onToggle,
 }: NodeProps & {
   id: string;
-  code: string;
+  /** Front-runner's flag code, when a market exists for this node. */
+  code?: string;
   size?: string;
-  /** Seconds to stagger the reveal animation, for the outward ripple. */
-  delay?: number;
+  predict?: boolean;
 }) {
+  const open = openId === id;
+  const showFlag = !!(predict && code);
   return (
     <button
       type="button"
       onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
-      aria-expanded={openId === id}
-      style={{ animationDelay: `${delay}s` }}
+      aria-expanded={open}
       className={cn(
-        "group relative block animate-predict-in rounded-full",
-        openId === id && "ring-2 ring-pick/60",
+        "group relative block rounded-full transition-shadow duration-300",
+        showFlag && open && "ring-2 ring-pick/60",
       )}
+      style={{ width: `calc(${size})`, height: `calc(${size})` }}
     >
-      {/* Solid opaque base (in RoundFlag) covers the connector lines; the flag
-          image on top is faded so the node reads as a prediction. */}
-      <RoundFlag
-        code={code}
-        size={size}
-        faded
-        className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
-      />
+      {/* "?" layer — fades/scales out as the flag comes in. */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-[opacity,transform,color,border-color] duration-300 ease-out",
+          showFlag ? "scale-50 opacity-0" : "scale-100 opacity-100",
+          open
+            ? "border-pick/60 text-pick"
+            : "border-surface-border text-muted-foreground group-hover:text-foreground",
+        )}
+        style={{
+          width: `calc(${size} * 0.82)`,
+          height: `calc(${size} * 0.82)`,
+          fontSize: `calc(${size} * 0.42)`,
+        }}
+      >
+        ?
+      </span>
+      {/* Predicted-flag layer — fades/scales in over the solid base, which keeps
+          the connector lines covered. */}
+      {code && (
+        <span
+          aria-hidden
+          className={cn(
+            "absolute inset-0 transition-[opacity,transform] duration-300 ease-out",
+            showFlag ? "scale-100 opacity-100" : "scale-50 opacity-0",
+          )}
+        >
+          <RoundFlag
+            code={code}
+            size={size}
+            faded
+            className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
+          />
+        </span>
+      )}
     </button>
   );
 }
@@ -598,20 +618,20 @@ function SlotNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
-      {confirmed(odds) && top ? (
-        <RoundFlag code={top.code} size={size} />
-      ) : predict && top ? (
-        <PredictedNode
-          id={id}
-          code={top.code}
-          size={size}
-          delay={rippleDelay(pos.x, pos.y)}
-          openId={openId}
-          onToggle={onToggle}
-        />
-      ) : (
-        <UnknownNode id={id} size={size} openId={openId} onToggle={onToggle} />
-      )}
+      <NodeReveal delay={rippleDelay(pos.x, pos.y)}>
+        {confirmed(odds) && top ? (
+          <RoundFlag code={top.code} size={size} />
+        ) : (
+          <UnsettledNode
+            id={id}
+            code={top?.code}
+            size={size}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        )}
+      </NodeReveal>
     </div>
   );
 }
@@ -638,20 +658,20 @@ function MatchNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
-      {win ? (
-        <RoundFlag code={win.code} size={size} />
-      ) : predict && top ? (
-        <PredictedNode
-          id={id}
-          code={top.code}
-          size={size}
-          delay={rippleDelay(node.x, node.y)}
-          openId={openId}
-          onToggle={onToggle}
-        />
-      ) : (
-        <UnknownNode id={id} size={size} openId={openId} onToggle={onToggle} />
-      )}
+      <NodeReveal delay={rippleDelay(node.x, node.y)}>
+        {win ? (
+          <RoundFlag code={win.code} size={size} />
+        ) : (
+          <UnsettledNode
+            id={id}
+            code={top?.code}
+            size={size}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        )}
+      </NodeReveal>
     </div>
   );
 }
@@ -670,29 +690,31 @@ function ChampionNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: "50%", top: "50%" }}
     >
-      {win ? (
-        <button
-          type="button"
-          onClick={(e) => onToggle("champion", e.currentTarget)}
-          aria-label="Show title odds"
-          className="block rounded-full ring-2 ring-pick"
-        >
-          <RoundFlag code={win.code} size="var(--cf)" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => onToggle("champion", e.currentTarget)}
-          aria-label="Show title odds"
-          aria-expanded={isOpen}
-          className={cn(
-            "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
-            isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
-          )}
-        >
-          <Trophy style={{ width: "55%", height: "55%" }} />
-        </button>
-      )}
+      <NodeReveal delay={0}>
+        {win ? (
+          <button
+            type="button"
+            onClick={(e) => onToggle("champion", e.currentTarget)}
+            aria-label="Show title odds"
+            className="block rounded-full ring-2 ring-pick"
+          >
+            <RoundFlag code={win.code} size="var(--cf)" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => onToggle("champion", e.currentTarget)}
+            aria-label="Show title odds"
+            aria-expanded={isOpen}
+            className={cn(
+              "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
+              isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
+            )}
+          >
+            <Trophy style={{ width: "55%", height: "55%" }} />
+          </button>
+        )}
+      </NodeReveal>
     </div>
   );
 }

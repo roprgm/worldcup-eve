@@ -104,7 +104,6 @@ export function CircularBracketWidget() {
     () => (predictions ? circularView(predictions, results) : undefined),
     [predictions, results],
   );
-  // `predict` enabled for now so the faded front-runner flags can be reviewed
-  // in a preview deploy (instead of "?" placeholders).
-  return <CircularBracketCard view={view} predict />;
+  // Market predictions start off; users opt in via the in-card toggle.
+  return <CircularBracketCard view={view} />;
 }
