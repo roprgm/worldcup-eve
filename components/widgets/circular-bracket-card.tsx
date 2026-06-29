@@ -442,10 +442,23 @@ function Connectors({ view }: { view?: CircularBracketView }) {
 }
 
 /** A single team's chance, as a flag + code + bar + percentage — the row style
- *  used across the prediction widgets. */
-function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
+ *  used across the prediction widgets. Rows cascade in and their bars sweep out
+ *  from the left, staggered by `index`, when the popover opens. */
+function OddsRow({
+  c,
+  top,
+  index = 0,
+}: {
+  c: Candidate;
+  top: boolean;
+  index?: number;
+}) {
+  const delay = `${index * 0.05}s`;
   return (
-    <div className="flex h-5 items-center gap-1.5">
+    <div
+      className="animate-fade-in flex h-5 items-center gap-1.5"
+      style={{ animationDelay: delay }}
+    >
       <RoundFlag code={c.code} size="14px" />
       <span
         title={c.name}
@@ -456,13 +469,13 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       >
         {c.code}
       </span>
-      <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
         <span
           className={cn(
-            "h-full rounded-[1px]",
+            "animate-bar-grow h-full origin-left rounded-[1px]",
             top ? "bg-pick" : "bg-muted-foreground/30",
           )}
-          style={{ width: formatPct(c.probability) }}
+          style={{ width: formatPct(c.probability), animationDelay: delay }}
         />
       </span>
       <span
@@ -497,7 +510,9 @@ function OddsList({
             no market
           </p>
         ) : (
-          shown.map((c, i) => <OddsRow key={c.code} c={c} top={i === 0} />)
+          shown.map((c, i) => (
+            <OddsRow key={c.code} c={c} top={i === 0} index={i} />
+          ))
         )}
       </div>
     </div>
