@@ -340,6 +340,7 @@ export interface CircularBracketView {
   slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
   matchOdds: Map<number, Candidate[]>; // match → each contender's chance to win
   decided: Map<number, Candidate>; // match → real winner, once played
+  live: Set<number>; // match numbers currently in progress
   championOdds: Candidate[];
 }
 
@@ -527,19 +528,49 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   );
 }
 
+function LiveDot({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "shrink-0 animate-pulse rounded-full bg-rose-400",
+        className,
+      )}
+    />
+  );
+}
+
+function LiveBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tracking-wide text-rose-400",
+        className,
+      )}
+    >
+      <LiveDot className="size-1.5" />
+      Live
+    </span>
+  );
+}
+
 /** The body of a chances popover: which match it is, then a titled ranked list. */
 function OddsList({
   title,
   subtitle,
   odds,
+  live,
 }: {
   title: string;
   subtitle?: string;
   odds: Candidate[];
+  /** Mark the popup as live (the underlying match is in progress). */
+  live?: boolean;
 }) {
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
-    <div>
+    <div className="relative">
+      {live && <LiveBadge className="absolute top-0 right-0" />}
       <PopupHeader title={title} subtitle={subtitle} />
       <div className="space-y-1">
         {shown.length === 0 ? (
@@ -963,21 +994,29 @@ function matchSubtitle(num: number): string {
 function openContent(
   view: CircularBracketView,
   id: string,
-): { title: string; subtitle: string; odds: Candidate[] } | null {
+): {
+  title: string;
+  subtitle: string;
+  odds: Candidate[];
+  live: boolean;
+} | null {
   if (id === "champion")
     return {
       title: "Chances to win the title",
       subtitle: matchSubtitle(104),
       odds: view.championOdds,
+      live: view.live.has(104),
     };
   if (id.startsWith("slot:")) {
     const sideKey = id.slice("slot:".length);
     const odds = view.slotOdds.get(sideKey);
     if (!odds) return null;
+    const num = Number(sideKey.split(":")[0]);
     return {
       title: "Chances to reach this match",
-      subtitle: matchSubtitle(Number(sideKey.split(":")[0])),
+      subtitle: matchSubtitle(num),
       odds,
+      live: view.live.has(num),
     };
   }
   const num = Number(id.slice("match:".length));
@@ -988,6 +1027,7 @@ function openContent(
     title: `Chances to reach the ${NEXT_LABEL[round]}`,
     subtitle: matchSubtitle(num),
     odds,
+    live: view.live.has(num),
   };
 }
 
@@ -1165,6 +1205,7 @@ export function CircularBracketRing({
               title={content.title}
               subtitle={content.subtitle}
               odds={content.odds}
+              live={content.live}
             />
           )
         )}

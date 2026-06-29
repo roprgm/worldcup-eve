@@ -116,10 +116,15 @@ function circularView(
     );
   }
 
+  const live = new Set<number>();
+  for (const m of results?.matches ?? [])
+    if (m.status === "live") live.add(m.n);
+
   return {
     slotOdds,
     matchOdds,
     decided,
+    live,
     championOdds: withOpening(
       predictions.bracketChampion,
       openingMap(predictions.opening.bracketChampion),
