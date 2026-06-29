@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "cnfast";
 import spriteImage from "@/components/flags-sprite.png";
+import { useSpriteLoaded } from "@/hooks/use-sprite-loaded";
 
 // The flag order for the spritesheet. This list is the single source of truth
 // for which cell each team occupies, and the lookup below maps a code to that
@@ -66,6 +69,7 @@ function flagMetrics(size: number | string) {
  */
 export function Flag({ code, size = 18, className }: FlagProps) {
   const { width, height, bgSize, pos } = flagMetrics(size);
+  const loaded = useSpriteLoaded(SPRITE_URL);
   const base = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
 
   const index = code ? cellByCode.get(code.toLowerCase()) : undefined;
@@ -91,8 +95,9 @@ export function Flag({ code, size = 18, className }: FlagProps) {
         backgroundSize: bgSize,
         backgroundPosition: pos(col, row),
         backgroundRepeat: "no-repeat",
+        opacity: loaded ? 1 : 0,
       }}
-      className={cn(base, className)}
+      className={cn(base, "transition-opacity duration-500", className)}
     />
   );
 }

@@ -27,10 +27,7 @@ function EmptyState() {
   );
 
   return (
-    // `my-auto` on the inner column centres it when there's room and collapses to
-    // a clean top-aligned scroll when the bracket makes the content taller than
-    // the viewport — so nothing is ever clipped above the fold.
-    <div className="flex min-h-full flex-col items-center px-4 py-8 text-center">
+    <div className="flex min-h-full flex-col items-center px-4 py-6 text-center">
       <div className="my-auto flex w-full flex-col items-center">
         <h1 className="animate-fade-up text-[1.5rem] leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-[1.95rem]">
           Ask anything about the
@@ -39,14 +36,14 @@ function EmptyState() {
         </h1>
 
         <div
-          className="animate-fade-up mt-7 w-full max-w-[420px]"
+          className="animate-fade-up mt-7 w-full max-w-lg"
           style={{ animationDelay: "120ms" }}
         >
           <HomeBracket />
         </div>
 
         <div
-          className="animate-fade-up mt-8 w-full max-w-lg"
+          className="animate-fade-up mt-8 w-full max-w-2xl"
           style={{ animationDelay: "180ms" }}
         >
           <Suggestions className="justify-center">

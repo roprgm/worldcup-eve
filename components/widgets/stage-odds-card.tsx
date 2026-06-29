@@ -301,17 +301,14 @@ export function StageOddsCard(props: StageOddsCardProps) {
               />
             ))}
       </div>
-      {open && breakdown && (
-        // Key per cell so it replays its entrance when moving between cells.
-        <Popover
-          key={`${open.code}:${open.round}`}
-          anchor={open.anchor}
-          onClose={() => setOpen(null)}
-          className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
-        >
-          <CellPathExplain path={breakdown} />
-        </Popover>
-      )}
+      <Popover
+        open={Boolean(open && breakdown)}
+        anchor={open?.anchor ?? null}
+        onClose={() => setOpen(null)}
+        className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
+      >
+        {breakdown && <CellPathExplain path={breakdown} />}
+      </Popover>
     </Card>
   );
 }
