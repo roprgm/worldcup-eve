@@ -26,7 +26,6 @@ function savedChatPath() {
 }
 
 function chatHrefFor(pathname: string) {
-  if (pathname === "/") return "/";
   return pathname.startsWith("/chat/") ? pathname : savedChatPath();
 }
 
@@ -55,7 +54,7 @@ const linkClass = (active: boolean) =>
 export function SiteNav() {
   const pathname = useInstantPathname();
   const chatHref = useChatHref(pathname);
-  const onChat = pathname === "/" || pathname.startsWith("/chat/");
+  const onChat = pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">
