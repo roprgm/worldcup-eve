@@ -30,9 +30,9 @@ type RoundKey = "R32" | "R16" | "QF" | "SF";
 // so this is the single place to adjust the layout's concentric spacing.
 const RING_GAP = {
   flagToR32: 125, // outer flags (32) → round-of-16 nodes
-  r32ToR16: 70, // round-of-16 nodes → round-of-8 nodes
-  r16ToQF: 80, // quarter-final nodes
-  qfToSF: 75, // semi-final nodes
+  r32ToR16: 80, // round-of-16 nodes → round-of-8 nodes
+  r16ToQF: 75, // quarter-final nodes
+  qfToSF: 60, // semi-final nodes
 };
 // Derived ring radii (distance from centre), outside → in.
 const RING: Record<RoundKey, number> = {
@@ -584,7 +584,11 @@ function SlotNode({
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
       {confirmed(odds) && top ? (
-        <RoundFlag code={top.code} size={size} />
+        <RoundFlag
+          code={top.code}
+          size={size}
+          className="border border-foreground"
+        />
       ) : predict && top ? (
         <PredictedNode
           id={id}
@@ -623,7 +627,11 @@ function MatchNode({
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
       {win ? (
-        <RoundFlag code={win.code} size={size} />
+        <RoundFlag
+          code={win.code}
+          size={size}
+          className="border border-foreground"
+        />
       ) : predict && top ? (
         <PredictedNode
           id={id}
