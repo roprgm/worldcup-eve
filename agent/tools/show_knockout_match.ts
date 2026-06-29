@@ -26,7 +26,7 @@ function source(ref: SlotRef): string {
 
 export default defineTool({
   description:
-    "Show the user a widget predicting a knockout match (Round of 32 to Final) by id, with each side's likely teams and chances to get there. Use for who might reach or play in match 73–104; for the head-to-head win odds of a decided matchup use get_match_forecast.",
+    "Show the user the single-match widget for one knockout fixture (Round of 32 to Final) by id, with each side's teams and chances. Use it to display any specific match 73–104 — who might reach an undecided one, or the matchup of a decided one. For the head-to-head win odds/score, pair it with get_match_forecast; for a team's whole road to the final use show_team_path, not this.",
   inputSchema: z.object({
     id: z
       .number()

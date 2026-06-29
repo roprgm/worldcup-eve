@@ -176,6 +176,7 @@ export default defineTool({
 
     return {
       updatedAt: snapshot.updatedAt,
+      match: fixture.number,
       fixture: fixture.id,
       home: fixture.homeId,
       away: fixture.awayId,
