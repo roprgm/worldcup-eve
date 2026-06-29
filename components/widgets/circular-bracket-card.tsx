@@ -368,10 +368,9 @@ function Connectors({ view }: { view?: CircularBracketView }) {
             key={a.d}
             d={a.d}
             fill="none"
-            stroke="var(--border-strong)"
+            // Winner's path in foreground; everything else stays grey but solid.
+            stroke={solid ? "var(--foreground)" : "var(--border-strong)"}
             strokeWidth={2.5}
-            strokeOpacity={solid ? 1 : 0.5}
-            strokeDasharray={solid ? undefined : "5 7"}
           />
         );
       })}
@@ -385,11 +384,10 @@ function Connectors({ view }: { view?: CircularBracketView }) {
             y1={s.y1}
             x2={s.x2}
             y2={s.y2}
-            stroke="var(--border-strong)"
+            // Winner's path in foreground; everything else stays grey but solid.
+            stroke={solid ? "var(--foreground)" : "var(--border-strong)"}
             strokeWidth={2.5}
             strokeLinecap="round"
-            strokeOpacity={solid ? 1 : 0.5}
-            strokeDasharray={solid ? undefined : "5 7"}
           />
         );
       })}
