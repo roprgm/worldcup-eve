@@ -553,10 +553,7 @@ function UnsettledNode({
       onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
       aria-expanded={open}
-      className={cn(
-        "group relative block rounded-full transition-shadow duration-300",
-        showFlag && open && "ring-2 ring-pick/60",
-      )}
+      className="group relative block rounded-full"
       style={{ width: `calc(${size})`, height: `calc(${size})` }}
     >
       {/* "?" layer — stays fully opaque underneath so the crossfade never
@@ -592,7 +589,10 @@ function UnsettledNode({
             code={code}
             size={`calc(${size} * 0.82)`}
             faded
-            className="ring-surface-divider transition-[filter] group-hover:brightness-110"
+            className={cn(
+              "transition-[filter] group-hover:brightness-110",
+              open ? "ring-pick/60" : "ring-surface-divider",
+            )}
           />
         </span>
       )}
