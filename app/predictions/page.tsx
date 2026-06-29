@@ -24,12 +24,12 @@ const knockoutSections = [
 ];
 
 // This page owns the whole layout: it lays out the sections and places the
-// widgets it shows in a grid. Each widget fetches its own data and renders its
+// widgets it shows in a grid. Each widget fetches its own data and renders its 
 // own skeleton, so the section headers and grid show immediately.
 export default function PredictionsPage() {
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain">
-      <div className="mx-auto w-full max-w-4xl space-y-3 px-3 py-3 sm:px-4">
+      <div className="mx-auto w-full max-w-2xl space-y-3 px-3 py-3 sm:px-4">
         <Section title="Road to the final">
           <CardGridFrame className="space-y-3">
             <CircularBracketWidget />

@@ -10,7 +10,7 @@ import {
 import { usePredictions, useResults } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
 import type { Results } from "@/lib/results";
-import { teamById } from "@/lib/tournament";
+import { matchByNumber, teamById } from "@/lib/tournament";
 
 const named = (c: { code: string; probability: number }): Candidate => ({
   code: c.code,
@@ -38,6 +38,27 @@ function decidedWinners(results?: Results): Map<number, Candidate> {
   return decided;
 }
 
+// --- TEMP UI SIMULATION (revert before commit) ---------------------------
+// Force `code` to win its R32 slot and the R16 match that slot feeds into, so
+// the winner's solid line is seen advancing two levels.
+function simulateWinnerPath(
+  code: string,
+  decided: Map<number, Candidate>,
+  slotOdds: Map<string, Candidate[]>,
+) {
+  const win: Candidate = { code, name: teamById[code]?.name, probability: 1 };
+  // Find the R32 slot this team leads.
+  for (const [key, candidates] of slotOdds) {
+    if (candidates[0]?.code !== code) continue;
+    const r32 = Number(key.split(":")[0]);
+    decided.set(r32, win); // wins R32
+    const r16 = matchByNumber[r32]?.feedsInto;
+    if (r16) decided.set(r16, win); // wins R16
+    break;
+  }
+}
+// -------------------------------------------------------------------------
+
 // Derive the circular view: per R32 slot the teams that could fill it, per match
 // each contender's chance to win it (i.e. advance), the real winner of any
 // finished match, and the title odds.
@@ -50,6 +71,12 @@ function circularView(
   const slotOdds = new Map<string, Candidate[]>();
   for (const slot of predictions.slots)
     slotOdds.set(`${slot.match}:${slot.side}`, slot.candidates.map(named));
+
+  // --- TEMP UI SIMULATION (revert before commit) -------------------------
+  // Pretend FRA wins its R32 and the R16 it feeds into, so we can preview the
+  // winner's line advancing two levels (R32 → R16 → QF).
+  simulateWinnerPath("FRA", decided, slotOdds);
+  // -----------------------------------------------------------------------
 
   // Each contender's chance to win the match — a finished match is pinned to
   // its real winner.
@@ -77,5 +104,6 @@ export function CircularBracketWidget() {
     () => (predictions ? circularView(predictions, results) : undefined),
     [predictions, results],
   );
+  // Market predictions start off; users opt in via the in-card toggle.
   return <CircularBracketCard view={view} />;
 }

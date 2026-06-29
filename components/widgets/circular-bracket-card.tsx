@@ -3,7 +3,7 @@
 import { cn } from "cnfast";
 import { addMinutes, format } from "date-fns";
 import { Info, Trophy } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Flag } from "@/components/flags";
 import { Popover } from "@/components/ui/popover";
@@ -21,12 +21,31 @@ const C = SIZE / 2;
 
 // Each half spans 180°−2·GAP, leaving a GAP wedge at top and bottom so the two
 // halves read apart and the finalists meet on the horizontal centre axis.
-const GAP = 10;
+const GAP = 0;
 const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
-// Every node is one full-size circle, so the rings are spaced more than a
-// diameter apart to keep them from touching toward the centre.
-const RING: Record<RoundKey, number> = { R32: 345, R16: 255, QF: 175, SF: 100 };
+// ── Ring spacing ──────────────────────────────────────────────────────────
+// The radial gap between each ring, working inward from the outer flags. Tune
+// these to space the rings apart; every ring radius below is derived from them,
+// so this is the single place to adjust the layout's concentric spacing.
+const RING_GAP = {
+  flagToR32: 125, // outer flags (32) → round-of-16 nodes
+  r32ToR16: 80, // round-of-16 nodes → round-of-8 nodes
+  r16ToQF: 75, // quarter-final nodes
+  qfToSF: 60, // semi-final nodes
+};
+// Derived ring radii (distance from centre), outside → in.
+const RING: Record<RoundKey, number> = {
+  R32: R_FLAG - RING_GAP.flagToR32,
+  R16: R_FLAG - RING_GAP.flagToR32 - RING_GAP.r32ToR16,
+  QF: R_FLAG - RING_GAP.flagToR32 - RING_GAP.r32ToR16 - RING_GAP.r16ToQF,
+  SF:
+    R_FLAG -
+    RING_GAP.flagToR32 -
+    RING_GAP.r32ToR16 -
+    RING_GAP.r16ToQF -
+    RING_GAP.qfToSF,
+};
 // The round a match's winner advances to — what its contenders are racing to reach.
 const NEXT_LABEL: Record<RoundKey, string> = {
   R32: "round of 16",
@@ -76,6 +95,13 @@ function polar(deg: number, r: number): { x: number; y: number } {
   return { x: round2(C + r * Math.sin(rad)), y: round2(C - r * Math.cos(rad)) };
 }
 
+/** Stagger (seconds) for a node's reveal so predictions ripple inward from the
+ *  edge: the outer flags appear first, nodes nearer the centre last. */
+function rippleDelay(x: number, y: number): number {
+  const r = Math.hypot(x - C, y - C);
+  return round2((1 - r / R_FLAG) * 0.3);
+}
+
 /** SVG arc along radius `r` from `a1` to `a2` (the bar joining a node's two
  *  children), drawn clockwise. */
 function arcPath(r: number, a1: number, a2: number): string {
@@ -110,11 +136,35 @@ function leafSlots(root: number): { match: number; side: Side }[] {
   return out;
 }
 
+// When a connector is drawn solid. A leg is solid only once a team has actually
+// advanced along it (the match at its outer end is played), so the solid lines
+// trace the real winners' paths rather than the merely-qualified field.
+type SolidWhen =
+  // A R32 spoke: a flag → R32 node. Solid once that R32 match is played and this
+  // side's team won it.
+  | { kind: "r32leg"; match: number; side: Side }
+  // An inner spoke: child node → parent node. Solid once the parent match is
+  // played and its winner is the team that came up through `child`.
+  | { kind: "innerleg"; parent: number; child: number }
+  // A final spoke: semi-final node → champion. Solid once the final is played
+  // and its winner is the team that came up through this semi-final.
+  | { kind: "finalleg"; sf: number }
+  // The trunk from a node out to its sibling-merge point. Solid once that match
+  // is decided (a winner has arrived at the node).
+  | { kind: "trunk"; match: number }
+  // Arcs (the bars joining siblings) are never drawn solid.
+  | { kind: "never" };
+
 interface Seg {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  solid: SolidWhen;
+}
+interface Arc {
+  d: string;
+  solid: SolidWhen;
 }
 interface FlagPos {
   match: number;
@@ -132,7 +182,7 @@ interface Geometry {
   flags: FlagPos[];
   nodes: InnerNode[];
   segs: Seg[];
-  arcs: string[];
+  arcs: Arc[];
 }
 
 /** Angles for every node under a half-root: leaves spread evenly across the
@@ -163,7 +213,7 @@ function buildGeometry(): Geometry {
   const flags: FlagPos[] = [];
   const nodes: InnerNode[] = [];
   const segs: Seg[] = [];
-  const arcs: string[] = [];
+  const arcs: Arc[] = [];
   const sfAngle = new Map<number, number>();
 
   for (const { root, start, end } of [LEFT, RIGHT]) {
@@ -183,39 +233,68 @@ function buildGeometry(): Geometry {
 
       const kids = childMatches(m);
       if (!kids) {
-        // R32: a spoke out to each flag, the bar joining the two flags.
+        // R32 → flags: the two feeding paths merge at a midpoint radius between
+        // this node's ring and the flag ring — a short radial trunk runs out to
+        // that midpoint, an arc there spreads to each flag's angle, and a short
+        // radial spoke then enters each flag head-on (from the front).
+        const rMid = (rN + R_FLAG) / 2;
+        const trunk = polar(ang, rMid);
+        const base = polar(ang, rN);
+        segs.push({
+          x1: base.x,
+          y1: base.y,
+          x2: trunk.x,
+          y2: trunk.y,
+          solid: { kind: "trunk", match: num },
+        });
         for (const side of ["home", "away"] as Side[]) {
           const fa = flagAngle.get(`${num}:${side}`)!;
-          const inner = polar(fa, rN);
-          const outer = polar(fa, R_FLAG);
-          segs.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y });
+          const leg: SolidWhen = { kind: "r32leg", match: num, side };
+          arcs.push({ d: arcPath(rMid, fa, ang), solid: leg });
+          const mid = polar(fa, rMid);
+          const tip = polar(fa, R_FLAG);
+          segs.push({
+            x1: mid.x,
+            y1: mid.y,
+            x2: tip.x,
+            y2: tip.y,
+            solid: leg,
+          });
         }
-        arcs.push(
-          arcPath(
-            rN,
-            flagAngle.get(`${num}:home`)!,
-            flagAngle.get(`${num}:away`)!,
-          ),
-        );
       } else {
+        // Inner nodes keep the original side-entry style: a spoke from each child
+        // out to the parent's ring, and an arc at the parent radius that bends
+        // into the node from the side.
         const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
         for (const cm of kids) {
           const ca = nodeAngle.get(cm)!;
           const inner = polar(ca, rN);
           const outer = polar(ca, rChild);
-          segs.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y });
+          const leg: SolidWhen = { kind: "innerleg", parent: num, child: cm };
+          segs.push({
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
+            solid: leg,
+          });
+          arcs.push({ d: arcPath(rN, ca, ang), solid: leg });
         }
-        arcs.push(
-          arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
-        );
       }
     }
   }
 
   // The final: each semi runs straight to the centre, where the champion sits.
+  // Solid once the final is played and its winner came up through this semi.
   for (const sf of [LEFT.root, RIGHT.root]) {
     const p = polar(sfAngle.get(sf)!, RING.SF);
-    segs.push({ x1: C, y1: C, x2: p.x, y2: p.y });
+    segs.push({
+      x1: C,
+      y1: C,
+      x2: p.x,
+      y2: p.y,
+      solid: { kind: "finalleg", sf },
+    });
   }
 
   return { flags, nodes, segs, arcs };
@@ -252,15 +331,20 @@ function RoundFlag({
   code,
   size,
   className,
+  faded,
 }: {
   code?: string;
   size: string;
   className?: string;
+  /** Render the flag image semi-transparent over its solid base (used for
+   *  unconfirmed/predicted nodes). The base stays opaque so it still covers the
+   *  connector lines behind it. */
+  faded?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "relative block shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-surface-border",
+        "relative block shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-surface-border",
         className,
       )}
       style={{ width: size, height: size }}
@@ -268,13 +352,45 @@ function RoundFlag({
       <Flag
         code={code}
         size={`calc(${size} * 4 / 3)`}
-        className="absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0"
+        className={cn(
+          "absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0",
+          faded && "opacity-40",
+        )}
       />
     </span>
   );
 }
 
-function Connectors() {
+function Connectors({ view }: { view?: CircularBracketView }) {
+  // Solid only traces the path a winner actually travelled: the leg's outer
+  // match must be played AND the team that advanced inward must be the one on
+  // this leg. So a freshly-qualified (but not-yet-played) team's spoke stays
+  // dashed — it only turns solid once it wins and moves on.
+  const isSolid = (s: SolidWhen): boolean => {
+    switch (s.kind) {
+      case "never":
+        return false;
+      case "r32leg": {
+        const win = view?.decided.get(s.match);
+        const team = lead(view?.slotOdds.get(`${s.match}:${s.side}`));
+        return !!win && !!team && win.code === team.code;
+      }
+      case "innerleg": {
+        const win = view?.decided.get(s.parent);
+        const child = view?.decided.get(s.child);
+        return !!win && !!child && win.code === child.code;
+      }
+      case "finalleg": {
+        const win = view?.decided.get(104);
+        const finalist = view?.decided.get(s.sf);
+        return !!win && !!finalist && win.code === finalist.code;
+      }
+      case "trunk":
+        // The trunk lights once a winner has arrived at the node.
+        return !!view?.decided.get(s.match);
+    }
+  };
+
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: decorative connectors; structure is conveyed by the labelled nodes it links.
     <svg
@@ -282,28 +398,36 @@ function Connectors() {
       className="absolute inset-0 h-full w-full overflow-visible"
       aria-hidden
     >
-      {GEOMETRY.arcs.map((d) => (
-        <path
-          key={d}
-          d={d}
-          fill="none"
-          stroke="var(--border-strong)"
-          strokeWidth={2.5}
-        />
-      ))}
-      {GEOMETRY.segs.map((s, i) => (
-        <line
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
-          key={i}
-          x1={s.x1}
-          y1={s.y1}
-          x2={s.x2}
-          y2={s.y2}
-          stroke="var(--border-strong)"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-        />
-      ))}
+      {GEOMETRY.arcs.map((a) => {
+        const solid = isSolid(a.solid);
+        return (
+          <path
+            key={a.d}
+            d={a.d}
+            fill="none"
+            // Winner's path in the trophy's green; everything else stays grey.
+            stroke={solid ? "var(--pick)" : "var(--border-strong)"}
+            strokeWidth={2.5}
+          />
+        );
+      })}
+      {GEOMETRY.segs.map((s, i) => {
+        const solid = isSolid(s.solid);
+        return (
+          <line
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
+            key={i}
+            x1={s.x1}
+            y1={s.y1}
+            x2={s.x2}
+            y2={s.y2}
+            // Winner's path in the trophy's green; everything else stays grey.
+            stroke={solid ? "var(--pick)" : "var(--border-strong)"}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -357,9 +481,9 @@ function OddsList({
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
     <>
-      <p className="text-[11px] font-medium tracking-wide text-foreground/80">
-        {title}
-      </p>
+  <p className="text-[12px] font-medium tracking-wide text-foreground/80">
+  {title}
+  </p>
       {subtitle && (
         <p className="mb-1.5 text-[10px] text-muted-foreground/70">
           {subtitle}
@@ -383,52 +507,136 @@ interface NodeProps {
   onToggle: (id: string, anchor: HTMLElement) => void;
 }
 
-/** A node whose team isn't settled yet: a full-size circle with a question mark,
- *  the same footprint as a flag, that opens its chances on tap. */
-function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
+/** Wraps a node so it plays the outward "ripple" reveal once on mount. The
+ *  animation lives on this inner element (not the positioning wrapper) so it
+ *  never clashes with the wrapper's centring transform. */
+function NodeReveal({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="animate-predict-in"
+      style={{ animationDelay: `${delay}s` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** A node whose team isn't settled yet. It always contains both layers — the
+ *  "?" placeholder and the predicted front-runner's faded flag — stacked on top
+ *  of each other, and cross-fades between them when `predict` toggles, so the
+ *  two states morph into one another rather than popping in and out. */
+function UnsettledNode({
+  id,
+  code,
+  size = "var(--cf)",
+  predict,
+  openId,
+  onToggle,
+}: NodeProps & {
+  id: string;
+  /** Front-runner's flag code, when a market exists for this node. */
+  code?: string;
+  size?: string;
+  predict?: boolean;
+}) {
+  const open = openId === id;
+  const showFlag = !!(predict && code);
   return (
     <button
       type="button"
       onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
-      aria-expanded={openId === id}
-      className={cn(
-        "flex size-[var(--cf)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
-        openId === id
-          ? "border-pick/60 text-pick"
-          : "border-surface-border text-muted-foreground hover:text-foreground",
-      )}
-      style={{ fontSize: "calc(var(--cf) * 0.5)" }}
+      aria-expanded={open}
+      className="group relative block rounded-full"
+      style={{ width: `calc(${size})`, height: `calc(${size})` }}
     >
-      ?
+      {/* "?" layer — stays fully opaque underneath so the crossfade never
+          exposes the card behind it; the flag (with its own solid base) simply
+          fades in on top, giving a clean A→B transition. */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors duration-300 ease-out",
+          open
+            ? "border-foreground/65 text-foreground"
+            : "border-surface-border text-muted-foreground group-hover:text-foreground",
+        )}
+        style={{
+          width: `calc(${size} * 0.82)`,
+          height: `calc(${size} * 0.82)`,
+          fontSize: `calc(${size} * 0.42)`,
+        }}
+      >
+        ?
+      </span>
+      {/* Predicted-flag layer — fades in over the solid base, which keeps the
+          connector lines covered and hides the "?" beneath. */}
+      {code && (
+        <span
+          aria-hidden
+          className={cn(
+            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out",
+            showFlag ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <RoundFlag
+            code={code}
+            size={`calc(${size} * 0.82)`}
+            faded
+            className={cn(
+              "transition-[filter] group-hover:brightness-110",
+              open ? "ring-foreground/65" : "ring-surface-divider",
+            )}
+          />
+        </span>
+      )}
     </button>
   );
 }
 
 /** An outer Round-of-32 slot: the team's flag once the group is decided, else a
- *  question-mark circle onto the candidates for that spot. */
+ *  question-mark circle (or, in `predict` mode, the faded front-runner's flag)
+ *  onto the candidates for that spot. */
 function SlotNode({
   pos,
   view,
+  predict,
   openId,
   onToggle,
-}: NodeProps & { pos: FlagPos; view?: CircularBracketView }) {
+}: NodeProps & { pos: FlagPos; view?: CircularBracketView; predict?: boolean }) {
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
+  const id = `slot:${pos.match}:${pos.side}`;
+  const size = "calc(var(--cf) * 0.85)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
-      {confirmed(odds) && top ? (
-        <RoundFlag code={top.code} size="var(--cf)" />
-      ) : (
-        <UnknownNode
-          id={`slot:${pos.match}:${pos.side}`}
-          openId={openId}
-          onToggle={onToggle}
-        />
-      )}
+      <NodeReveal delay={rippleDelay(pos.x, pos.y)}>
+        {confirmed(odds) && top ? (
+          <RoundFlag
+            code={top.code}
+            size={size}
+            className="ring-surface-divider"
+          />
+        ) : (
+          <UnsettledNode
+            id={id}
+            code={top?.code}
+            size={size}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        )}
+      </NodeReveal>
     </div>
   );
 }
@@ -438,24 +646,41 @@ function SlotNode({
 function MatchNode({
   node,
   view,
+  predict,
   openId,
   onToggle,
-}: NodeProps & { node: InnerNode; view?: CircularBracketView }) {
+}: NodeProps & {
+  node: InnerNode;
+  view?: CircularBracketView;
+  predict?: boolean;
+}) {
   const win = view?.decided.get(node.match);
+  const top = lead(view?.matchOdds.get(node.match));
+  const id = `match:${node.match}`;
+  const size = "calc(var(--cf) * 0.85)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
-      {win ? (
-        <RoundFlag code={win.code} size="var(--cf)" />
-      ) : (
-        <UnknownNode
-          id={`match:${node.match}`}
-          openId={openId}
-          onToggle={onToggle}
-        />
-      )}
+      <NodeReveal delay={rippleDelay(node.x, node.y)}>
+        {win ? (
+          <RoundFlag
+            code={win.code}
+            size={size}
+            className="ring-surface-divider"
+          />
+        ) : (
+          <UnsettledNode
+            id={id}
+            code={top?.code}
+            size={size}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        )}
+      </NodeReveal>
     </div>
   );
 }
@@ -474,29 +699,31 @@ function ChampionNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: "50%", top: "50%" }}
     >
-      {win ? (
-        <button
-          type="button"
-          onClick={(e) => onToggle("champion", e.currentTarget)}
-          aria-label="Show title odds"
-          className="block rounded-full ring-2 ring-pick"
-        >
-          <RoundFlag code={win.code} size="var(--cf)" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => onToggle("champion", e.currentTarget)}
-          aria-label="Show title odds"
-          aria-expanded={isOpen}
-          className={cn(
-            "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
-            isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
-          )}
-        >
-          <Trophy style={{ width: "55%", height: "55%" }} />
-        </button>
-      )}
+      <NodeReveal delay={0}>
+        {win ? (
+          <button
+            type="button"
+            onClick={(e) => onToggle("champion", e.currentTarget)}
+            aria-label="Show title odds"
+            className="block rounded-full ring-2 ring-pick"
+          >
+            <RoundFlag code={win.code} size="var(--cf)" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => onToggle("champion", e.currentTarget)}
+            aria-label="Show title odds"
+            aria-expanded={isOpen}
+            className={cn(
+              "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
+              isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
+            )}
+          >
+            <Trophy style={{ width: "55%", height: "55%" }} />
+          </button>
+        )}
+      </NodeReveal>
     </div>
   );
 }
@@ -546,7 +773,7 @@ const HELP_TEXT =
 function CircularBracketHelp() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative ml-auto shrink-0">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -575,12 +802,58 @@ function CircularBracketHelp() {
   );
 }
 
+/** Compact header switch to turn the predicted-flags overlay on or off. */
+function PredictToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Show market predictions"
+      onClick={() => onChange(!on)}
+      className="flex cursor-pointer items-center gap-1.5"
+    >
+      <span className="text-[12px] font-medium text-muted-foreground/70">
+        Market predictions
+      </span>
+      <span
+        className={cn(
+          "relative flex h-3.5 w-6 shrink-0 items-center rounded-full transition-colors",
+          on ? "bg-pick" : "bg-surface-border",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute size-2.5 rounded-full bg-card transition-transform",
+            on ? "translate-x-3" : "translate-x-0.5",
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
-export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
+export function CircularBracketCard({
+  view,
+  predict: predictDefault = false,
+}: {
+  view?: CircularBracketView;
+  /** Initial state of the predictions toggle: show the leading candidate's flag
+   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
+  predict?: boolean;
+}) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
+  const [predict, setPredict] = useState(predictDefault);
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
@@ -591,24 +864,30 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
     // over the page's sticky section header.
     <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
-        <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
+        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
         </span>
-        <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
           · tap a node to see its chances
         </span>
-        <CircularBracketHelp />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <CircularBracketHelp />
+        </div>
       </div>
       <div className="px-2 py-4 sm:px-3">
+        <div className="mb-2 flex justify-end px-1">
+          <PredictToggle on={predict} onChange={setPredict} />
+        </div>
         {/* Sizes are container-relative (cqw), so the whole ring fits any width
             without scrolling and the flags scale up with it. */}
         <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
-          <Connectors />
+          <Connectors view={view} />
           {GEOMETRY.nodes.map((node) => (
             <MatchNode
               key={node.match}
               node={node}
               view={view}
+              predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
@@ -618,6 +897,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               key={`${pos.match}:${pos.side}`}
               pos={pos}
               view={view}
+              predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
