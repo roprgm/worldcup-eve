@@ -398,8 +398,8 @@ function Connectors({ view }: { view?: CircularBracketView }) {
             key={a.d}
             d={a.d}
             fill="none"
-            // Winner's path in foreground; everything else stays grey but solid.
-            stroke={solid ? "var(--foreground)" : "var(--border-strong)"}
+            // Winner's path in the trophy's green; everything else stays grey.
+            stroke={solid ? "var(--pick)" : "var(--border-strong)"}
             strokeWidth={2.5}
           />
         );
@@ -414,8 +414,8 @@ function Connectors({ view }: { view?: CircularBracketView }) {
             y1={s.y1}
             x2={s.x2}
             y2={s.y2}
-            // Winner's path in foreground; everything else stays grey but solid.
-            stroke={solid ? "var(--foreground)" : "var(--border-strong)"}
+            // Winner's path in the trophy's green; everything else stays grey.
+            stroke={solid ? "var(--pick)" : "var(--border-strong)"}
             strokeWidth={2.5}
             strokeLinecap="round"
           />
@@ -584,11 +584,7 @@ function SlotNode({
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
       {confirmed(odds) && top ? (
-        <RoundFlag
-          code={top.code}
-          size={size}
-          className="border border-foreground"
-        />
+        <RoundFlag code={top.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
@@ -627,11 +623,7 @@ function MatchNode({
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
       {win ? (
-        <RoundFlag
-          code={win.code}
-          size={size}
-          className="border border-foreground"
-        />
+        <RoundFlag code={win.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
