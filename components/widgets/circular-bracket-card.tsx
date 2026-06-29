@@ -421,11 +421,24 @@ function PredictedNode({
       aria-label="Show chances"
       aria-expanded={openId === id}
       className={cn(
-        "block rounded-full opacity-45 grayscale-[0.3] transition-opacity hover:opacity-75",
-        openId === id && "opacity-90 ring-2 ring-pick/60",
+        "group relative block rounded-full",
+        openId === id && "ring-2 ring-pick/60",
       )}
     >
-      <RoundFlag code={code} size="var(--cf)" className="border border-dashed border-surface-border" />
+      {/* The flag stays fully opaque so the connector lines never show through;
+          a dark overlay tint is what dims it to read as a prediction. */}
+      <RoundFlag
+        code={code}
+        size="var(--cf)"
+        className="border border-dashed border-surface-border saturate-[0.85]"
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 rounded-full bg-surface-1/60 transition-colors group-hover:bg-surface-1/35",
+          openId === id && "bg-surface-1/20",
+        )}
+      />
     </button>
   );
 }
