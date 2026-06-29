@@ -475,6 +475,11 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
     c.opening == null
       ? undefined
       : `now ${formatPct(c.probability)} · start ${formatPct(c.opening)}`;
+  // When the move is worth noting (>1pt), spell out both ends: "start -> now".
+  const pctLabel =
+    c.opening != null && Math.abs(delta) > 0.01
+      ? `${formatPct(c.opening)} -> ${formatPct(c.probability)}`
+      : formatPct(c.probability);
   return (
     <div className="animate-fade-in flex h-5 items-center gap-1.5">
       <RoundFlag code={c.code} size="14px" />
@@ -510,11 +515,11 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       </span>
       <span
         className={cn(
-          "min-w-8 text-right text-[11px] tabular-nums",
+          "min-w-8 whitespace-nowrap text-right text-[11px] tabular-nums",
           top ? "font-semibold text-foreground" : "text-muted-foreground",
         )}
       >
-        {formatPct(c.probability)}
+        {pctLabel}
       </span>
     </div>
   );
