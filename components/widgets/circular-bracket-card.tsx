@@ -393,7 +393,12 @@ interface NodeProps {
 
 /** A node whose team isn't settled yet: a full-size circle with a question mark,
  *  the same footprint as a flag, that opens its chances on tap. */
-function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
+function UnknownNode({
+  id,
+  size = "var(--cf)",
+  openId,
+  onToggle,
+}: NodeProps & { id: string; size?: string }) {
   return (
     <button
       type="button"
@@ -401,12 +406,16 @@ function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
       aria-label="Show chances"
       aria-expanded={openId === id}
       className={cn(
-        "flex size-[calc(var(--cf)*0.7)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
+        "flex items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
         openId === id
           ? "border-pick/60 text-pick"
           : "border-surface-border text-muted-foreground hover:text-foreground",
       )}
-      style={{ fontSize: "calc(var(--cf) * 0.42)" }}
+      style={{
+        width: `calc(${size} * 0.7)`,
+        height: `calc(${size} * 0.7)`,
+        fontSize: `calc(${size} * 0.42)`,
+      }}
     >
       ?
     </button>
@@ -419,9 +428,10 @@ function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
 function PredictedNode({
   id,
   code,
+  size = "var(--cf)",
   openId,
   onToggle,
-}: NodeProps & { id: string; code: string }) {
+}: NodeProps & { id: string; code: string; size?: string }) {
   return (
     <button
       type="button"
@@ -437,7 +447,7 @@ function PredictedNode({
           image on top is faded so the node reads as a prediction. */}
       <RoundFlag
         code={code}
-        size="var(--cf)"
+        size={size}
         faded
         className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
       />
@@ -495,22 +505,25 @@ function MatchNode({
   const win = view?.decided.get(node.match);
   const top = lead(view?.matchOdds.get(node.match));
   const id = `match:${node.match}`;
+  // Inner match nodes render a touch smaller than the outer ring of slots.
+  const size = "calc(var(--cf) * 0.8)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
       {win ? (
-        <RoundFlag code={win.code} size="var(--cf)" />
+        <RoundFlag code={win.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
           code={top.code}
+          size={size}
           openId={openId}
           onToggle={onToggle}
         />
       ) : (
-        <UnknownNode id={id} openId={openId} onToggle={onToggle} />
+        <UnknownNode id={id} size={size} openId={openId} onToggle={onToggle} />
       )}
     </div>
   );
