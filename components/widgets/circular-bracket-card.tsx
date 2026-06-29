@@ -110,11 +110,23 @@ function leafSlots(root: number): { match: number; side: Side }[] {
   return out;
 }
 
+// A node a connector touches, used to decide whether the connector is "solid"
+// (drawn for a settled part of the bracket) or still tentative.
+type Endpoint =
+  | { type: "slot"; match: number; side: Side }
+  | { type: "match"; match: number };
+
 interface Seg {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  // The connector is solid once every endpoint listed here is resolved.
+  ends: Endpoint[];
+}
+interface Arc {
+  d: string;
+  ends: Endpoint[];
 }
 interface FlagPos {
   match: number;
@@ -132,7 +144,7 @@ interface Geometry {
   flags: FlagPos[];
   nodes: InnerNode[];
   segs: Seg[];
-  arcs: string[];
+  arcs: Arc[];
 }
 
 /** Angles for every node under a half-root: leaves spread evenly across the
@@ -163,7 +175,7 @@ function buildGeometry(): Geometry {
   const flags: FlagPos[] = [];
   const nodes: InnerNode[] = [];
   const segs: Seg[] = [];
-  const arcs: string[] = [];
+  const arcs: Arc[] = [];
   const sfAngle = new Map<number, number>();
 
   for (const { root, start, end } of [LEFT, RIGHT]) {
@@ -183,39 +195,69 @@ function buildGeometry(): Geometry {
 
       const kids = childMatches(m);
       if (!kids) {
-        // R32: a spoke out to each flag, the bar joining the two flags.
+        // R32: a spoke out to each flag (solid once that team is confirmed), the
+        // bar joining the two flags (solid once both are confirmed).
         for (const side of ["home", "away"] as Side[]) {
           const fa = flagAngle.get(`${num}:${side}`)!;
           const inner = polar(fa, rN);
           const outer = polar(fa, R_FLAG);
-          segs.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y });
+          segs.push({
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
+            ends: [{ type: "slot", match: num, side }],
+          });
         }
-        arcs.push(
-          arcPath(
+        arcs.push({
+          d: arcPath(
             rN,
             flagAngle.get(`${num}:home`)!,
             flagAngle.get(`${num}:away`)!,
           ),
-        );
+          ends: [
+            { type: "slot", match: num, side: "home" },
+            { type: "slot", match: num, side: "away" },
+          ],
+        });
       } else {
+        // Inner node: a spoke to each child (solid once that child match is
+        // decided), the bar joining them (solid once both are decided).
         const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
         for (const cm of kids) {
           const ca = nodeAngle.get(cm)!;
           const inner = polar(ca, rN);
           const outer = polar(ca, rChild);
-          segs.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y });
+          segs.push({
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
+            ends: [{ type: "match", match: cm }],
+          });
         }
-        arcs.push(
-          arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
-        );
+        arcs.push({
+          d: arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
+          ends: [
+            { type: "match", match: kids[0] },
+            { type: "match", match: kids[1] },
+          ],
+        });
       }
     }
   }
 
   // The final: each semi runs straight to the centre, where the champion sits.
+  // Solid once that semi-final is decided (the finalist is known).
   for (const sf of [LEFT.root, RIGHT.root]) {
     const p = polar(sfAngle.get(sf)!, RING.SF);
-    segs.push({ x1: C, y1: C, x2: p.x, y2: p.y });
+    segs.push({
+      x1: C,
+      y1: C,
+      x2: p.x,
+      y2: p.y,
+      ends: [{ type: "match", match: sf }],
+    });
   }
 
   return { flags, nodes, segs, arcs };
@@ -282,7 +324,17 @@ function RoundFlag({
   );
 }
 
-function Connectors() {
+function Connectors({ view }: { view?: CircularBracketView }) {
+  // An endpoint is resolved once its team is locked in: a slot when its R32
+  // occupant is confirmed, an inner node when its match has a winner.
+  const resolved = (e: Endpoint) =>
+    e.type === "slot"
+      ? confirmed(view?.slotOdds.get(`${e.match}:${e.side}`))
+      : !!view?.decided.get(e.match);
+  // A connector is drawn solid only when every node it joins is resolved;
+  // otherwise it stays dashed to read as part of the still-undecided bracket.
+  const isSolid = (ends: Endpoint[]) => ends.every(resolved);
+
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: decorative connectors; structure is conveyed by the labelled nodes it links.
     <svg
@@ -290,28 +342,38 @@ function Connectors() {
       className="absolute inset-0 h-full w-full overflow-visible"
       aria-hidden
     >
-      {GEOMETRY.arcs.map((d) => (
-        <path
-          key={d}
-          d={d}
-          fill="none"
-          stroke="var(--border-strong)"
-          strokeWidth={2.5}
-        />
-      ))}
-      {GEOMETRY.segs.map((s, i) => (
-        <line
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
-          key={i}
-          x1={s.x1}
-          y1={s.y1}
-          x2={s.x2}
-          y2={s.y2}
-          stroke="var(--border-strong)"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-        />
-      ))}
+      {GEOMETRY.arcs.map((a) => {
+        const solid = isSolid(a.ends);
+        return (
+          <path
+            key={a.d}
+            d={a.d}
+            fill="none"
+            stroke="var(--border-strong)"
+            strokeWidth={2.5}
+            strokeOpacity={solid ? 1 : 0.5}
+            strokeDasharray={solid ? undefined : "5 7"}
+          />
+        );
+      })}
+      {GEOMETRY.segs.map((s, i) => {
+        const solid = isSolid(s.ends);
+        return (
+          <line
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
+            key={i}
+            x1={s.x1}
+            y1={s.y1}
+            x2={s.x2}
+            y2={s.y2}
+            stroke="var(--border-strong)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeOpacity={solid ? 1 : 0.5}
+            strokeDasharray={solid ? undefined : "5 7"}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -683,7 +745,7 @@ export function CircularBracketCard({
         {/* Sizes are container-relative (cqw), so the whole ring fits any width
             without scrolling and the flags scale up with it. */}
         <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
-          <Connectors />
+          <Connectors view={view} />
           {GEOMETRY.nodes.map((node) => (
             <MatchNode
               key={node.match}
