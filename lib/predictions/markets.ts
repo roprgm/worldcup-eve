@@ -74,6 +74,24 @@ export function reachObsFor(
   return [c16, cQf, cSf, Math.min(cSf, Math.max(0, final ?? 0))];
 }
 
+// Two-way "Team to Advance" odds for a decided knockout pair, from each side's
+// reach-the-next-round future (`reachKind`). Unlike the regulation money line,
+// this stays valid when a match is level after 90' and headed to extra time /
+// penalties (a regulation draw) — the future prices who goes through, not the
+// 90-minute result. Null when neither side is priced.
+export function advanceOdds(
+  prices: Map<string, number>,
+  reachKind: string,
+  home: string,
+  away: string,
+): { home: number; away: number } | null {
+  const h = marketProb(prices, reachKind, home) ?? 0;
+  const a = marketProb(prices, reachKind, away) ?? 0;
+  const total = h + a;
+  if (total <= 0) return null;
+  return { home: h / total, away: a / total };
+}
+
 export function normalize(dist: Dist): Dist {
   const sum = [...dist.values()].reduce((a, b) => a + b, 0);
   return sum <= 0
