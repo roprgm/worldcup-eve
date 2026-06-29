@@ -95,6 +95,13 @@ function polar(deg: number, r: number): { x: number; y: number } {
   return { x: round2(C + r * Math.sin(rad)), y: round2(C - r * Math.cos(rad)) };
 }
 
+/** Stagger (seconds) for a node's reveal so predictions ripple outward from the
+ *  centre: nodes nearer the middle appear first, outer flags last. */
+function rippleDelay(x: number, y: number): number {
+  const r = Math.hypot(x - C, y - C);
+  return round2((r / R_FLAG) * 0.3);
+}
+
 /** SVG arc along radius `r` from `a1` to `a2` (the bar joining a node's two
  *  children), drawn clockwise. */
 function arcPath(r: number, a1: number, a2: number): string {
@@ -538,17 +545,25 @@ function PredictedNode({
   id,
   code,
   size = "var(--cf)",
+  delay = 0,
   openId,
   onToggle,
-}: NodeProps & { id: string; code: string; size?: string }) {
+}: NodeProps & {
+  id: string;
+  code: string;
+  size?: string;
+  /** Seconds to stagger the reveal animation, for the outward ripple. */
+  delay?: number;
+}) {
   return (
     <button
       type="button"
       onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
       aria-expanded={openId === id}
+      style={{ animationDelay: `${delay}s` }}
       className={cn(
-        "group relative block rounded-full",
+        "group relative block animate-predict-in rounded-full",
         openId === id && "ring-2 ring-pick/60",
       )}
     >
@@ -590,6 +605,7 @@ function SlotNode({
           id={id}
           code={top.code}
           size={size}
+          delay={rippleDelay(pos.x, pos.y)}
           openId={openId}
           onToggle={onToggle}
         />
@@ -629,6 +645,7 @@ function MatchNode({
           id={id}
           code={top.code}
           size={size}
+          delay={rippleDelay(node.x, node.y)}
           openId={openId}
           onToggle={onToggle}
         />
@@ -816,10 +833,10 @@ export function CircularBracketCard({
     // over the page's sticky section header.
     <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
-        <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
+        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
         </span>
-        <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
+        <span className="min-w-0 truncate text-[11px] text-muted-foreground/55">
           · tap a node to see its chances
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">

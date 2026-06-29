@@ -69,6 +69,21 @@
   --animate-fade-up: wc-fade-up 0.5s var(--ease-geist) both;
   --animate-fade-in: wc-fade-in 0.4s var(--ease-geist) both;
   --animate-pop-in: wc-pop-in 0.14s var(--ease-geist) both;
+  --animate-predict-in: wc-predict-in 0.32s var(--ease-geist) both;
+
+  @keyframes wc-predict-in {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    60% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 
   @keyframes wc-fade-up {
     from {
