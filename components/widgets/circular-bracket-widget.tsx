@@ -21,6 +21,20 @@ const named = (c: { code: string; probability: number }): Candidate => ({
   probability: c.probability,
 });
 
+const baselineMap = (candidates?: { code: string; probability: number }[]) =>
+  candidates && new Map(candidates.map((c) => [c.code, c.probability]));
+
+// Tag each live candidate with its baseline chance (0 if it wasn't on the
+// baseline list, absent when there's no baseline at all).
+const withBaseline = (
+  candidates: { code: string; probability: number }[],
+  baseline?: Map<string, number>,
+): Candidate[] =>
+  candidates.map((c) => {
+    if (!baseline) return named(c);
+    return { ...named(c), baseline: baseline.get(c.code) ?? 0 };
+  });
+
 // Knockout wins → the round the team is now in, for the road-to-the-final start.
 const ROUND_BY_WINS: Round[] = ["R32", "R16", "QF", "SF", "FINAL"];
 
@@ -69,25 +83,51 @@ function circularView(
 ): CircularBracketView {
   const decided = decidedWinners(results);
 
+  // Start-of-day baseline counterparts, to paint the move since the day's start.
+  const baselineSlots = new Map(
+    predictions.baseline.slots.map((s) => [
+      `${s.match}:${s.side}`,
+      baselineMap(s.candidates),
+    ]),
+  );
+  const baselineMatch = new Map(
+    Object.entries(predictions.baseline.matchWinOdds).map(([match, cands]) => [
+      Number(match),
+      baselineMap(cands),
+    ]),
+  );
+
   const slotOdds = new Map<string, Candidate[]>();
   for (const slot of predictions.slots) {
-    slotOdds.set(`${slot.match}:${slot.side}`, slot.candidates.map(named));
+    const key = `${slot.match}:${slot.side}`;
+    slotOdds.set(key, withBaseline(slot.candidates, baselineSlots.get(key)));
   }
 
   // Each contender's chance to win the match — a finished match is pinned to
-  // its real winner.
+  // its real winner (no baseline split: it's settled).
   const matchOdds = new Map<number, Candidate[]>();
   for (const [match, candidates] of Object.entries(predictions.matchWinOdds)) {
     const num = Number(match);
     const win = decided.get(num);
-    matchOdds.set(num, win ? [win] : candidates.map(named));
+    matchOdds.set(
+      num,
+      win ? [win] : withBaseline(candidates, baselineMatch.get(num)),
+    );
   }
+
+  const live = new Set<number>();
+  for (const m of results?.matches ?? [])
+    if (m.status === "live") live.add(m.n);
 
   return {
     slotOdds,
     matchOdds,
     decided,
-    championOdds: predictions.bracketChampion.map(named),
+    live,
+    championOdds: withBaseline(
+      predictions.bracketChampion,
+      baselineMap(predictions.baseline.bracketChampion),
+    ),
   };
 }
 

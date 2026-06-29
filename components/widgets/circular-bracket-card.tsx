@@ -326,6 +326,10 @@ export interface Candidate {
   code: string;
   name?: string;
   probability: number;
+  /** The same team's chance at the start of the day, when known. The bar paints
+   *  the shared value in the base colour and the move since in green/red. Absent
+   *  for settled/unsnapshotted nodes — the bar is then solid. */
+  baseline?: number;
 }
 
 /** Everything the card paints onto the skeleton: the candidates for each R32
@@ -335,6 +339,7 @@ export interface CircularBracketView {
   slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
   matchOdds: Map<number, Candidate[]>; // match → each contender's chance to win
   decided: Map<number, Candidate>; // match → real winner, once played
+  live: Set<number>; // match numbers currently in progress
   championOdds: Candidate[];
 }
 
@@ -460,6 +465,20 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  used across the prediction widgets. Rows fade in and their bars sweep out
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
+  // The bar reaches max(now, start): a foreground base up to the value both share,
+  // then the move since the day's start — green if the chance rose, red if it fell.
+  // With no baseline, start equals now, so there's no move and the bar stays solid.
+  const now = c.probability;
+  const start = c.baseline ?? now;
+  const base = Math.min(now, start);
+  const delta = now - start;
+  const moved = Math.abs(delta) > 0.01; // worth showing (>1pt)
+  const pctLabel = moved
+    ? `${formatPct(start)} -> ${formatPct(now)}`
+    : formatPct(now);
+  const barTitle = moved
+    ? `now ${formatPct(now)} · start ${formatPct(start)}`
+    : undefined;
   return (
     <div className="animate-fade-in flex h-5 items-center gap-1.5">
       <RoundFlag code={c.code} size="14px" />
@@ -472,24 +491,64 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       >
         {c.code}
       </span>
-      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span
+        title={barTitle}
+        className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50"
+      >
         <span
-          className={cn(
-            "animate-bar-grow h-full origin-left rounded-[1px]",
-            top ? "bg-pick" : "bg-muted-foreground/30",
-          )}
-          style={{ width: formatPct(c.probability) }}
+          className="animate-bar-grow h-full origin-left bg-foreground"
+          style={{ width: formatPct(base) }}
         />
+        {moved && (
+          <span
+            className="animate-bar-grow h-full origin-left"
+            style={{ width: formatPct(Math.abs(delta)) }}
+          >
+            {/* Skeleton-style pulse so the live move reads as in-play. */}
+            <span
+              className={cn(
+                "block h-full w-full animate-pulse",
+                delta > 0 ? "bg-emerald-400" : "bg-red-400",
+              )}
+            />
+          </span>
+        )}
       </span>
       <span
         className={cn(
-          "min-w-8 text-right text-[11px] tabular-nums",
+          "min-w-8 whitespace-nowrap pr-0.5 text-right text-[11px] tabular-nums",
           top ? "font-semibold text-foreground" : "text-muted-foreground",
         )}
       >
-        {formatPct(c.probability)}
+        {pctLabel}
       </span>
     </div>
+  );
+}
+
+function LiveDot({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "shrink-0 animate-pulse rounded-full bg-rose-400",
+        className,
+      )}
+    />
+  );
+}
+
+function LiveBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tracking-wide text-rose-400",
+        className,
+      )}
+    >
+      <LiveDot className="size-1.5" />
+      Live
+    </span>
   );
 }
 
@@ -498,14 +557,18 @@ function OddsList({
   title,
   subtitle,
   odds,
+  live,
 }: {
   title: string;
   subtitle?: string;
   odds: Candidate[];
+  /** Mark the popup as live (the underlying match is in progress). */
+  live?: boolean;
 }) {
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
-    <div>
+    <div className="relative">
+      {live && <LiveBadge className="absolute top-0 right-0" />}
       <PopupHeader title={title} subtitle={subtitle} />
       <div className="space-y-1">
         {shown.length === 0 ? (
@@ -759,6 +822,7 @@ interface NodeModel {
   flagCode?: string;
   predictedCode?: string;
   explainable: boolean; // the locked-in flag opens a road-to-the-final breakdown
+  live: boolean; // the node's match is in progress
 }
 
 function slotModel(
@@ -776,6 +840,7 @@ function slotModel(
     flagCode,
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    live: view?.live.has(pos.match) ?? false,
   };
 }
 
@@ -793,6 +858,7 @@ function matchModel(
     flagCode,
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    live: view?.live.has(node.match) ?? false,
   };
 }
 
@@ -836,6 +902,15 @@ function BracketNode({
               transitionDelay: loading ? undefined : `${wave}s`,
             }}
           />
+          {/* The node's own edge, recoloured and breathing, marks a live match.
+              Scaled to the node so the ring sits flush against it. */}
+          {model.live && (
+            <span
+              aria-hidden
+              style={{ transform: `scale(${settleScale})` }}
+              className="pointer-events-none absolute inset-0 animate-pulse rounded-full ring-2 ring-rose-400/55"
+            />
+          )}
           {!loading && (
             <div
               className="col-start-1 row-start-1 animate-fade-in"
@@ -929,21 +1004,29 @@ function matchSubtitle(num: number): string {
 function openContent(
   view: CircularBracketView,
   id: string,
-): { title: string; subtitle: string; odds: Candidate[] } | null {
+): {
+  title: string;
+  subtitle: string;
+  odds: Candidate[];
+  live: boolean;
+} | null {
   if (id === "champion")
     return {
       title: "Chances to win the title",
       subtitle: matchSubtitle(104),
       odds: view.championOdds,
+      live: view.live.has(104),
     };
   if (id.startsWith("slot:")) {
     const sideKey = id.slice("slot:".length);
     const odds = view.slotOdds.get(sideKey);
     if (!odds) return null;
+    const num = Number(sideKey.split(":")[0]);
     return {
       title: "Chances to reach this match",
-      subtitle: matchSubtitle(Number(sideKey.split(":")[0])),
+      subtitle: matchSubtitle(num),
       odds,
+      live: view.live.has(num),
     };
   }
   const num = Number(id.slice("match:".length));
@@ -954,6 +1037,7 @@ function openContent(
     title: `Chances to reach the ${NEXT_LABEL[round]}`,
     subtitle: matchSubtitle(num),
     odds,
+    live: view.live.has(num),
   };
 }
 
@@ -1131,6 +1215,7 @@ export function CircularBracketRing({
               title={content.title}
               subtitle={content.subtitle}
               odds={content.odds}
+              live={content.live}
             />
           )
         )}

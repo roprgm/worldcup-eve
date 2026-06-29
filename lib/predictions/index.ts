@@ -37,7 +37,12 @@ import {
   type MatchOdds,
   type Scoreline,
 } from "./group-markets";
-import { fetchKnockoutMarkets, pairKey } from "./knockout-markets";
+import {
+  fetchKnockoutMarkets,
+  pairKey,
+  type KnockoutMarketsSnapshot,
+} from "./knockout-markets";
+import { readLatestEpoch, writeEpoch, type EpochSnapshot } from "./epoch";
 import { getMatchResults, type Results } from "../results";
 
 export interface Candidate {
@@ -78,18 +83,13 @@ export interface KnockoutOdds {
   homeAdvance: number; // P(home advances) — two-way, homeAdvance + awayAdvance = 1
   awayAdvance: number;
 }
-export interface Predictions {
-  updatedAt: string; // ISO timestamp
-  catalogGeneratedAt: string;
+/** Everything the bracket simulation produces from one Bradley-Terry fit. The
+ *  live snapshot exposes these at the top level of `Predictions`; the start-of-
+ *  day epoch carries the same shape and is surfaced as `Predictions.baseline`. */
+export interface BracketOutputs {
   slots: PredictedSlot[];
-  champion: Candidate[]; // direct champion market
   bracketChampion: Candidate[]; // BT winner of the Final (match 104)
-  groups: GroupOdds[];
   reach: TeamReach[];
-  /** Most-likely exact scoreline per unplayed group fixture, by fixture id. */
-  groupScores: Record<string, Scoreline>;
-  /** Live two-way (home/away) win chance per group fixture with a market. */
-  matchOdds: MatchOdds[];
   /** Most-likely exact scoreline per decided knockout match with a per-game
    *  market, by FIFA match number (oriented to the bracket's home/away). */
   knockoutScores: Record<number, Scoreline>;
@@ -107,6 +107,21 @@ export interface Predictions {
   teamStrengths: Record<string, number>;
 }
 
+export interface Predictions extends BracketOutputs {
+  updatedAt: string; // ISO timestamp
+  catalogGeneratedAt: string;
+  champion: Candidate[]; // direct champion market
+  groups: GroupOdds[];
+  /** Most-likely exact scoreline per unplayed group fixture, by fixture id. */
+  groupScores: Record<string, Scoreline>;
+  /** Live two-way (home/away) win chance per group fixture with a market. */
+  matchOdds: MatchOdds[];
+  /** The bracket outputs from the start-of-day epoch (the persisted snapshot),
+   *  the before/after counterpart the bars diff against. Equals the live bracket
+   *  until the first epoch is captured. */
+  baseline: BracketOutputs;
+}
+
 // 4 decimals: display-only, keeps the payload small, drops long-tail candidates.
 const round4 = (x: number) => Math.round(x * 1e4) / 1e4;
 
@@ -118,11 +133,12 @@ function toCandidates(dist: Dist, keepZeros = false): Candidate[] {
     .sort((a, b) => b.probability - a.probability);
 }
 
-// Optional cross-call cache for the expensive fit anchor (~2 s). Pass the same
-// object across calls to reuse it; the default recomputes it (keeping the call
-// pure). Drop/replace the object to invalidate.
+// Fallback cache for the expensive fit anchor (~2 s), used only when no epoch is
+// available to warm-start from (first deploy / local dev). Pass the same object
+// across calls to reuse it; the default recomputes it. With an epoch present the
+// anchor is never computed here.
 export interface PredictionCache {
-  anchor?: Strengths;
+  live?: { anchor?: Strengths };
 }
 
 // A slot's team once it is all but certain (group stage decided), else null.
@@ -196,29 +212,19 @@ function knockoutMarketOverride(
   return { override, scores, odds };
 }
 
-export async function buildPredictions(
-  cache: PredictionCache = {},
-  // Optional override for the Round-of-32 third-place slots, keyed "match:side"
-  // → team distribution. When given (from real results), it replaces the market
-  // heuristic for those slots; other slots are untouched.
-  thirdSlotDists?: Map<string, Dist>,
-): Promise<Predictions> {
-  const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
-    fetchPrices(),
-    fetchGroupMarkets(),
-    fetchKnockoutMarkets(),
-  ]);
-
-  const r32Slots = buildR32Slots(prices);
-  // Replace the market's third-place slots with the results-based distribution
-  // (when given) before the fit and simulation, so the whole bracket — not just
-  // the R32 display — propagates from the sharper thirds. R16+ stay consistent.
-  if (thirdSlotDists)
-    for (const [key, dist] of thirdSlotDists) r32Slots.set(key, dist);
-  const reachObs: ReachObs = new Map(
-    teamCodes.map((t) => [t, reachObsFor(prices, t)]),
-  );
-
+// Fit and simulate the whole bracket from the live knockout markets, returning
+// every output that depends on the fit. The futures-derived champion/groups are
+// computed by the caller and shared. `prices` is needed only for each team's
+// market champion column. `base` warm-starts the fit from the persisted epoch
+// (skipping the ~2 s anchor); without it the anchor is computed and cached.
+function simulateBracket(
+  r32Slots: Map<string, Dist>,
+  reachObs: ReachObs,
+  knockoutMarkets: KnockoutMarketsSnapshot,
+  prices: Map<string, number>,
+  cache: { anchor?: Strengths },
+  base?: Strengths,
+): BracketOutputs {
   // Once an R32 slot is decided, Polymarket prices that exact matchup directly.
   // Pin those matches to the market's two-way advance odds (instead of inferring
   // them from the fit) and capture the market's scoreline + three-way read. The
@@ -229,8 +235,14 @@ export async function buildPredictions(
     odds: knockoutOdds,
   } = knockoutMarketOverride(r32Slots, knockoutMarkets);
 
-  cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
-  const strengths = fitStrengths(r32Slots, reachObs, cache.anchor, r32Override);
+  // Warm-start from the epoch; fall back to the cached anchor when there's none.
+  if (!base) cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
+  const strengths = fitStrengths(
+    r32Slots,
+    reachObs,
+    base ?? cache.anchor,
+    r32Override,
+  );
   const winners = simulate(r32Slots, strengths, r32Override);
 
   // Third-place play-off: simulate() skips it, so derive its two slots here as
@@ -251,36 +263,30 @@ export async function buildPredictions(
     return out;
   };
 
-  // R32 from group markets, R16+ from the BT winner of the feeding match, play-off from the losers.
+  // R32 from group markets, R16+ from the BT winner of the feeding match,
+  // play-off from the losers.
+  const slotDist = (m: KnockoutMatch, side: "home" | "away"): Dist => {
+    if (m.round === "R32")
+      return r32Slots.get(`${m.number}:${side}`) ?? new Map();
+    const ref = m[side];
+    if (ref.kind === "match") return winners.get(ref.match) ?? new Map();
+    if (ref.kind === "loser") return losersOf(ref.match);
+    return new Map();
+  };
+
   const slots: PredictedSlot[] = [];
   for (const m of knockoutMatches)
     for (const side of ["home", "away"] as const) {
       const ref = m[side];
-      const key = `${m.number}:${side}`;
-      const dist =
-        m.round === "R32"
-          ? (r32Slots.get(key) ?? new Map())
-          : ref.kind === "match"
-            ? (winners.get(ref.match) ?? new Map())
-            : ref.kind === "loser"
-              ? losersOf(ref.match)
-              : new Map();
       const keepZeros =
         m.round === "R32" && (ref.kind === "winner" || ref.kind === "runner");
       slots.push({
         match: m.number,
         side,
-        candidates: toCandidates(normalize(dist), keepZeros),
+        candidates: toCandidates(normalize(slotDist(m, side)), keepZeros),
       });
     }
 
-  const champion = toCandidates(
-    normalize(
-      new Map(
-        teamCodes.map((t) => [t, marketProb(prices, "champion", t) ?? 0]),
-      ),
-    ),
-  );
   const bracketChampion = toCandidates(
     normalize(winners.get(104) ?? new Map()),
   );
@@ -309,6 +315,75 @@ export async function buildPredictions(
     }))
     .sort((a, b) => b.final - a.final);
 
+  return {
+    slots,
+    bracketChampion,
+    reach,
+    knockoutScores,
+    knockoutOdds,
+    matchWinOdds,
+    teamStrengths: Object.fromEntries(
+      teamCodes.map((t) => [t, round4(strengths.get(t) ?? 1)]),
+    ),
+  };
+}
+
+// The bracket slice of a snapshot, for persisting as the epoch.
+const bracketOf = (s: Predictions): BracketOutputs => ({
+  slots: s.slots,
+  bracketChampion: s.bracketChampion,
+  reach: s.reach,
+  knockoutScores: s.knockoutScores,
+  knockoutOdds: s.knockoutOdds,
+  matchWinOdds: s.matchWinOdds,
+  teamStrengths: s.teamStrengths,
+});
+
+export async function buildPredictions(
+  cache: PredictionCache = {},
+  // Round-of-32 third-place slots from real results, replacing the market
+  // heuristic for those slots; keyed "match:side".
+  thirdSlotDists?: Map<string, Dist>,
+  // The start-of-day epoch: warm-starts the fit and is the before/after baseline.
+  epoch?: EpochSnapshot | null,
+): Promise<Predictions> {
+  const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
+    fetchPrices(),
+    fetchGroupMarkets(),
+    fetchKnockoutMarkets(),
+  ]);
+
+  const r32Slots = buildR32Slots(prices);
+  // Replace the market's third-place slots with the results-based distribution
+  // (when given) before the fit and simulation, so the whole bracket — not just
+  // the R32 display — propagates from the sharper thirds. R16+ stay consistent.
+  if (thirdSlotDists)
+    for (const [key, dist] of thirdSlotDists) r32Slots.set(key, dist);
+  const reachObs: ReachObs = new Map(
+    teamCodes.map((t) => [t, reachObsFor(prices, t)]),
+  );
+
+  cache.live ??= {};
+  const base = epoch ? new Map(Object.entries(epoch.teamStrengths)) : undefined;
+  const live = simulateBracket(
+    r32Slots,
+    reachObs,
+    knockoutMarkets,
+    prices,
+    cache.live,
+    base,
+  );
+  // No epoch yet → baseline mirrors live, so deltas are zero and bars stay solid.
+  const baseline = epoch ?? live;
+
+  const champion = toCandidates(
+    normalize(
+      new Map(
+        teamCodes.map((t) => [t, marketProb(prices, "champion", t) ?? 0]),
+      ),
+    ),
+  );
+
   const groups = groupLetters.map((letter) => ({
     letter,
     teams: groupTeams[letter]
@@ -324,27 +399,20 @@ export async function buildPredictions(
   return {
     updatedAt: new Date().toISOString(),
     catalogGeneratedAt: catalog.generatedAt,
-    slots,
     champion,
-    bracketChampion,
     groups,
-    reach,
     groupScores: groupMarkets.scores,
     matchOdds: groupMarkets.odds,
-    knockoutScores,
-    knockoutOdds,
-    matchWinOdds,
-    teamStrengths: Object.fromEntries(
-      teamCodes.map((t) => [t, round4(strengths.get(t) ?? 1)]),
-    ),
+    ...live,
+    baseline,
   };
 }
 
-// Cached snapshot shared by the predictions API route and the agent. The fit is
-// the cost (~2s), so we cache the result in the Vercel Runtime Cache
-// (cross-instance, with a transparent in-memory fallback elsewhere) and reuse
-// the fit anchor across the rare rebuilds. An eve schedule refreshes it every
-// minute so reads stay warm.
+// Cached snapshot shared by the predictions API route and the agent. We cache
+// the result in the Vercel Runtime Cache (cross-instance, with a transparent
+// in-memory fallback elsewhere). An eve schedule refreshes it every minute; each
+// rebuild warm-starts from the persisted epoch, so the ~2 s anchor fit only runs
+// at the daily capture (or once, as a fallback, when no epoch exists yet).
 const PREDICTIONS_TTL = 120; // 2 min, longer than the 1-min refresh to survive a late tick
 const anchor: PredictionCache = {};
 const predictionsCache = getCache({ namespace: "predictions" });
@@ -374,20 +442,34 @@ function thirdSlotDistsFromResults(results: Results): Map<string, Dist> {
   return dists;
 }
 
-// Rebuild the snapshot and write it to the cache; the schedule calls this to
-// keep reads warm.
-export async function refreshPredictions(): Promise<Predictions> {
-  // Real results sharpen the Round-of-32 third-place slots; fall back to the
-  // market heuristic if the results feed is unavailable.
-  const thirdSlotDists = await getMatchResults()
+// Real results sharpen the Round-of-32 third-place slots; fall back to the
+// market heuristic if the results feed is unavailable.
+const currentThirdSlotDists = () =>
+  getMatchResults()
     .then(thirdSlotDistsFromResults)
     .catch(() => undefined);
-  const data = await buildPredictions(anchor, thirdSlotDists);
+
+// Rebuild the snapshot and write it to the cache; the schedule calls this every
+// minute to keep reads warm. Warm-starts the fit from the persisted epoch.
+export async function refreshPredictions(): Promise<Predictions> {
+  const [thirdSlotDists, epoch] = await Promise.all([
+    currentThirdSlotDists(),
+    readLatestEpoch(),
+  ]);
+  const data = await buildPredictions(anchor, thirdSlotDists, epoch);
   await predictionsCache.set("snapshot", data, {
     ttl: PREDICTIONS_TTL,
     tags: ["predictions"],
   });
   return data;
+}
+
+// Authoritative start-of-day fit (fresh anchor, no warm-start), persisted as the
+// day's epoch. Runs once a day from the rollover schedule.
+export async function captureDailySnapshot(day: string): Promise<void> {
+  const thirdSlotDists = await currentThirdSlotDists();
+  const snapshot = await buildPredictions({}, thirdSlotDists, null);
+  await writeEpoch(day, bracketOf(snapshot));
 }
 
 export async function getPredictions(): Promise<Predictions> {

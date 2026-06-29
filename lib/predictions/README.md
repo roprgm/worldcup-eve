@@ -30,23 +30,25 @@ bun run lib/predictions/cli.ts --min    # one line, for piping into an API
 Each call fetches fresh prices and refits the model. The fit is deterministic:
 identical prices always yield identical output.
 
-### Reusing the fit anchor (optional)
+### The daily epoch (warm-start + baseline)
 
 The bulk of the compute is the model's *anchor* — an averaged, stable fit that
-takes ~2 s but barely moves between price refreshes. `buildPredictions` recomputes
-it every call by default (staying pure and stateless). A long-lived server can
-reuse it by passing the same cache object across calls, paying only the ~100 ms
-warm-start each time:
+takes ~2 s but barely moves between price refreshes. Rather than pay it on every
+rebuild, a once-a-day job (`captureDailySnapshot`, run by the rollover schedule)
+computes an authoritative snapshot and persists it as the **epoch** via Vercel
+Blob (`epoch.ts`). Every per-minute rebuild then passes that epoch to
+`buildPredictions`, which warm-starts the fit from its `teamStrengths` and skips
+the anchor entirely:
 
 ```ts
-const cache = {}                 // hold this across requests
-await buildPredictions(cache)    // first call computes the anchor (~2 s)
-await buildPredictions(cache)    // later calls reuse it (~100 ms + fetch)
-// drop or replace `cache` to invalidate — e.g. every few minutes
+const epoch = await readLatestEpoch()      // start-of-day snapshot, or null
+await buildPredictions(cache, thirds, epoch)
+// with an epoch: ~0.3 s (80-step warm start). without one: ~2 s (anchor fit).
 ```
 
-This is a deliberately minimal hook; wire it to your platform's real cache
-(Redis, Vercel Runtime Cache, …) however you like.
+Measured ~4.7× faster than the cold anchor path. When no epoch exists (first
+deploy, or local dev with no blob configured), it falls back to computing the
+anchor once and caching it on the passed `cache` object.
 
 ## What it returns
 
@@ -63,6 +65,13 @@ This is a deliberately minimal hook; wire it to your platform's real cache
 | `knockoutScores`  | most-likely exact scoreline per decided knockout match with a per-game market, by match number |
 | `knockoutOdds`    | the per-game market's direct read of each decided knockout match: regulation three-way (home/draw/away) + the two-way advance odds it implies |
 | `matchWinOdds`    | win distribution per knockout match (73–104). R32 comes straight from the per-game market; deeper rounds are the BT model |
+| `baseline`        | the same bracket outputs (`slots`, `bracketChampion`, `reach`, `knockoutScores`, `knockoutOdds`, `matchWinOdds`, `teamStrengths`) from the start-of-day **epoch** — the before/after counterpart for the bars |
+
+The `baseline` block is the persisted start-of-day epoch (`epoch.ts`), not a
+recompute: the bars diff the live bracket against it to show the move since the
+day began. Until the first epoch is captured it equals the live bracket (every
+delta zero). The stored epoch itself carries no `baseline`, so history files stay
+flat.
 
 Teams are FIFA 3-letter codes (`BRA`, `ARG`, …). Probabilities are in `[0, 1]`,
 rounded to four decimals.
@@ -104,6 +113,7 @@ As deeper rounds get decided and priced, the same path covers them.
 | `bradley-terry.ts` | the BT model: SPSA fit + bracket simulation (with winner overrides) |
 | `group-markets.ts` | per-group-fixture exact scoreline + two-way win odds            |
 | `knockout-markets.ts` | per-knockout-match exact scoreline + three-way / advance odds |
+| `epoch.ts`         | read/write the persisted start-of-day epoch ([`lib/storage`](../storage) over Vercel Blob) — warm-start seed + baseline |
 | `market-api.ts`    | fetch live prices (rate-limited CLOB + Gamma)                   |
 | `markets.json`     | futures catalog (advance / reach / elim / champion token ids)   |
 | `group-markets.json` | per-group-fixture catalog (exact-score + moneyline token ids) |
