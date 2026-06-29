@@ -558,8 +558,7 @@ function SlotNode({
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
   const id = `slot:${pos.match}:${pos.side}`;
-  // Outer ring slots shrink slightly (less than the inner match nodes).
-  const size = "calc(var(--cf) * 0.9)";
+  const size = "calc(var(--cf) * 0.85)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
@@ -598,8 +597,7 @@ function MatchNode({
   const win = view?.decided.get(node.match);
   const top = lead(view?.matchOdds.get(node.match));
   const id = `match:${node.match}`;
-  // Inner match nodes render a touch smaller than the outer ring of slots.
-  const size = "calc(var(--cf) * 0.8)";
+  const size = "calc(var(--cf) * 0.85)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
