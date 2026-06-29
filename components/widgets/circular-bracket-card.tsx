@@ -489,7 +489,7 @@ function openContent(
 }
 
 const HELP_TEXT =
-  "The knockout bracket as a ring: the Round of 32 on the outside, merging inward to the trophy. A settled team shows its flag; a “?” marks one still undecided — tap it to see that match's chances.";
+  "Tap any node to see each team's chance of reaching that match. The chances are computed from the betting market and refresh every minute.";
 
 /** Header info affordance — a popover on tap (native `title` is hover-only). */
 function CircularBracketHelp() {
