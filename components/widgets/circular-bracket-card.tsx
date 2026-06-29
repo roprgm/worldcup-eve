@@ -252,15 +252,20 @@ function RoundFlag({
   code,
   size,
   className,
+  faded,
 }: {
   code?: string;
   size: string;
   className?: string;
+  /** Render the flag image semi-transparent over its solid base (used for
+   *  unconfirmed/predicted nodes). The base stays opaque so it still covers the
+   *  connector lines behind it. */
+  faded?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "relative block shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-surface-border",
+        "relative block shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-surface-border",
         className,
       )}
       style={{ width: size, height: size }}
@@ -268,7 +273,10 @@ function RoundFlag({
       <Flag
         code={code}
         size={`calc(${size} * 4 / 3)`}
-        className="absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0"
+        className={cn(
+          "absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none ring-0",
+          faded && "opacity-40",
+        )}
       />
     </span>
   );
@@ -425,19 +433,13 @@ function PredictedNode({
         openId === id && "ring-2 ring-pick/60",
       )}
     >
-      {/* The flag stays fully opaque so the connector lines never show through;
-          a dark overlay tint is what dims it to read as a prediction. */}
+      {/* Solid opaque base (in RoundFlag) covers the connector lines; the flag
+          image on top is faded so the node reads as a prediction. */}
       <RoundFlag
         code={code}
         size="var(--cf)"
-        className="border border-dashed border-surface-border saturate-[0.85]"
-      />
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute inset-0 rounded-full bg-surface-1/60 transition-colors group-hover:bg-surface-1/35",
-          openId === id && "bg-surface-1/20",
-        )}
+        faded
+        className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
       />
     </button>
   );
