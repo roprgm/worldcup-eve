@@ -85,7 +85,7 @@ function Card({
 }) {
   return (
     <CardFrame className="flex h-full flex-col">
-      <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
+      <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-xs font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
         {header}
       </div>
@@ -162,7 +162,7 @@ function HeatCell({
   return (
     <span
       className={cn(
-        "flex h-7 w-full items-center justify-center rounded-[3px] text-[11px] tabular-nums @lg:text-[12px]",
+        "flex h-7 w-full items-center justify-center rounded-[3px] text-xs tabular-nums",
         strong ? "font-semibold text-foreground" : "text-muted-foreground",
       )}
       style={{
@@ -176,7 +176,7 @@ function HeatCell({
 
 function ColumnLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="text-center text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+    <span className="text-center text-xs font-medium tracking-wide text-muted-foreground/70 uppercase">
       {children}
     </span>
   );
@@ -197,7 +197,7 @@ function StageRow({
     <StageGrid className="h-7 animate-fade-in">
       <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
         <Flag code={row.code} size={14} />
-        <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
+        <span className="min-w-0 truncate text-xs font-medium @lg:text-sm">
           <span className="@lg:hidden">{row.code}</span>
           <span className="hidden @lg:inline">{row.name ?? row.code}</span>
         </span>
@@ -272,7 +272,7 @@ export function StageOddsCard(props: StageOddsCardProps) {
     >
       <div className="@container flex flex-col gap-1 px-2.5 py-2">
         <StageGrid className="pb-1">
-          <span className="pl-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+          <span className="pl-0.5 text-xs font-medium tracking-wide text-muted-foreground/70 uppercase">
             Team
           </span>
           {STAGES.map((stage) => (

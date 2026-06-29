@@ -116,14 +116,22 @@ function circularView(
   }
 
   const live = new Set<number>();
-  for (const m of results?.matches ?? [])
-    if (m.status === "live") live.add(m.n);
+  const liveLeader = new Map<number, string>();
+  for (const m of results?.matches ?? []) {
+    if (m.status !== "live") continue;
+    live.add(m.n);
+    const home = m.home.score ?? 0;
+    const away = m.away.score ?? 0;
+    if (home > away && m.home.code) liveLeader.set(m.n, m.home.code);
+    else if (away > home && m.away.code) liveLeader.set(m.n, m.away.code);
+  }
 
   return {
     slotOdds,
     matchOdds,
     decided,
     live,
+    liveLeader,
     championOdds: withBaseline(
       predictions.bracketChampion,
       baselineMap(predictions.baseline.bracketChampion),

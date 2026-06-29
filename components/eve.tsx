@@ -39,7 +39,7 @@ export function EveAttribution() {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       className={
-        "text-sm text-subtle-foreground transition-colors hover:text-foreground"
+        "text-xs text-subtle-foreground transition-colors hover:text-foreground"
       }
     >
       made with{" "}

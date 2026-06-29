@@ -152,10 +152,10 @@ export function Composer({
           />
         </form>
         <div className="mt-2.5 flex items-center justify-center gap-1.5 text-center font-mono">
-          <p className="text-[10.5px] tracking-wide text-subtle-foreground">
+          <p className="text-xs tracking-wide text-subtle-foreground">
             WC26.chat can make mistakes
           </p>
-          <span className="text-[10.5px] text-subtle-foreground/50">·</span>
+          <span className="text-xs text-subtle-foreground/50">·</span>
           <EveAttribution />
         </div>
       </div>

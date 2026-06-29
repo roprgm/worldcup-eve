@@ -27,16 +27,16 @@ function EmptyState() {
   );
 
   return (
-    <div className="flex min-h-full flex-col items-center px-4 py-6 text-center">
+    <div className="flex min-h-full flex-col items-center p-4 text-center">
       <div className="my-auto flex w-full flex-col items-center">
-        <h1 className="animate-fade-up text-[1.5rem] leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-[1.95rem]">
+        <h1 className="animate-fade-up text-xl leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-2xl">
           Ask anything about the
           <br />
           2026 World Cup
         </h1>
 
         <div
-          className="animate-fade-up mt-7 w-full max-w-lg"
+          className="animate-fade-up mt-4 w-full max-w-lg"
           style={{ animationDelay: "120ms" }}
         >
           <HomeBracket />
@@ -58,7 +58,7 @@ function EmptyState() {
         </div>
 
         <div
-          className="animate-fade-up mt-8 font-mono"
+          className="animate-fade-up my-4 font-mono"
           style={{ animationDelay: "240ms" }}
         >
           <EveAttribution />

@@ -60,7 +60,7 @@ function LiveDot({ className }: { className?: string }) {
 
 function LiveBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-rose-400">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-400">
       <LiveDot className="size-1.5" />
       Live
     </span>
@@ -69,7 +69,7 @@ function LiveBadge() {
 
 function PredictedBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-foreground/45">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold tracking-wide text-foreground/45">
       <span
         aria-hidden
         className="size-1.5 shrink-0 rounded-full bg-foreground/45"
@@ -86,7 +86,7 @@ function ResultCell({ result }: { result: GroupCardResult }) {
   return (
     <div
       className={cn(
-        "w-full rounded px-0.5 py-1.5 text-center text-[11px] font-semibold leading-none tabular-nums whitespace-nowrap select-none",
+        "w-full rounded px-0.5 py-1.5 text-center text-xs font-semibold leading-none tabular-nums whitespace-nowrap select-none",
         // Speculative scorelines are a faint grey; confirmed and live ones stay white.
         predicted ? "text-foreground/45" : "text-foreground",
       )}
@@ -121,7 +121,7 @@ function MarkerIcon({ marker }: { marker?: Marker }) {
 
   if (marker === "third") {
     return (
-      <span className="inline-flex size-3 items-center justify-center text-[13px] font-semibold leading-none text-muted-foreground/60">
+      <span className="inline-flex size-3 items-center justify-center text-sm font-semibold leading-none text-muted-foreground/60">
         ?
       </span>
     );
@@ -143,7 +143,7 @@ function GroupCardShell({
 }) {
   return (
     <Card className="flex min-w-0 flex-col">
-      <div className="flex h-6 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="flex h-6 items-center justify-between gap-2 border-b border-surface-divider px-3 text-xs leading-3 font-medium text-muted-foreground tabular-nums tracking-wide">
         <h3 className="truncate text-left text-foreground/70">{title}</h3>
         {(live || predicted) && (
           <div className="flex shrink-0 items-center gap-2.5">
@@ -200,15 +200,15 @@ export function GroupCard(props: GroupCardProps) {
         {columns.map((code) => (
           <span
             key={`head-${code}`}
-            className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap"
+            className="text-center text-xs leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap"
           >
             {code}
           </span>
         ))}
-        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
+        <span className="text-center text-xs leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
           GD
         </span>
-        <span className="text-center text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
+        <span className="text-center text-xs leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase whitespace-nowrap">
           Pts
         </span>
         <span />
@@ -221,12 +221,12 @@ export function GroupCard(props: GroupCardProps) {
               row.dimmed && "opacity-45",
             )}
           >
-            <span className="w-3 text-right text-[10px] text-muted-foreground tabular-nums">
+            <span className="w-3 text-right text-xs text-muted-foreground tabular-nums">
               {row.position}
             </span>
             <Flag code={row.team.code} size={16} />
             <span
-              className="truncate text-[12px] font-semibold tracking-wide"
+              className="truncate text-xs font-semibold tracking-wide"
               title={row.team.name}
             >
               {row.team.code}
@@ -248,7 +248,7 @@ export function GroupCard(props: GroupCardProps) {
           <span
             key={`${row.team.code}:gd`}
             className={cn(
-              "text-center text-[11px] text-muted-foreground tabular-nums",
+              "text-center text-xs text-muted-foreground tabular-nums",
               row.dimmed && "opacity-60",
             )}
           >
@@ -257,7 +257,7 @@ export function GroupCard(props: GroupCardProps) {
           <span
             key={`${row.team.code}:points`}
             className={cn(
-              "text-center text-[12px] font-semibold text-foreground tabular-nums",
+              "text-center text-xs font-semibold text-foreground tabular-nums",
               row.dimmed && "opacity-60",
             )}
           >

@@ -340,6 +340,7 @@ export interface CircularBracketView {
   matchOdds: Map<number, Candidate[]>; // match → each contender's chance to win
   decided: Map<number, Candidate>; // match → real winner, once played
   live: Set<number>; // match numbers currently in progress
+  liveLeader: Map<number, string>; // live match → team code currently ahead
   championOdds: Candidate[];
 }
 
@@ -485,7 +486,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       <span
         title={c.name}
         className={cn(
-          "w-7 shrink-0 text-[11px] font-semibold tracking-wide",
+          "w-7 shrink-0 text-xs font-semibold tracking-wide",
           top ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -516,7 +517,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       </span>
       <span
         className={cn(
-          "min-w-8 whitespace-nowrap pr-0.5 text-right text-[11px] tabular-nums",
+          "min-w-8 whitespace-nowrap pr-0.5 text-right text-xs tabular-nums",
           top ? "font-semibold text-foreground" : "text-muted-foreground",
         )}
       >
@@ -542,7 +543,7 @@ function LiveBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tracking-wide text-rose-400",
+        "inline-flex shrink-0 items-center gap-1 text-xs font-semibold tracking-wide text-rose-400",
         className,
       )}
     >
@@ -572,7 +573,7 @@ function OddsList({
       <PopupHeader title={title} subtitle={subtitle} />
       <div className="space-y-1">
         {shown.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground/50 italic">
+          <p className="text-xs text-muted-foreground/50 italic">
             no market
           </p>
         ) : (
@@ -823,6 +824,7 @@ interface NodeModel {
   predictedCode?: string;
   explainable: boolean; // the locked-in flag opens a road-to-the-final breakdown
   live: boolean; // the node's match is in progress
+  liveLeaderCode?: string; // team currently ahead, while the match is live
 }
 
 function slotModel(
@@ -841,6 +843,7 @@ function slotModel(
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
     live: view?.live.has(pos.match) ?? false,
+    liveLeaderCode: view?.liveLeader.get(pos.match),
   };
 }
 
@@ -859,6 +862,7 @@ function matchModel(
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
     live: view?.live.has(node.match) ?? false,
+    liveLeaderCode: view?.liveLeader.get(node.match),
   };
 }
 
@@ -928,9 +932,9 @@ function BracketNode({
               ) : (
                 <UnsettledNode
                   id={model.id}
-                  code={model.predictedCode}
+                  code={model.liveLeaderCode ?? model.predictedCode}
                   size={NODE_SIZE}
-                  predict={predict}
+                  predict={predict || !!model.liveLeaderCode}
                   openId={openId}
                   onToggle={onToggle}
                 />
@@ -1084,7 +1088,7 @@ function CircularBracketHelp() {
             onClick={() => setOpen(false)}
           />
           {/* Above the bracket nodes (z-30), which the card isolates. */}
-          <div className="absolute top-full right-0 z-50 mt-1.5 w-64 rounded-md border border-surface-border bg-surface-2 p-2 text-[10px] leading-relaxed text-muted-foreground shadow-lg">
+          <div className="absolute top-full right-0 z-50 mt-1.5 w-64 rounded-md border border-surface-border bg-surface-2 p-2 text-xs leading-relaxed text-muted-foreground shadow-lg">
             {HELP_TEXT}
           </div>
         </>
@@ -1110,7 +1114,7 @@ export function PredictToggle({
       onClick={() => onChange(!on)}
       className="flex cursor-pointer items-center gap-1.5"
     >
-      <span className="text-[12px] font-medium text-muted-foreground/70">
+      <span className="text-xs font-medium text-muted-foreground/70">
         Show market predictions
       </span>
       <span
@@ -1244,10 +1248,10 @@ export function CircularBracketCard({
     // over the page's sticky section header.
     <Card className="isolate">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
-        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
+        <span className="shrink-0 text-xs font-medium tracking-wide text-foreground/70">
           Prediction bracket
         </span>
-        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
+        <span className="min-w-0 truncate text-xs text-muted-foreground/55">
           · tap a node to see its chances
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">

@@ -16,9 +16,9 @@ export function Header() {
           className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
         >
           <span className="flex size-8 items-center justify-center rounded-[9px] border border-border bg-surface text-foreground">
-            <BallIcon className="size-[18px]" />
+            <BallIcon style={{ width: '18px', height: '18px' }} />
           </span>
-          <span className="text-[0.95rem] mr-2 font-semibold tracking-tight text-foreground">
+          <span className="text-base mr-2 font-semibold tracking-tight text-foreground">
             WC26<span className="text-muted-foreground">.chat</span>
           </span>
         </Link>
@@ -48,7 +48,7 @@ export function Header() {
             title="GitHub repository"
             className={buttonVariants({ variant: "ghost", size: "icon" })}
           >
-            <GitHubIcon className="size-[20px]" />
+            <GitHubIcon style={{ width: '20px', height: '20px' }} />
           </a>
         </div>
       </div>

@@ -24,11 +24,11 @@ export function PopupHeader({
 }) {
   return (
     <div className="mb-1.5">
-      <p className="text-[12px] font-medium tracking-wide text-foreground/80">
+      <p className="text-xs font-medium tracking-wide text-foreground/80">
         {title}
       </p>
       {subtitle && (
-        <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
       )}
     </div>
   );
@@ -67,7 +67,7 @@ export function CellPathExplain({ path }: { path: CellPath }) {
         title={`${path.name}${note}`}
         subtitle={`Road to the ${ROUND_LABEL[path.targetRound]}`}
       />
-      <div className="flex flex-col gap-1.5 text-[11px]">
+      <div className="flex flex-col gap-1.5 text-xs">
         {path.legs.map((leg) => (
           <div
             key={leg.round}
