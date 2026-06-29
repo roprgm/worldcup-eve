@@ -7,7 +7,7 @@ import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
 import { Composer } from "@/components/composer";
 import { EveAttribution } from "@/components/eve";
-import { BallIcon } from "@/components/icons";
+import { HomeBracket } from "@/components/widgets/circular-bracket-widget";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
@@ -27,50 +27,52 @@ function EmptyState() {
   );
 
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-6 text-center">
-      <div className="animate-fade-up relative mb-7">
-        <div className="wc-halo" />
-        <span className="relative flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-foreground">
-          <BallIcon className="size-7" />
-        </span>
-      </div>
+    // `my-auto` on the inner column centres it when there's room and collapses to
+    // a clean top-aligned scroll when the bracket makes the content taller than
+    // the viewport — so nothing is ever clipped above the fold.
+    <div className="flex min-h-full flex-col items-center px-4 py-8 text-center">
+      <div className="my-auto flex w-full flex-col items-center">
+        <h1 className="animate-fade-up text-[1.5rem] leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-[1.95rem]">
+          Ask anything about the
+          <br />
+          2026 World Cup
+        </h1>
 
-      <h1
-        className="animate-fade-up text-[1.6rem] leading-[1.15] font-semibold tracking-tight text-balance text-foreground sm:text-3xl"
-        style={{ animationDelay: "60ms" }}
-      >
-        Ask anything about the
-        <br />
-        2026 World Cup
-      </h1>
+        <p
+          className="animate-fade-up mt-3 font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase"
+          style={{ animationDelay: "60ms" }}
+        >
+          USA · Canada · México — Jun 11 → Jul 19
+        </p>
 
-      <p
-        className="animate-fade-up mt-3.5 font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase"
-        style={{ animationDelay: "120ms" }}
-      >
-        USA · Canada · México — Jun 11 → Jul 19
-      </p>
+        <div
+          className="animate-fade-up mt-7 w-full max-w-[420px]"
+          style={{ animationDelay: "120ms" }}
+        >
+          <HomeBracket />
+        </div>
 
-      <div
-        className="animate-fade-up mt-9 w-full max-w-lg"
-        style={{ animationDelay: "180ms" }}
-      >
-        <Suggestions className="justify-center">
-          {SUGGESTIONS.map((suggestion) => (
-            <Suggestion
-              key={suggestion}
-              suggestion={suggestion}
-              onSelect={handleSuggestion}
-            />
-          ))}
-        </Suggestions>
-      </div>
+        <div
+          className="animate-fade-up mt-8 w-full max-w-lg"
+          style={{ animationDelay: "180ms" }}
+        >
+          <Suggestions className="justify-center">
+            {SUGGESTIONS.map((suggestion) => (
+              <Suggestion
+                key={suggestion}
+                suggestion={suggestion}
+                onSelect={handleSuggestion}
+              />
+            ))}
+          </Suggestions>
+        </div>
 
-      <div
-        className="animate-fade-up mt-10 font-mono"
-        style={{ animationDelay: "240ms" }}
-      >
-        <EveAttribution />
+        <div
+          className="animate-fade-up mt-8 font-mono"
+          style={{ animationDelay: "240ms" }}
+        >
+          <EveAttribution />
+        </div>
       </div>
     </div>
   );

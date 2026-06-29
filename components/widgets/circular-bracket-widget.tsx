@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   type Candidate,
   CircularBracketCard,
+  CircularBracketRing,
   type CircularBracketView,
+  PredictToggle,
   type TeamPaths,
 } from "@/components/widgets/circular-bracket-card";
 import { usePredictions, useResults } from "@/components/widgets/queries";
@@ -90,9 +92,12 @@ function circularView(
   };
 }
 
-/** Connected circular bracket: merges the shared predictions with real results
- *  and paints them onto the radial skeleton. */
-export function CircularBracketWidget() {
+/** Merges the shared predictions with real results into the view and per-team
+ *  road-to-the-final paths the bracket paints onto the radial skeleton. */
+function useBracketData(): {
+  view?: CircularBracketView;
+  teamPaths?: TeamPaths;
+} {
   const predictions = usePredictions();
   const results = useResults();
   const view = useMemo(
@@ -118,6 +123,33 @@ export function CircularBracketWidget() {
     }
     return map;
   }, [predictions, results]);
+  return { view, teamPaths };
+}
+
+/** Connected circular bracket: merges the shared predictions with real results
+ *  and paints them onto the radial skeleton. */
+export function CircularBracketWidget() {
+  const { view, teamPaths } = useBracketData();
   // Market predictions start off; users opt in via the in-card toggle.
   return <CircularBracketCard view={view} teamPaths={teamPaths} />;
+}
+
+/** The bracket ring without the card chrome, for the home hero: a centred ring
+ *  with a compact predictions toggle. Predictions start on so the home shows a
+ *  populated, inviting bracket rather than a field of "?". */
+export function HomeBracket() {
+  const { view, teamPaths } = useBracketData();
+  const [predict, setPredict] = useState(true);
+  return (
+    <div className="w-full">
+      <CircularBracketRing
+        view={view}
+        teamPaths={teamPaths}
+        predict={predict}
+      />
+      <div className="mt-1 flex justify-center">
+        <PredictToggle on={predict} onChange={setPredict} />
+      </div>
+    </div>
+  );
 }

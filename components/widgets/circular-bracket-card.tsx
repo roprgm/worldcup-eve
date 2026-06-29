@@ -876,7 +876,7 @@ function CircularBracketHelp() {
 }
 
 /** Compact header switch to turn the predicted-flags overlay on or off. */
-function PredictToggle({
+export function PredictToggle({
   on,
   onChange,
 }: {
@@ -912,24 +912,26 @@ function PredictToggle({
   );
 }
 
-/** The knockout bracket as a ring of flags and chevrons. Structure renders
- *  immediately; flags lock in and chances open as the market resolves. */
-export function CircularBracketCard({
+/** The interactive ring on its own — connectors, nodes, the centre champion and
+ *  the popover each opens on tap. Sizing is container-relative (cqw) so it fills
+ *  whatever width its parent gives it; pass `className` to cap or pad it. Used
+ *  bare on the home and wrapped in a card on the predictions page. */
+export function CircularBracketRing({
   view,
-  predict: predictDefault = false,
   teamPaths,
+  predict = false,
+  className,
 }: {
   view?: CircularBracketView;
-  /** Initial state of the predictions toggle: show the leading candidate's flag
-   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
-  predict?: boolean;
   /** Road to the final per locked-in team, making those flags tappable. */
   teamPaths?: TeamPaths;
+  /** Show the leading candidate's flag (faded) in unsettled nodes instead of "?". */
+  predict?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
-  const [predict, setPredict] = useState(predictDefault);
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
@@ -941,50 +943,37 @@ export function CircularBracketCard({
   const content = open && view && !teamPath ? openContent(view, open.id) : null;
 
   return (
-    // `isolate` keeps the nodes' z-index inside this card so they don't paint
-    // over the page's sticky section header.
-    <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
-      <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
-        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
-          Prediction bracket
-        </span>
-        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
-          · tap a node to see its chances
-        </span>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <CircularBracketHelp />
-        </div>
-      </div>
-      <div className="px-2 py-4 sm:px-3">
-        <div className="mb-2 flex justify-end px-1">
-          <PredictToggle on={predict} onChange={setPredict} />
-        </div>
-        {/* Sizes are container-relative (cqw), so the whole ring fits any width
-            without scrolling and the flags scale up with it. */}
-        <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
-          <Connectors view={view} />
-          {GEOMETRY.nodes.map((node) => (
-            <BracketNode
-              key={`match:${node.match}`}
-              model={matchModel(node, view, teamPaths)}
-              loading={loading}
-              predict={predict}
-              openId={openId}
-              onToggle={onToggle}
-            />
-          ))}
-          {GEOMETRY.flags.map((pos) => (
-            <BracketNode
-              key={`slot:${pos.match}:${pos.side}`}
-              model={slotModel(pos, view, teamPaths)}
-              loading={loading}
-              predict={predict}
-              openId={openId}
-              onToggle={onToggle}
-            />
-          ))}
-          <ChampionNode view={view} openId={openId} onToggle={onToggle} />
-        </div>
+    <>
+      {/* Sizes are container-relative (cqw), so the whole ring fits any width
+          without scrolling and the flags scale up with it. */}
+      <div
+        className={cn(
+          "relative mx-auto aspect-square w-full [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]",
+          className,
+        )}
+      >
+        <Connectors view={view} />
+        {GEOMETRY.nodes.map((node) => (
+          <BracketNode
+            key={`match:${node.match}`}
+            model={matchModel(node, view, teamPaths)}
+            loading={loading}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        ))}
+        {GEOMETRY.flags.map((pos) => (
+          <BracketNode
+            key={`slot:${pos.match}:${pos.side}`}
+            model={slotModel(pos, view, teamPaths)}
+            loading={loading}
+            predict={predict}
+            openId={openId}
+            onToggle={onToggle}
+          />
+        ))}
+        <ChampionNode view={view} openId={openId} onToggle={onToggle} />
       </div>
       {open && (teamPath || content) && (
         <Popover
@@ -1006,6 +995,51 @@ export function CircularBracketCard({
           )}
         </Popover>
       )}
+    </>
+  );
+}
+
+/** The knockout bracket as a ring of flags and chevrons. Structure renders
+ *  immediately; flags lock in and chances open as the market resolves. */
+export function CircularBracketCard({
+  view,
+  predict: predictDefault = false,
+  teamPaths,
+}: {
+  view?: CircularBracketView;
+  /** Initial state of the predictions toggle: show the leading candidate's flag
+   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
+  predict?: boolean;
+  /** Road to the final per locked-in team, making those flags tappable. */
+  teamPaths?: TeamPaths;
+}) {
+  const [predict, setPredict] = useState(predictDefault);
+  return (
+    // `isolate` keeps the nodes' z-index inside this card so they don't paint
+    // over the page's sticky section header.
+    <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
+      <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
+        <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
+          Prediction bracket
+        </span>
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground/55">
+          · tap a node to see its chances
+        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <CircularBracketHelp />
+        </div>
+      </div>
+      <div className="px-2 py-4 sm:px-3">
+        <div className="mb-2 flex justify-end px-1">
+          <PredictToggle on={predict} onChange={setPredict} />
+        </div>
+        <CircularBracketRing
+          view={view}
+          teamPaths={teamPaths}
+          predict={predict}
+          className="max-w-[680px]"
+        />
+      </div>
     </div>
   );
 }
