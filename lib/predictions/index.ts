@@ -101,6 +101,10 @@ export interface Predictions {
    *  play-off): the teams that could win it, sorted high→low. For a decided
    *  matchup this is the head-to-head win split. */
   matchWinOdds: Record<number, Candidate[]>;
+  /** Fitted Bradley-Terry strength per team (FIFA code). A neutral-site
+   *  head-to-head is `s_A / (s_A + s_B)` — the basis for any hypothetical
+   *  matchup, even one the bracket hasn't drawn. */
+  teamStrengths: Record<string, number>;
 }
 
 // 4 decimals: display-only, keeps the payload small, drops long-tail candidates.
@@ -330,6 +334,9 @@ export async function buildPredictions(
     knockoutScores,
     knockoutOdds,
     matchWinOdds,
+    teamStrengths: Object.fromEntries(
+      teamCodes.map((t) => [t, round4(strengths.get(t) ?? 1)]),
+    ),
   };
 }
 
