@@ -1,6 +1,8 @@
 "use client";
 
+import { cn } from "cnfast";
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
+import { useState } from "react";
 import { useChat } from "@/components/chat/chat-context";
 import {
   MessageWidgets,
@@ -89,8 +91,19 @@ function AssistantRow({
     ? visibleText(messageText(message), widgets.length > 0)
     : "";
 
+  // Decide the entrance animation once, at mount. A row that first appears
+  // mid-flight (activity loader or streaming text) settles in place — the avatar
+  // pulse and shimmer already signal it — and must never slide afterwards, so a
+  // label change (Thinking → Almost done) or the turn finishing can't re-trigger
+  // the entrance and jump.
+  const [animateEntrance] = useState(() => !streaming && !activity);
+
   return (
-    <Message align="start" className="animate-fade-up" style={fadeDelay(index)}>
+    <Message
+      align="start"
+      className={cn(animateEntrance && "animate-fade-up")}
+      style={animateEntrance ? fadeDelay(index) : undefined}
+    >
       <MessageAvatar streaming={streaming}>
         <BallIcon className="size-[18px]" />
       </MessageAvatar>
@@ -99,7 +112,9 @@ function AssistantRow({
           {question && <QuestionPrompt part={question} />}
           {text && <Markdown>{text}</Markdown>}
           {!text && !question && activity && <Activity label={activity} />}
-          <MessageWidgets specs={widgets} />
+          {/* Hold widgets until the reply finishes: while text streams in above
+              them, an already-drawn widget would otherwise get pushed down. */}
+          {!streaming && <MessageWidgets specs={widgets} />}
         </div>
       </Bubble>
     </Message>
