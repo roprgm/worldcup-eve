@@ -902,11 +902,13 @@ function BracketNode({
               transitionDelay: loading ? undefined : `${wave}s`,
             }}
           />
-          {/* A faint breathing ring marks a match in progress. */}
+          {/* The node's own edge, recoloured and breathing, marks a live match.
+              Scaled to the node so the ring sits flush against it. */}
           {model.live && (
             <span
               aria-hidden
-              className="pointer-events-none absolute -inset-0.5 animate-pulse rounded-full border border-rose-400/25 ring-2 ring-rose-400/15"
+              style={{ transform: `scale(${settleScale})` }}
+              className="pointer-events-none absolute inset-0 animate-pulse rounded-full ring-2 ring-rose-400/55"
             />
           )}
           {!loading && (
