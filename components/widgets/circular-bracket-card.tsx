@@ -476,11 +476,7 @@ function SlotNode({
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
       {confirmed(odds) && top ? (
-        <RoundFlag
-          code={top.code}
-          size={size}
-          className="border-2 border-solid border-foreground"
-        />
+        <RoundFlag code={top.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
@@ -520,11 +516,7 @@ function MatchNode({
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
       {win ? (
-        <RoundFlag
-          code={win.code}
-          size={size}
-          className="border-2 border-solid border-foreground"
-        />
+        <RoundFlag code={win.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
