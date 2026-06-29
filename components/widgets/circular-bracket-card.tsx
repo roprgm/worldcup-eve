@@ -110,23 +110,32 @@ function leafSlots(root: number): { match: number; side: Side }[] {
   return out;
 }
 
-// A node a connector touches, used to decide whether the connector is "solid"
-// (drawn for a settled part of the bracket) or still tentative.
-type Endpoint =
-  | { type: "slot"; match: number; side: Side }
-  | { type: "match"; match: number };
+// When a connector is drawn solid. A leg is solid only once a team has actually
+// advanced along it (the match at its outer end is played), so the solid lines
+// trace the real winners' paths rather than the merely-qualified field.
+type SolidWhen =
+  // A R32 spoke: a flag → R32 node. Solid once that R32 match is played and this
+  // side's team won it.
+  | { kind: "r32leg"; match: number; side: Side }
+  // An inner spoke: child node → parent node. Solid once the parent match is
+  // played and its winner is the team that came up through `child`.
+  | { kind: "innerleg"; parent: number; child: number }
+  // A final spoke: semi-final node → champion. Solid once the final is played
+  // and its winner is the team that came up through this semi-final.
+  | { kind: "finalleg"; sf: number }
+  // Arcs (the bars joining siblings) are never drawn solid.
+  | { kind: "never" };
 
 interface Seg {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
-  // The connector is solid once every endpoint listed here is resolved.
-  ends: Endpoint[];
+  solid: SolidWhen;
 }
 interface Arc {
   d: string;
-  ends: Endpoint[];
+  solid: SolidWhen;
 }
 interface FlagPos {
   match: number;
@@ -195,8 +204,8 @@ function buildGeometry(): Geometry {
 
       const kids = childMatches(m);
       if (!kids) {
-        // R32: a spoke out to each flag (solid once that team is confirmed), the
-        // bar joining the two flags (solid once both are confirmed).
+        // R32: a spoke out to each flag (solid once that side won the R32 match),
+        // the bar joining the two flags (never solid).
         for (const side of ["home", "away"] as Side[]) {
           const fa = flagAngle.get(`${num}:${side}`)!;
           const inner = polar(fa, rN);
@@ -206,7 +215,7 @@ function buildGeometry(): Geometry {
             y1: inner.y,
             x2: outer.x,
             y2: outer.y,
-            ends: [{ type: "slot", match: num, side }],
+            solid: { kind: "r32leg", match: num, side },
           });
         }
         arcs.push({
@@ -215,14 +224,11 @@ function buildGeometry(): Geometry {
             flagAngle.get(`${num}:home`)!,
             flagAngle.get(`${num}:away`)!,
           ),
-          ends: [
-            { type: "slot", match: num, side: "home" },
-            { type: "slot", match: num, side: "away" },
-          ],
+          solid: { kind: "never" },
         });
       } else {
-        // Inner node: a spoke to each child (solid once that child match is
-        // decided), the bar joining them (solid once both are decided).
+        // Inner node: a spoke to each child (solid once this match is played and
+        // its winner came up through that child), the bar joining them (never).
         const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
         for (const cm of kids) {
           const ca = nodeAngle.get(cm)!;
@@ -233,22 +239,19 @@ function buildGeometry(): Geometry {
             y1: inner.y,
             x2: outer.x,
             y2: outer.y,
-            ends: [{ type: "match", match: cm }],
+            solid: { kind: "innerleg", parent: num, child: cm },
           });
         }
         arcs.push({
           d: arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
-          ends: [
-            { type: "match", match: kids[0] },
-            { type: "match", match: kids[1] },
-          ],
+          solid: { kind: "never" },
         });
       }
     }
   }
 
   // The final: each semi runs straight to the centre, where the champion sits.
-  // Solid once that semi-final is decided (the finalist is known).
+  // Solid once the final is played and its winner came up through this semi.
   for (const sf of [LEFT.root, RIGHT.root]) {
     const p = polar(sfAngle.get(sf)!, RING.SF);
     segs.push({
@@ -256,7 +259,7 @@ function buildGeometry(): Geometry {
       y1: C,
       x2: p.x,
       y2: p.y,
-      ends: [{ type: "match", match: sf }],
+      solid: { kind: "finalleg", sf },
     });
   }
 
@@ -325,15 +328,31 @@ function RoundFlag({
 }
 
 function Connectors({ view }: { view?: CircularBracketView }) {
-  // An endpoint is resolved once its team is locked in: a slot when its R32
-  // occupant is confirmed, an inner node when its match has a winner.
-  const resolved = (e: Endpoint) =>
-    e.type === "slot"
-      ? confirmed(view?.slotOdds.get(`${e.match}:${e.side}`))
-      : !!view?.decided.get(e.match);
-  // A connector is drawn solid only when every node it joins is resolved;
-  // otherwise it stays dashed to read as part of the still-undecided bracket.
-  const isSolid = (ends: Endpoint[]) => ends.every(resolved);
+  // Solid only traces the path a winner actually travelled: the leg's outer
+  // match must be played AND the team that advanced inward must be the one on
+  // this leg. So a freshly-qualified (but not-yet-played) team's spoke stays
+  // dashed — it only turns solid once it wins and moves on.
+  const isSolid = (s: SolidWhen): boolean => {
+    switch (s.kind) {
+      case "never":
+        return false;
+      case "r32leg": {
+        const win = view?.decided.get(s.match);
+        const team = lead(view?.slotOdds.get(`${s.match}:${s.side}`));
+        return !!win && !!team && win.code === team.code;
+      }
+      case "innerleg": {
+        const win = view?.decided.get(s.parent);
+        const child = view?.decided.get(s.child);
+        return !!win && !!child && win.code === child.code;
+      }
+      case "finalleg": {
+        const win = view?.decided.get(104);
+        const finalist = view?.decided.get(s.sf);
+        return !!win && !!finalist && win.code === finalist.code;
+      }
+    }
+  };
 
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: decorative connectors; structure is conveyed by the labelled nodes it links.
@@ -343,7 +362,7 @@ function Connectors({ view }: { view?: CircularBracketView }) {
       aria-hidden
     >
       {GEOMETRY.arcs.map((a) => {
-        const solid = isSolid(a.ends);
+        const solid = isSolid(a.solid);
         return (
           <path
             key={a.d}
@@ -357,7 +376,7 @@ function Connectors({ view }: { view?: CircularBracketView }) {
         );
       })}
       {GEOMETRY.segs.map((s, i) => {
-        const solid = isSolid(s.ends);
+        const solid = isSolid(s.solid);
         return (
           <line
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
