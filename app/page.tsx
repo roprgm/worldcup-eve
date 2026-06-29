@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 import { useChat } from "@/components/chat/chat-context";
 import { ChatView } from "@/components/chat/chat-view";
@@ -69,17 +69,21 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { start } = useChat();
+  const { agent, start } = useChat();
   const pathname = usePathname();
   const [input, setInput] = useState("");
+  const lastPathname = useRef<string | null>(null);
 
   const handleSubmit = useCallback(() => {
     start(input);
     setInput("");
   }, [start, input]);
 
-  // `start()` swaps in a `/chat/<id>` URL with history.pushState (no route
-  // change), so the chat shows here instantly; render it off that URL.
+  useEffect(() => {
+    if (pathname === "/" && lastPathname.current !== "/") agent.reset();
+    lastPathname.current = pathname;
+  }, [agent, pathname]);
+
   if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
