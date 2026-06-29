@@ -509,7 +509,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
             <span
               className={cn(
                 "block h-full w-full animate-pulse",
-                delta > 0 ? "bg-pick" : "bg-red-500",
+                delta > 0 ? "bg-emerald-400" : "bg-red-400",
               )}
             />
           </span>
@@ -517,7 +517,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       </span>
       <span
         className={cn(
-          "min-w-8 whitespace-nowrap text-right text-[11px] tabular-nums",
+          "min-w-8 whitespace-nowrap pr-0.5 text-right text-[11px] tabular-nums",
           top ? "font-semibold text-foreground" : "text-muted-foreground",
         )}
       >
