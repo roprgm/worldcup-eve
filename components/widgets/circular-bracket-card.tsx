@@ -494,7 +494,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
         <span
           className={cn(
             "animate-bar-grow h-full origin-left",
-            top ? "bg-foreground" : "bg-muted-foreground/30",
+            top ? "bg-foreground" : "bg-foreground/60",
           )}
           style={{ width: formatPct(base) }}
         />
