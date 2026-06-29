@@ -822,6 +822,7 @@ interface NodeModel {
   flagCode?: string;
   predictedCode?: string;
   explainable: boolean; // the locked-in flag opens a road-to-the-final breakdown
+  live: boolean; // the node's match is in progress
 }
 
 function slotModel(
@@ -839,6 +840,7 @@ function slotModel(
     flagCode,
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    live: view?.live.has(pos.match) ?? false,
   };
 }
 
@@ -856,6 +858,7 @@ function matchModel(
     flagCode,
     predictedCode: top?.code,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    live: view?.live.has(node.match) ?? false,
   };
 }
 
@@ -899,6 +902,13 @@ function BracketNode({
               transitionDelay: loading ? undefined : `${wave}s`,
             }}
           />
+          {/* A faint breathing ring marks a match in progress. */}
+          {model.live && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -inset-0.5 animate-pulse rounded-full border border-rose-400/25 ring-2 ring-rose-400/15"
+            />
+          )}
           {!loading && (
             <div
               className="col-start-1 row-start-1 animate-fade-in"
