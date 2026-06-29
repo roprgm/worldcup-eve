@@ -642,11 +642,24 @@ function FlagNode({
 }
 
 /** A node still waiting on its data: a plain pulsing circle, kept distinct from
- *  the "?" so loading never reads as an undecided match. */
-function NodeSkeleton({ size }: { size: string }) {
+ *  the "?" so loading never reads as an undecided match. Sits under the real node
+ *  and fades out as it arrives, so it pulses only while `pulse` is set. */
+function NodeSkeleton({
+  size,
+  pulse = true,
+  className,
+}: {
+  size: string;
+  pulse?: boolean;
+  className?: string;
+}) {
   return (
     <span
-      className="block animate-pulse rounded-full bg-surface-2 ring-1 ring-surface-border"
+      className={cn(
+        "block rounded-full bg-surface-2 ring-1 ring-surface-border",
+        pulse && "animate-pulse",
+        className,
+      )}
       style={{ width: `calc(${size})`, height: `calc(${size})` }}
     />
   );
@@ -702,9 +715,10 @@ function matchModel(
 }
 
 /** One bracket node: a skeleton while its data loads, a locked-in flag once the
- *  team is known, or a tappable "?" onto the chances in between. The skeleton
- *  sits outside `NodeReveal` so the outward ripple plays on the real node as it
- *  loads in — not on the placeholder that precedes it. */
+ *  team is known, or a tappable "?" onto the chances in between. The node ripples
+ *  in once on mount with the skeleton already in place; when data arrives the
+ *  skeleton fades out as the real node fades in over the same spot, so there's no
+ *  disappear-and-regrow flash between the two states. */
 function BracketNode({
   model,
   loading,
@@ -717,31 +731,44 @@ function BracketNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(model.x), top: pct(model.y) }}
     >
-      {loading ? (
-        <NodeSkeleton size={NODE_SIZE} />
-      ) : (
-        <NodeReveal delay={rippleDelay(model.x, model.y)}>
-          {model.flagCode ? (
-            <FlagNode
-              id={model.id}
-              code={model.flagCode}
-              size={NODE_SIZE}
-              explainable={model.explainable}
-              openId={openId}
-              onToggle={onToggle}
-            />
-          ) : (
-            <UnsettledNode
-              id={model.id}
-              code={model.predictedCode}
-              size={NODE_SIZE}
-              predict={predict}
-              openId={openId}
-              onToggle={onToggle}
-            />
+      <NodeReveal delay={rippleDelay(model.x, model.y)}>
+        <div
+          className="relative grid place-items-center"
+          style={{ width: `calc(${NODE_SIZE})`, height: `calc(${NODE_SIZE})` }}
+        >
+          <NodeSkeleton
+            size={NODE_SIZE}
+            pulse={loading}
+            className={cn(
+              "col-start-1 row-start-1 transition-opacity duration-300",
+              !loading && "opacity-0",
+            )}
+          />
+          {!loading && (
+            <div className="col-start-1 row-start-1 animate-fade-in">
+              {model.flagCode ? (
+                <FlagNode
+                  id={model.id}
+                  code={model.flagCode}
+                  size={NODE_SIZE}
+                  explainable={model.explainable}
+                  openId={openId}
+                  onToggle={onToggle}
+                />
+              ) : (
+                <UnsettledNode
+                  id={model.id}
+                  code={model.predictedCode}
+                  size={NODE_SIZE}
+                  predict={predict}
+                  openId={openId}
+                  onToggle={onToggle}
+                />
+              )}
+            </div>
           )}
-        </NodeReveal>
-      )}
+        </div>
+      </NodeReveal>
     </div>
   );
 }

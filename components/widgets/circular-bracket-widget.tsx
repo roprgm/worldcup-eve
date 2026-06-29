@@ -133,10 +133,9 @@ export function CircularBracketWidget() {
   return <CircularBracketCard view={view} teamPaths={teamPaths} />;
 }
 
-/** The bracket ring without the card chrome, for the home hero. Predictions are
- *  always on so the home shows a populated, inviting bracket rather than a field
- *  of "?". */
+/** The bracket ring without the card chrome, for the home hero. The predicted
+ *  flags overlay stays off here — locked-in teams show, undecided nodes stay "?". */
 export function HomeBracket() {
   const { view, teamPaths } = useBracketData();
-  return <CircularBracketRing view={view} teamPaths={teamPaths} predict />;
+  return <CircularBracketRing view={view} teamPaths={teamPaths} />;
 }
