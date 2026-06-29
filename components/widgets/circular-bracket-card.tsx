@@ -218,14 +218,14 @@ function buildGeometry(): Geometry {
             solid: { kind: "r32leg", match: num, side },
           });
         }
-        arcs.push({
-          d: arcPath(
-            rN,
-            flagAngle.get(`${num}:home`)!,
-            flagAngle.get(`${num}:away`)!,
-          ),
-          solid: { kind: "never" },
-        });
+        // The connecting bar is split at the node angle so each half can light
+        // up with the side that advanced (completing that team's elbow).
+        for (const side of ["home", "away"] as Side[]) {
+          arcs.push({
+            d: arcPath(rN, flagAngle.get(`${num}:${side}`)!, ang),
+            solid: { kind: "r32leg", match: num, side },
+          });
+        }
       } else {
         // Inner node: a spoke to each child (solid once this match is played and
         // its winner came up through that child), the bar joining them (never).
@@ -242,10 +242,14 @@ function buildGeometry(): Geometry {
             solid: { kind: "innerleg", parent: num, child: cm },
           });
         }
-        arcs.push({
-          d: arcPath(rN, nodeAngle.get(kids[0])!, nodeAngle.get(kids[1])!),
-          solid: { kind: "never" },
-        });
+        // Split the bar at the node angle so each half lights up with the child
+        // whose winner advanced through it.
+        for (const cm of kids) {
+          arcs.push({
+            d: arcPath(rN, nodeAngle.get(cm)!, ang),
+            solid: { kind: "innerleg", parent: num, child: cm },
+          });
+        }
       }
     }
   }
