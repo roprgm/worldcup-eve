@@ -47,8 +47,8 @@ await buildPredictions(cache, thirds, epoch)
 ```
 
 Measured ~4.7× faster than the cold anchor path. When no epoch exists (first
-deploy, or local dev with no `BLOB_READ_WRITE_TOKEN`), it falls back to computing
-the anchor once and caching it on the passed `cache` object.
+deploy, or local dev with no blob configured), it falls back to computing the
+anchor once and caching it on the passed `cache` object.
 
 ## What it returns
 

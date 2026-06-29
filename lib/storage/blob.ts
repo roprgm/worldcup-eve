@@ -1,12 +1,9 @@
-// A tiny typed wrapper over Vercel Blob for private JSON. Domain-free: it knows
-// nothing about predictions. When no blob credentials are configured (local dev
-// without `vercel env pull`, first deploy) every call no-ops — reads return
-// null, writes are skipped — so the app runs without storage instead of throwing.
+// A typed wrapper over Vercel Blob for private JSON. With no credentials (plain
+// local dev, first deploy) every call no-ops, so the app runs without storage.
 
 import { get, put } from "@vercel/blob";
 
-// Mirror the SDK's auth resolution: a static read/write token, or OIDC (the
-// runtime's `VERCEL_OIDC_TOKEN` plus the connected store id). Either is enough.
+// A static read/write token, or OIDC (the runtime's token + connected store id).
 const enabled = () =>
   Boolean(
     process.env.BLOB_READ_WRITE_TOKEN ||
@@ -18,16 +15,14 @@ export async function readJson<T>(pathname: string): Promise<T | null> {
   if (!enabled()) return null;
   try {
     const res = await get(pathname, { access: "private" });
-    if (!res?.stream) return null; // missing, or a 304 with no body
+    if (!res?.stream) return null;
     return (await new Response(res.stream).json()) as T;
   } catch {
-    // missing key or a transient error — the caller falls back, never crashes
     return null;
   }
 }
 
-/** Overwrite the private JSON blob at `pathname`. Logs and continues on error so
- *  a failed write never takes down the scheduled job that triggered it. */
+/** Overwrite the private JSON blob at `pathname`; logs and continues on error. */
 export async function writeJson(
   pathname: string,
   data: unknown,

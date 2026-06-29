@@ -21,20 +21,19 @@ const named = (c: { code: string; probability: number }): Candidate => ({
   probability: c.probability,
 });
 
-// code → baseline probability, for one match's or slot's baseline candidate list.
 const baselineMap = (candidates?: { code: string; probability: number }[]) =>
   candidates && new Map(candidates.map((c) => [c.code, c.probability]));
 
-// Tag each live candidate with its baseline chance (0 when the team wasn't on the
-// baseline list but the snapshot exists; left absent when there's no snapshot).
+// Tag each live candidate with its baseline chance (0 if it wasn't on the
+// baseline list, absent when there's no baseline at all).
 const withBaseline = (
   candidates: { code: string; probability: number }[],
   baseline?: Map<string, number>,
 ): Candidate[] =>
-  candidates.map((c) => ({
-    ...named(c),
-    ...(baseline ? { baseline: baseline.get(c.code) ?? 0 } : {}),
-  }));
+  candidates.map((c) => {
+    if (!baseline) return named(c);
+    return { ...named(c), baseline: baseline.get(c.code) ?? 0 };
+  });
 
 // Knockout wins → the round the team is now in, for the road-to-the-final start.
 const ROUND_BY_WINS: Round[] = ["R32", "R16", "QF", "SF", "FINAL"];

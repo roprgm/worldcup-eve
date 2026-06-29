@@ -235,8 +235,7 @@ function simulateBracket(
     odds: knockoutOdds,
   } = knockoutMarketOverride(r32Slots, knockoutMarkets);
 
-  // Warm-start from the epoch when present; otherwise compute (and cache) the
-  // anchor as a fallback.
+  // Warm-start from the epoch; fall back to the cached anchor when there's none.
   if (!base) cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
   const strengths = fitStrengths(
     r32Slots,
@@ -264,26 +263,27 @@ function simulateBracket(
     return out;
   };
 
-  // R32 from group markets, R16+ from the BT winner of the feeding match, play-off from the losers.
+  // R32 from group markets, R16+ from the BT winner of the feeding match,
+  // play-off from the losers.
+  const slotDist = (m: KnockoutMatch, side: "home" | "away"): Dist => {
+    if (m.round === "R32")
+      return r32Slots.get(`${m.number}:${side}`) ?? new Map();
+    const ref = m[side];
+    if (ref.kind === "match") return winners.get(ref.match) ?? new Map();
+    if (ref.kind === "loser") return losersOf(ref.match);
+    return new Map();
+  };
+
   const slots: PredictedSlot[] = [];
   for (const m of knockoutMatches)
     for (const side of ["home", "away"] as const) {
       const ref = m[side];
-      const key = `${m.number}:${side}`;
-      const dist =
-        m.round === "R32"
-          ? (r32Slots.get(key) ?? new Map())
-          : ref.kind === "match"
-            ? (winners.get(ref.match) ?? new Map())
-            : ref.kind === "loser"
-              ? losersOf(ref.match)
-              : new Map();
       const keepZeros =
         m.round === "R32" && (ref.kind === "winner" || ref.kind === "runner");
       slots.push({
         match: m.number,
         side,
-        candidates: toCandidates(normalize(dist), keepZeros),
+        candidates: toCandidates(normalize(slotDist(m, side)), keepZeros),
       });
     }
 
@@ -328,28 +328,23 @@ function simulateBracket(
   };
 }
 
-// Pull the bracket slice out of a stored epoch (which carries the same fields
-// plus the futures ones) to serve as the before/after baseline.
-function bracketOf(s: EpochSnapshot): BracketOutputs {
-  return {
-    slots: s.slots,
-    bracketChampion: s.bracketChampion,
-    reach: s.reach,
-    knockoutScores: s.knockoutScores,
-    knockoutOdds: s.knockoutOdds,
-    matchWinOdds: s.matchWinOdds,
-    teamStrengths: s.teamStrengths,
-  };
-}
+// The bracket slice of a snapshot, for persisting as the epoch.
+const bracketOf = (s: Predictions): BracketOutputs => ({
+  slots: s.slots,
+  bracketChampion: s.bracketChampion,
+  reach: s.reach,
+  knockoutScores: s.knockoutScores,
+  knockoutOdds: s.knockoutOdds,
+  matchWinOdds: s.matchWinOdds,
+  teamStrengths: s.teamStrengths,
+});
 
 export async function buildPredictions(
   cache: PredictionCache = {},
-  // Optional override for the Round-of-32 third-place slots, keyed "match:side"
-  // → team distribution. When given (from real results), it replaces the market
-  // heuristic for those slots; other slots are untouched.
+  // Round-of-32 third-place slots from real results, replacing the market
+  // heuristic for those slots; keyed "match:side".
   thirdSlotDists?: Map<string, Dist>,
-  // The persisted start-of-day epoch: warm-starts the fit and supplies the
-  // before/after baseline. Null on the first deploy / in dev without storage.
+  // The start-of-day epoch: warm-starts the fit and is the before/after baseline.
   epoch?: EpochSnapshot | null,
 ): Promise<Predictions> {
   const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
@@ -369,20 +364,17 @@ export async function buildPredictions(
   );
 
   cache.live ??= {};
-  const epochStrengths = epoch
-    ? new Map(Object.entries(epoch.teamStrengths))
-    : undefined;
+  const base = epoch ? new Map(Object.entries(epoch.teamStrengths)) : undefined;
   const live = simulateBracket(
     r32Slots,
     reachObs,
     knockoutMarkets,
     prices,
     cache.live,
-    epochStrengths,
+    base,
   );
-  // The baseline is the stored epoch's bracket; with no epoch yet it mirrors the
-  // live bracket, so every delta is zero and the bars render solid.
-  const baseline = epoch ? bracketOf(epoch) : live;
+  // No epoch yet → baseline mirrors live, so deltas are zero and bars stay solid.
+  const baseline = epoch ?? live;
 
   const champion = toCandidates(
     normalize(
@@ -462,7 +454,7 @@ const currentThirdSlotDists = () =>
 export async function refreshPredictions(): Promise<Predictions> {
   const [thirdSlotDists, epoch] = await Promise.all([
     currentThirdSlotDists(),
-    readLatestEpoch().catch(() => null),
+    readLatestEpoch(),
   ]);
   const data = await buildPredictions(anchor, thirdSlotDists, epoch);
   await predictionsCache.set("snapshot", data, {
@@ -472,20 +464,12 @@ export async function refreshPredictions(): Promise<Predictions> {
   return data;
 }
 
-// Authoritative start-of-day fit: build from a fresh anchor (no warm-start) and
-// persist it as the day's epoch. Stripping `baseline` keeps the stored file
-// flat. Runs once a day from the rollover schedule.
-export async function captureDailySnapshot(
-  day: string,
-): Promise<EpochSnapshot> {
+// Authoritative start-of-day fit (fresh anchor, no warm-start), persisted as the
+// day's epoch. Runs once a day from the rollover schedule.
+export async function captureDailySnapshot(day: string): Promise<void> {
   const thirdSlotDists = await currentThirdSlotDists();
-  const { baseline: _baseline, ...snapshot } = await buildPredictions(
-    {},
-    thirdSlotDists,
-    null,
-  );
-  await writeEpoch(day, snapshot);
-  return snapshot;
+  const snapshot = await buildPredictions({}, thirdSlotDists, null);
+  await writeEpoch(day, bracketOf(snapshot));
 }
 
 export async function getPredictions(): Promise<Predictions> {

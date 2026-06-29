@@ -326,10 +326,9 @@ export interface Candidate {
   code: string;
   name?: string;
   probability: number;
-  /** The same team's chance at the start of the current tournament day (the
-   *  persisted baseline), when one exists. The bar paints the shared value in the
-   *  base colour and the move since in green (rose) or red (fell). Absent for
-   *  settled/unsnapshotted nodes — then the bar is solid. */
+  /** The same team's chance at the start of the day, when known. The bar paints
+   *  the shared value in the base colour and the move since in green/red. Absent
+   *  for settled/unsnapshotted nodes — the bar is then solid. */
   baseline?: number;
 }
 
@@ -466,21 +465,20 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  used across the prediction widgets. Rows fade in and their bars sweep out
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
-  // The bar reaches max(now, start): a foreground base up to the value both
-  // share, then the move since the day's start — green if the chance rose, red
-  // if it fell. With no baseline snapshot it's a single solid segment.
-  const base =
-    c.baseline == null ? c.probability : Math.min(c.probability, c.baseline);
-  const delta = c.baseline == null ? 0 : c.probability - c.baseline;
-  const barTitle =
-    c.baseline == null
-      ? undefined
-      : `now ${formatPct(c.probability)} · start ${formatPct(c.baseline)}`;
-  // When the move is worth noting (>1pt), spell out both ends: "start -> now".
-  const pctLabel =
-    c.baseline != null && Math.abs(delta) > 0.01
-      ? `${formatPct(c.baseline)} -> ${formatPct(c.probability)}`
-      : formatPct(c.probability);
+  // The bar reaches max(now, start): a foreground base up to the value both share,
+  // then the move since the day's start — green if the chance rose, red if it fell.
+  // With no baseline, start equals now, so there's no move and the bar stays solid.
+  const now = c.probability;
+  const start = c.baseline ?? now;
+  const base = Math.min(now, start);
+  const delta = now - start;
+  const moved = Math.abs(delta) > 0.01; // worth showing (>1pt)
+  const pctLabel = moved
+    ? `${formatPct(start)} -> ${formatPct(now)}`
+    : formatPct(now);
+  const barTitle = moved
+    ? `now ${formatPct(now)} · start ${formatPct(start)}`
+    : undefined;
   return (
     <div className="animate-fade-in flex h-5 items-center gap-1.5">
       <RoundFlag code={c.code} size="14px" />
@@ -501,7 +499,7 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
           className="animate-bar-grow h-full origin-left bg-foreground"
           style={{ width: formatPct(base) }}
         />
-        {delta !== 0 && (
+        {moved && (
           <span
             className="animate-bar-grow h-full origin-left"
             style={{ width: formatPct(Math.abs(delta)) }}
