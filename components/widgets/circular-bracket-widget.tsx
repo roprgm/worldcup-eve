@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
   type Candidate,
   CircularBracketCard,
   CircularBracketRing,
   type CircularBracketView,
-  PredictToggle,
   type TeamPaths,
 } from "@/components/widgets/circular-bracket-card";
 import { usePredictions, useResults } from "@/components/widgets/queries";
@@ -134,22 +133,10 @@ export function CircularBracketWidget() {
   return <CircularBracketCard view={view} teamPaths={teamPaths} />;
 }
 
-/** The bracket ring without the card chrome, for the home hero: a centred ring
- *  with a compact predictions toggle. Predictions start on so the home shows a
- *  populated, inviting bracket rather than a field of "?". */
+/** The bracket ring without the card chrome, for the home hero. Predictions are
+ *  always on so the home shows a populated, inviting bracket rather than a field
+ *  of "?". */
 export function HomeBracket() {
   const { view, teamPaths } = useBracketData();
-  const [predict, setPredict] = useState(true);
-  return (
-    <div className="w-full">
-      <CircularBracketRing
-        view={view}
-        teamPaths={teamPaths}
-        predict={predict}
-      />
-      <div className="mt-1 flex justify-center">
-        <PredictToggle on={predict} onChange={setPredict} />
-      </div>
-    </div>
-  );
+  return <CircularBracketRing view={view} teamPaths={teamPaths} predict />;
 }

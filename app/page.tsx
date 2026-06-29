@@ -38,13 +38,6 @@ function EmptyState() {
           2026 World Cup
         </h1>
 
-        <p
-          className="animate-fade-up mt-3 font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase"
-          style={{ animationDelay: "60ms" }}
-        >
-          USA · Canada · México — Jun 11 → Jul 19
-        </p>
-
         <div
           className="animate-fade-up mt-7 w-full max-w-[420px]"
           style={{ animationDelay: "120ms" }}
