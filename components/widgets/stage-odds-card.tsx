@@ -327,7 +327,10 @@ function CellPopover({
         left: pos?.left ?? 0,
         visibility: pos ? "visible" : "hidden",
       }}
-      className="fixed z-50 max-h-[60vh] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl"
+      className={cn(
+        "fixed z-50 max-h-[60vh] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl",
+        pos && "animate-pop-in",
+      )}
     >
       {children}
     </div>,
@@ -347,7 +350,7 @@ function StageRow({
   canExplain: boolean;
 }) {
   return (
-    <StageGrid className="h-7">
+    <StageGrid className="h-7 animate-fade-up">
       <span className="flex min-w-0 items-center gap-1.5 @lg:gap-2">
         <Flag code={row.code} size={14} />
         <span className="min-w-0 truncate text-[12px] font-medium @lg:text-[13px]">
