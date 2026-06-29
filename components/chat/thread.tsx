@@ -14,7 +14,6 @@ import {
   questionPart,
 } from "@/components/chat/messages";
 import { BallIcon } from "@/components/icons";
-import { Loader } from "@/components/ui/loader";
 import { Markdown } from "@/components/ui/markdown";
 import { Bubble, Message, MessageAvatar } from "@/components/ui/message";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
@@ -32,7 +31,7 @@ export function Thread() {
     isBusy && (!lastAssistant || messageText(lastAssistant).trim().length === 0)
       ? lastAssistant
         ? assistantActivityLabel(lastAssistant)
-        : "Thinking"
+        : "Thinking..."
       : null;
 
   const rows = messages.filter(
@@ -113,9 +112,8 @@ const fadeDelay = (index: number) => ({
 
 function Activity({ label }: { label: string }) {
   return (
-    <div className="flex min-h-7 items-center gap-2.5 text-[0.8125rem] leading-snug text-subtle-foreground">
-      <span>{label}</span>
-      <Loader className="shrink-0" />
+    <div className="flex min-h-7 items-center text-[0.8125rem] leading-snug">
+      <span className="wc-shimmer">{label}</span>
     </div>
   );
 }
