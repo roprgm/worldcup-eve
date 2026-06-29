@@ -69,13 +69,14 @@ function circularView(
 }
 
 /** Connected circular bracket: merges the shared predictions with real results
- *  and paints them onto the radial skeleton. */
-export function CircularBracketWidget() {
+ *  and paints them onto the radial skeleton. With `predicted`, undecided nodes
+ *  show the most-likely team (dimmed) instead of a "?". */
+export function CircularBracketWidget({ predicted }: { predicted?: boolean }) {
   const predictions = usePredictions();
   const results = useResults();
   const view = useMemo(
     () => (predictions ? circularView(predictions, results) : undefined),
     [predictions, results],
   );
-  return <CircularBracketCard view={view} />;
+  return <CircularBracketCard view={view} predicted={predicted} />;
 }

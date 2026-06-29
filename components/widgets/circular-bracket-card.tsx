@@ -19,9 +19,10 @@ import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 const SIZE = 1000;
 const C = SIZE / 2;
 
-// Each half spans 180°−2·GAP, leaving a GAP wedge at top and bottom so the two
-// halves read apart and the finalists meet on the horizontal centre axis.
-const GAP = 10;
+// Each half spans a full semicircle (no GAP), so the 32 teams wrap evenly all
+// the way around — the half-step leaf offset keeps any flag off the exact poles,
+// and the finalists still meet on the horizontal centre axis.
+const GAP = 0;
 const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
 // Every node is one full-size circle, so the rings are spaced more than a
@@ -381,24 +382,54 @@ function OddsList({
 interface NodeProps {
   openId: string | null;
   onToggle: (id: string, anchor: HTMLElement) => void;
+  /** Fill undecided nodes with the most-likely team (dimmed) instead of a "?". */
+  predicted?: boolean;
 }
 
-/** A node whose team isn't settled yet: a full-size circle with a question mark,
- *  the same footprint as a flag, that opens its chances on tap. */
-function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
+/** An unsettled node: by default a question-mark circle; in `predicted` mode the
+ *  most-likely team's flag instead, dimmed so it reads as a forecast. Both are a
+ *  touch smaller than a settled flag and open the chances on tap. */
+function PendingNode({
+  id,
+  code,
+  predicted,
+  openId,
+  onToggle,
+}: NodeProps & { id: string; code?: string }) {
+  const open = openId === id;
+  if (predicted && code) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => onToggle(id, e.currentTarget)}
+        aria-label="Show chances"
+        aria-expanded={open}
+        className="block rounded-full"
+      >
+        <RoundFlag
+          code={code}
+          size="calc(var(--cf) * 0.82)"
+          className={cn(
+            "opacity-45 transition-opacity",
+            open && "opacity-90 ring-2 ring-pick",
+          )}
+        />
+      </button>
+    );
+  }
   return (
     <button
       type="button"
       onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
-      aria-expanded={openId === id}
+      aria-expanded={open}
       className={cn(
-        "flex size-[var(--cf)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
-        openId === id
+        "flex size-[calc(var(--cf)*0.78)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
+        open
           ? "border-pick/60 text-pick"
           : "border-surface-border text-muted-foreground hover:text-foreground",
       )}
-      style={{ fontSize: "calc(var(--cf) * 0.5)" }}
+      style={{ fontSize: "calc(var(--cf) * 0.42)" }}
     >
       ?
     </button>
@@ -412,6 +443,7 @@ function SlotNode({
   view,
   openId,
   onToggle,
+  predicted,
 }: NodeProps & { pos: FlagPos; view?: CircularBracketView }) {
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
@@ -423,8 +455,10 @@ function SlotNode({
       {confirmed(odds) && top ? (
         <RoundFlag code={top.code} size="var(--cf)" />
       ) : (
-        <UnknownNode
+        <PendingNode
           id={`slot:${pos.match}:${pos.side}`}
+          code={top?.code}
+          predicted={predicted}
           openId={openId}
           onToggle={onToggle}
         />
@@ -440,6 +474,7 @@ function MatchNode({
   view,
   openId,
   onToggle,
+  predicted,
 }: NodeProps & { node: InnerNode; view?: CircularBracketView }) {
   const win = view?.decided.get(node.match);
   return (
@@ -450,8 +485,10 @@ function MatchNode({
       {win ? (
         <RoundFlag code={win.code} size="var(--cf)" />
       ) : (
-        <UnknownNode
+        <PendingNode
           id={`match:${node.match}`}
+          code={lead(view?.matchOdds.get(node.match))?.code}
+          predicted={predicted}
           openId={openId}
           onToggle={onToggle}
         />
@@ -577,7 +614,14 @@ function CircularBracketHelp() {
 
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
-export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
+export function CircularBracketCard({
+  view,
+  predicted,
+}: {
+  view?: CircularBracketView;
+  /** Fill undecided nodes with the most-likely team (dimmed) instead of "?". */
+  predicted?: boolean;
+}) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
@@ -589,7 +633,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
   return (
     // `isolate` keeps the nodes' z-index inside this card so they don't paint
     // over the page's sticky section header.
-    <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
+    <div className="isolate mx-auto max-w-[480px] overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
         <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
@@ -602,7 +646,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
       <div className="px-2 py-4 sm:px-3">
         {/* Sizes are container-relative (cqw), so the whole ring fits any width
             without scrolling and the flags scale up with it. */}
-        <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
+        <div className="relative mx-auto aspect-square w-full [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
           <Connectors />
           {GEOMETRY.nodes.map((node) => (
             <MatchNode
@@ -611,6 +655,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               view={view}
               openId={openId}
               onToggle={onToggle}
+              predicted={predicted}
             />
           ))}
           {GEOMETRY.flags.map((pos) => (
@@ -620,6 +665,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               view={view}
               openId={openId}
               onToggle={onToggle}
+              predicted={predicted}
             />
           ))}
           <ChampionNode view={view} openId={openId} onToggle={onToggle} />

@@ -93,7 +93,7 @@ function Card({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
+    <div className="mx-auto flex h-full w-full max-w-[480px] flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
         {header}
