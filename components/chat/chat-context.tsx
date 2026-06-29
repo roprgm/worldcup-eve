@@ -17,6 +17,9 @@ type ChatContextValue = {
   agent: Agent;
   send: (message: string) => void;
   start: (message: string) => void;
+  // The chat held in memory, if any — the nav links back to it. Null on the
+  // new-chat screen with nothing to resume.
+  chatId: string | null;
 };
 
 type SavedChat = {
@@ -32,12 +35,12 @@ const newChatId = () => Math.random().toString(36).slice(2, 10);
 const chatIdFromPath = (path: string) =>
   path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-// Restore the saved chat — but only under its own `/chat/<id>` (a fresh id stays
-// empty) or on a non-chat page (so the Chat link can return to it). `/` is fresh.
+// Restore the saved chat into memory so the agent can show it again — except
+// under a different `/chat/<id>` than the one saved, where a fresh id must stay
+// empty. The home screen renders its new-chat UI off the URL, so a restored chat
+// sits in memory there without showing until the user returns to it via the nav.
 function loadChat(): SavedChat | null {
   if (typeof window === "undefined") return null;
-  const path = window.location.pathname;
-  if (path === "/") return null;
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   let saved: SavedChat;
@@ -46,12 +49,17 @@ function loadChat(): SavedChat | null {
   } catch {
     return null;
   }
-  const urlId = chatIdFromPath(path);
+  const urlId = chatIdFromPath(window.location.pathname);
   return urlId && urlId !== saved.id ? null : saved;
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [restored] = useState(loadChat);
+  // Only a chat with content is worth linking back to; a parse with no events
+  // would otherwise resolve to a blank conversation.
+  const [chatId, setChatId] = useState<string | null>(() =>
+    restored?.events?.length ? restored.id : null,
+  );
 
   const agent = useEveAgent({
     initialSession: restored?.session,
@@ -101,17 +109,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const start = useCallback(
     (text: string) => {
       if (!text.trim()) return;
+      const id = newChatId();
       agent.reset(); // start fresh even if a previous chat is still in context
       send(text); // optimistic message lands before the view swaps in
+      setChatId(id);
       // Update the URL without a route navigation: the conversation already
       // renders from shared context, so a real navigation only adds a flicker.
-      window.history.pushState(null, "", `/chat/${newChatId()}`);
+      window.history.pushState(null, "", `/chat/${id}`);
     },
     [agent, send],
   );
 
   return (
-    <ChatContext.Provider value={{ agent, send, start }}>
+    <ChatContext.Provider value={{ agent, send, start, chatId }}>
       {children}
     </ChatContext.Provider>
   );
