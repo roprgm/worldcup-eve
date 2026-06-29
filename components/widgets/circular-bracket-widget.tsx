@@ -10,7 +10,7 @@ import {
 import { usePredictions, useResults } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
 import type { Results } from "@/lib/results";
-import { teamById } from "@/lib/tournament";
+import { knockoutMatches, teamById } from "@/lib/tournament";
 
 const named = (c: { code: string; probability: number }): Candidate => ({
   code: c.code,
@@ -38,31 +38,45 @@ function decidedWinners(results?: Results): Map<number, Candidate> {
   return decided;
 }
 
-// Derive the circular view: the candidates per R32 slot, the win odds per match
-// (with finished matches pinned to their real winner), and the title odds.
+// Merge the two sides' candidates into one ranked list — every team that could
+// reach the match, with its chance of getting there.
+function mergeReach(a: Candidate[] = [], b: Candidate[] = []): Candidate[] {
+  const byCode = new Map<string, Candidate>();
+  for (const c of [...a, ...b]) {
+    const existing = byCode.get(c.code);
+    if (existing) existing.probability += c.probability;
+    else byCode.set(c.code, { ...c });
+  }
+  return [...byCode.values()].sort((x, y) => y.probability - x.probability);
+}
+
+// Derive the circular view: per R32 slot the teams that could fill it, per match
+// the teams that could reach it, the real winner of any finished match, and the
+// title odds.
 function circularView(
   predictions: Predictions,
   results?: Results,
 ): CircularBracketView {
-  const decided = decidedWinners(results);
-
   const slotOdds = new Map<string, Candidate[]>();
   for (const slot of predictions.slots)
     slotOdds.set(`${slot.match}:${slot.side}`, slot.candidates.map(named));
 
-  const matchOdds = new Map<number, Candidate[]>();
-  for (const [match, candidates] of Object.entries(predictions.matchWinOdds)) {
-    const num = Number(match);
-    const win = decided.get(num);
-    matchOdds.set(num, win ? [win] : candidates.map(named));
-  }
+  const reachOdds = new Map<number, Candidate[]>();
+  for (const m of knockoutMatches)
+    reachOdds.set(
+      m.number,
+      mergeReach(
+        slotOdds.get(`${m.number}:home`),
+        slotOdds.get(`${m.number}:away`),
+      ),
+    );
 
-  const finalWin = decided.get(104);
-  const championOdds = finalWin
-    ? [finalWin]
-    : predictions.bracketChampion.map(named);
-
-  return { slotOdds, matchOdds, championOdds };
+  return {
+    slotOdds,
+    reachOdds,
+    decided: decidedWinners(results),
+    championOdds: predictions.bracketChampion.map(named),
+  };
 }
 
 /** Connected circular bracket: merges the shared predictions with real results

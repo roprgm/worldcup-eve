@@ -5,6 +5,7 @@ import { Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
+import { Popover } from "@/components/ui/popover";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
 // The knockout bracket as a ring, in the spirit of the source artwork: the 32
@@ -210,10 +211,12 @@ export interface Candidate {
 }
 
 /** Everything the card paints onto the skeleton: the candidates for each R32
- *  slot, the win odds for each match, and the title odds. */
+ *  slot, the teams that could reach each match, the real winner of any finished
+ *  match, and the title odds. */
 export interface CircularBracketView {
   slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
-  matchOdds: Map<number, Candidate[]>; // match → chance each team wins it
+  reachOdds: Map<number, Candidate[]>; // match → teams that could reach it
+  decided: Map<number, Candidate>; // match → real winner, once played
   championOdds: Candidate[];
 }
 
@@ -322,29 +325,12 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   );
 }
 
-/** The chances popover, anchored to its node and opening toward the centre so
- *  it stays inside the widget. */
-function OddsPopover({
-  title,
-  odds,
-  x,
-  y,
-}: {
-  title: string;
-  odds: Candidate[];
-  x: number;
-  y: number;
-}) {
-  const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 6);
-  const horizontal =
-    x < C ? { left: "calc(100% + 6px)" } : { right: "calc(100% + 6px)" };
-  const vertical = y < C ? { top: "-6px" } : { bottom: "-6px" };
+/** The body of a chances popover: a titled, ranked list of teams. */
+function OddsList({ title, odds }: { title: string; odds: Candidate[] }) {
+  const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
-    <div
-      className="absolute z-40 w-44 rounded-md border border-surface-border bg-surface-2 p-2 shadow-lg"
-      style={{ ...horizontal, ...vertical }}
-    >
-      <p className="mb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+    <>
+      <p className="mb-1.5 text-[11px] font-medium tracking-wide text-muted-foreground/80">
         {title}
       </p>
       <div className="space-y-1">
@@ -356,28 +342,27 @@ function OddsPopover({
           shown.map((c, i) => <OddsRow key={c.code} c={c} top={i === 0} />)
         )}
       </div>
-    </div>
+    </>
   );
+}
+
+interface NodeProps {
+  openId: string | null;
+  onToggle: (id: string, anchor: HTMLElement) => void;
 }
 
 /** A node whose team isn't settled yet: a full-size circle with a question mark,
  *  the same footprint as a flag, that opens its chances on tap. */
-function UnknownNode({
-  open,
-  onClick,
-}: {
-  open: boolean;
-  onClick: () => void;
-}) {
+function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => onToggle(id, e.currentTarget)}
       aria-label="Show chances"
-      aria-expanded={open}
+      aria-expanded={openId === id}
       className={cn(
         "flex size-[var(--cf)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
-        open
+        openId === id
           ? "border-pick/60 text-pick"
           : "border-surface-border text-muted-foreground hover:text-foreground",
       )}
@@ -388,23 +373,16 @@ function UnknownNode({
   );
 }
 
-interface NodeProps {
-  openId: string | null;
-  setOpen: (id: string | null) => void;
-}
-
 /** An outer Round-of-32 slot: the team's flag once the group is decided, else a
  *  question-mark circle onto the candidates for that spot. */
 function SlotNode({
   pos,
   view,
   openId,
-  setOpen,
+  onToggle,
 }: NodeProps & { pos: FlagPos; view?: CircularBracketView }) {
-  const id = `slot:${pos.match}:${pos.side}`;
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
-  const isOpen = openId === id;
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
@@ -414,53 +392,36 @@ function SlotNode({
         <RoundFlag code={top.code} size="var(--cf)" />
       ) : (
         <UnknownNode
-          open={isOpen}
-          onClick={() => setOpen(isOpen ? null : id)}
-        />
-      )}
-      {isOpen && odds && (
-        <OddsPopover
-          title="Reaches this match"
-          odds={odds}
-          x={pos.x}
-          y={pos.y}
+          id={`slot:${pos.match}:${pos.side}`}
+          openId={openId}
+          onToggle={onToggle}
         />
       )}
     </div>
   );
 }
 
-/** An inner match: the winner's flag once it's played, else a chevron onto the
- *  chance each team wins it. */
+/** An inner match: the winner's flag once it's played, else a question-mark
+ *  circle onto the teams that could still reach it. */
 function MatchNode({
   node,
   view,
   openId,
-  setOpen,
+  onToggle,
 }: NodeProps & { node: InnerNode; view?: CircularBracketView }) {
-  const id = `match:${node.match}`;
-  const odds = view?.matchOdds.get(node.match);
-  const top = lead(odds);
-  const isOpen = openId === id;
+  const win = view?.decided.get(node.match);
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(node.x), top: pct(node.y) }}
     >
-      {confirmed(odds) && top ? (
-        <RoundFlag code={top.code} size="var(--cf)" />
+      {win ? (
+        <RoundFlag code={win.code} size="var(--cf)" />
       ) : (
         <UnknownNode
-          open={isOpen}
-          onClick={() => setOpen(isOpen ? null : id)}
-        />
-      )}
-      {isOpen && odds && (
-        <OddsPopover
-          title={`${ROUND_LABEL[node.round]} · wins`}
-          odds={odds}
-          x={node.x}
-          y={node.y}
+          id={`match:${node.match}`}
+          openId={openId}
+          onToggle={onToggle}
         />
       )}
     </div>
@@ -472,30 +433,28 @@ function MatchNode({
 function ChampionNode({
   view,
   openId,
-  setOpen,
+  onToggle,
 }: NodeProps & { view?: CircularBracketView }) {
-  const odds = view?.championOdds;
-  const top = lead(odds);
+  const win = view?.decided.get(104);
   const isOpen = openId === "champion";
-  const done = confirmed(odds) && top;
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: "50%", top: "50%" }}
     >
-      {done ? (
+      {win ? (
         <button
           type="button"
-          onClick={() => setOpen(isOpen ? null : "champion")}
+          onClick={(e) => onToggle("champion", e.currentTarget)}
           aria-label="Show title odds"
           className="block rounded-full ring-2 ring-pick"
         >
-          <RoundFlag code={top.code} size="var(--cf)" />
+          <RoundFlag code={win.code} size="var(--cf)" />
         </button>
       ) : (
         <button
           type="button"
-          onClick={() => setOpen(isOpen ? null : "champion")}
+          onClick={(e) => onToggle("champion", e.currentTarget)}
           aria-label="Show title odds"
           aria-expanded={isOpen}
           className={cn(
@@ -506,23 +465,29 @@ function ChampionNode({
           <Trophy style={{ width: "55%", height: "55%" }} />
         </button>
       )}
-      {isOpen && odds && (
-        <div className="absolute top-full left-1/2 z-40 mt-1.5 w-44 -translate-x-1/2 rounded-md border border-surface-border bg-surface-2 p-2 shadow-lg">
-          <p className="mb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
-            Champion
-          </p>
-          <div className="space-y-1">
-            {odds
-              .filter((c) => c.probability >= 0.01)
-              .slice(0, 6)
-              .map((c, i) => (
-                <OddsRow key={c.code} c={c} top={i === 0} />
-              ))}
-          </div>
-        </div>
-      )}
     </div>
   );
+}
+
+/** The title + team list for the currently open node. */
+function openContent(
+  view: CircularBracketView,
+  id: string,
+): { title: string; odds: Candidate[] } | null {
+  if (id === "champion")
+    return { title: "Chances to win the title", odds: view.championOdds };
+  if (id.startsWith("slot:")) {
+    const odds = view.slotOdds.get(id.slice("slot:".length));
+    return odds ? { title: "Chances to reach this match", odds } : null;
+  }
+  const num = Number(id.slice("match:".length));
+  const odds = view.reachOdds.get(num);
+  if (!odds) return null;
+  const round = matchByNumber[num].round as RoundKey;
+  return {
+    title: `Chances to reach the ${ROUND_LABEL[round].toLowerCase()}`,
+    odds,
+  };
 }
 
 const HELP_TEXT =
@@ -563,7 +528,14 @@ function CircularBracketHelp() {
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
 export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
-  const [openId, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
+    null,
+  );
+  const onToggle = (id: string, anchor: HTMLElement) =>
+    setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
+  const openId = open?.id ?? null;
+  const content = open && view ? openContent(view, open.id) : null;
+
   return (
     <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
@@ -571,7 +543,7 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           Prediction bracket
         </span>
         <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
-          · open a node to see its chances
+          · tap a node to see its chances
         </span>
         <CircularBracketHelp />
       </div>
@@ -580,22 +552,13 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
             without scrolling and the flags scale up with it. */}
         <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
           <Connectors />
-          {openId !== null && (
-            <button
-              type="button"
-              tabIndex={-1}
-              aria-hidden
-              className="absolute inset-0 z-20 cursor-default"
-              onClick={() => setOpen(null)}
-            />
-          )}
           {GEOMETRY.nodes.map((node) => (
             <MatchNode
               key={node.match}
               node={node}
               view={view}
               openId={openId}
-              setOpen={setOpen}
+              onToggle={onToggle}
             />
           ))}
           {GEOMETRY.flags.map((pos) => (
@@ -604,12 +567,22 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
               pos={pos}
               view={view}
               openId={openId}
-              setOpen={setOpen}
+              onToggle={onToggle}
             />
           ))}
-          <ChampionNode view={view} openId={openId} setOpen={setOpen} />
+          <ChampionNode view={view} openId={openId} onToggle={onToggle} />
         </div>
       </div>
+      {open && content && (
+        <Popover
+          key={open.id}
+          anchor={open.anchor}
+          onClose={() => setOpen(null)}
+          className="w-48 p-2.5"
+        >
+          <OddsList title={content.title} odds={content.odds} />
+        </Popover>
+      )}
     </div>
   );
 }
