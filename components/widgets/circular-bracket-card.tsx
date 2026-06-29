@@ -326,6 +326,10 @@ export interface Candidate {
   code: string;
   name?: string;
   probability: number;
+  /** The same team's chance at the start of the match (the opening snapshot),
+   *  when one exists. The bar paints this in the base colour and the move since
+   *  in amber. Absent for settled/unsnapshotted nodes — then the bar is solid. */
+  opening?: number;
 }
 
 /** Everything the card paints onto the skeleton: the candidates for each R32
@@ -460,6 +464,15 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  used across the prediction widgets. Rows fade in and their bars sweep out
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
+  // Split the bar into the value shared with kickoff (base colour) and the move
+  // since (amber). With no opening snapshot the bar is a single solid segment.
+  const base =
+    c.opening == null ? c.probability : Math.min(c.probability, c.opening);
+  const delta = c.opening == null ? 0 : Math.abs(c.probability - c.opening);
+  const barTitle =
+    c.opening == null
+      ? undefined
+      : `now ${formatPct(c.probability)} · start ${formatPct(c.opening)}`;
   return (
     <div className="animate-fade-in flex h-5 items-center gap-1.5">
       <RoundFlag code={c.code} size="14px" />
@@ -472,14 +485,23 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
       >
         {c.code}
       </span>
-      <span className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
+      <span
+        title={barTitle}
+        className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50"
+      >
         <span
           className={cn(
-            "animate-bar-grow h-full origin-left rounded-[1px]",
+            "animate-bar-grow h-full origin-left",
             top ? "bg-pick" : "bg-muted-foreground/30",
           )}
-          style={{ width: formatPct(c.probability) }}
+          style={{ width: formatPct(base) }}
         />
+        {delta > 0 && (
+          <span
+            className="animate-bar-grow h-full origin-left bg-amber-500"
+            style={{ width: formatPct(delta) }}
+          />
+        )}
       </span>
       <span
         className={cn(

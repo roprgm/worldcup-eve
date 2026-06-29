@@ -37,7 +37,12 @@ import {
   type MatchOdds,
   type Scoreline,
 } from "./group-markets";
-import { fetchKnockoutMarkets, pairKey } from "./knockout-markets";
+import {
+  fetchKnockoutMarkets,
+  pairKey,
+  type KnockoutMarketsSnapshot,
+} from "./knockout-markets";
+import { openingKnockoutMarkets } from "./opening-odds";
 import { getMatchResults, type Results } from "../results";
 
 export interface Candidate {
@@ -78,20 +83,16 @@ export interface KnockoutOdds {
   homeAdvance: number; // P(home advances) — two-way, homeAdvance + awayAdvance = 1
   awayAdvance: number;
 }
-export interface Predictions {
-  updatedAt: string; // ISO timestamp
-  catalogGeneratedAt: string;
+/** Everything the bracket simulation produces from one knockout-markets read.
+ *  Computed twice: from the live market (top level of `Predictions`) and from
+ *  each R32 match's opening (kickoff) odds (`Predictions.opening`). */
+export interface BracketOutputs {
   slots: PredictedSlot[];
-  champion: Candidate[]; // direct champion market
   bracketChampion: Candidate[]; // BT winner of the Final (match 104)
-  groups: GroupOdds[];
   reach: TeamReach[];
-  /** Most-likely exact scoreline per unplayed group fixture, by fixture id. */
-  groupScores: Record<string, Scoreline>;
-  /** Live two-way (home/away) win chance per group fixture with a market. */
-  matchOdds: MatchOdds[];
   /** Most-likely exact scoreline per decided knockout match with a per-game
-   *  market, by FIFA match number (oriented to the bracket's home/away). */
+   *  market, by FIFA match number (oriented to the bracket's home/away). Always
+   *  empty for `opening` — kickoff scores aren't captured. */
   knockoutScores: Record<number, Scoreline>;
   /** Direct per-game market read for each decided knockout match: the
    *  regulation three-way (home/draw/away) and the two-way advance odds it
@@ -107,6 +108,21 @@ export interface Predictions {
   teamStrengths: Record<string, number>;
 }
 
+export interface Predictions extends BracketOutputs {
+  updatedAt: string; // ISO timestamp
+  catalogGeneratedAt: string;
+  champion: Candidate[]; // direct champion market
+  groups: GroupOdds[];
+  /** Most-likely exact scoreline per unplayed group fixture, by fixture id. */
+  groupScores: Record<string, Scoreline>;
+  /** Live two-way (home/away) win chance per group fixture with a market. */
+  matchOdds: MatchOdds[];
+  /** The same bracket outputs computed from each R32 match's opening (kickoff)
+   *  odds instead of the live market — the before/after counterpart. Group and
+   *  champion futures stay live (only the R32 knockout read differs). */
+  opening: BracketOutputs;
+}
+
 // 4 decimals: display-only, keeps the payload small, drops long-tail candidates.
 const round4 = (x: number) => Math.round(x * 1e4) / 1e4;
 
@@ -118,11 +134,12 @@ function toCandidates(dist: Dist, keepZeros = false): Candidate[] {
     .sort((a, b) => b.probability - a.probability);
 }
 
-// Optional cross-call cache for the expensive fit anchor (~2 s). Pass the same
-// object across calls to reuse it; the default recomputes it (keeping the call
-// pure). Drop/replace the object to invalidate.
+// Optional cross-call cache for the expensive fit anchor (~2 s), one per bracket
+// (live and opening fit different overrides). Pass the same object across calls
+// to reuse it; the default recomputes it. Drop/replace the object to invalidate.
 export interface PredictionCache {
-  anchor?: Strengths;
+  live?: { anchor?: Strengths };
+  opening?: { anchor?: Strengths };
 }
 
 // A slot's team once it is all but certain (group stage decided), else null.
@@ -196,29 +213,17 @@ function knockoutMarketOverride(
   return { override, scores, odds };
 }
 
-export async function buildPredictions(
-  cache: PredictionCache = {},
-  // Optional override for the Round-of-32 third-place slots, keyed "match:side"
-  // → team distribution. When given (from real results), it replaces the market
-  // heuristic for those slots; other slots are untouched.
-  thirdSlotDists?: Map<string, Dist>,
-): Promise<Predictions> {
-  const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
-    fetchPrices(),
-    fetchGroupMarkets(),
-    fetchKnockoutMarkets(),
-  ]);
-
-  const r32Slots = buildR32Slots(prices);
-  // Replace the market's third-place slots with the results-based distribution
-  // (when given) before the fit and simulation, so the whole bracket — not just
-  // the R32 display — propagates from the sharper thirds. R16+ stay consistent.
-  if (thirdSlotDists)
-    for (const [key, dist] of thirdSlotDists) r32Slots.set(key, dist);
-  const reachObs: ReachObs = new Map(
-    teamCodes.map((t) => [t, reachObsFor(prices, t)]),
-  );
-
+// Fit and simulate the whole bracket from one knockout-markets read, returning
+// every output that depends on it. Called once per source (live market, opening
+// odds); the futures-derived champion/groups are computed by the caller and
+// shared. `prices` is needed only for each team's market champion column.
+function simulateBracket(
+  r32Slots: Map<string, Dist>,
+  reachObs: ReachObs,
+  knockoutMarkets: KnockoutMarketsSnapshot,
+  prices: Map<string, number>,
+  cache: { anchor?: Strengths },
+): BracketOutputs {
   // Once an R32 slot is decided, Polymarket prices that exact matchup directly.
   // Pin those matches to the market's two-way advance odds (instead of inferring
   // them from the fit) and capture the market's scoreline + three-way read. The
@@ -274,13 +279,6 @@ export async function buildPredictions(
       });
     }
 
-  const champion = toCandidates(
-    normalize(
-      new Map(
-        teamCodes.map((t) => [t, marketProb(prices, "champion", t) ?? 0]),
-      ),
-    ),
-  );
   const bracketChampion = toCandidates(
     normalize(winners.get(104) ?? new Map()),
   );
@@ -309,6 +307,69 @@ export async function buildPredictions(
     }))
     .sort((a, b) => b.final - a.final);
 
+  return {
+    slots,
+    bracketChampion,
+    reach,
+    knockoutScores,
+    knockoutOdds,
+    matchWinOdds,
+    teamStrengths: Object.fromEntries(
+      teamCodes.map((t) => [t, round4(strengths.get(t) ?? 1)]),
+    ),
+  };
+}
+
+export async function buildPredictions(
+  cache: PredictionCache = {},
+  // Optional override for the Round-of-32 third-place slots, keyed "match:side"
+  // → team distribution. When given (from real results), it replaces the market
+  // heuristic for those slots; other slots are untouched.
+  thirdSlotDists?: Map<string, Dist>,
+): Promise<Predictions> {
+  const [prices, groupMarkets, knockoutMarkets] = await Promise.all([
+    fetchPrices(),
+    fetchGroupMarkets(),
+    fetchKnockoutMarkets(),
+  ]);
+
+  const r32Slots = buildR32Slots(prices);
+  // Replace the market's third-place slots with the results-based distribution
+  // (when given) before the fit and simulation, so the whole bracket — not just
+  // the R32 display — propagates from the sharper thirds. R16+ stay consistent.
+  if (thirdSlotDists)
+    for (const [key, dist] of thirdSlotDists) r32Slots.set(key, dist);
+  const reachObs: ReachObs = new Map(
+    teamCodes.map((t) => [t, reachObsFor(prices, t)]),
+  );
+
+  // Two brackets off the same group/futures inputs: the live market and the
+  // committed opening (kickoff) R32 odds. Only the knockout read differs.
+  cache.live ??= {};
+  cache.opening ??= {};
+  const live = simulateBracket(
+    r32Slots,
+    reachObs,
+    knockoutMarkets,
+    prices,
+    cache.live,
+  );
+  const opening = simulateBracket(
+    r32Slots,
+    reachObs,
+    openingKnockoutMarkets(),
+    prices,
+    cache.opening,
+  );
+
+  const champion = toCandidates(
+    normalize(
+      new Map(
+        teamCodes.map((t) => [t, marketProb(prices, "champion", t) ?? 0]),
+      ),
+    ),
+  );
+
   const groups = groupLetters.map((letter) => ({
     letter,
     teams: groupTeams[letter]
@@ -324,19 +385,12 @@ export async function buildPredictions(
   return {
     updatedAt: new Date().toISOString(),
     catalogGeneratedAt: catalog.generatedAt,
-    slots,
     champion,
-    bracketChampion,
     groups,
-    reach,
     groupScores: groupMarkets.scores,
     matchOdds: groupMarkets.odds,
-    knockoutScores,
-    knockoutOdds,
-    matchWinOdds,
-    teamStrengths: Object.fromEntries(
-      teamCodes.map((t) => [t, round4(strengths.get(t) ?? 1)]),
-    ),
+    ...live,
+    opening,
   };
 }
 

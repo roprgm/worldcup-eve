@@ -13,6 +13,7 @@
     "format:check": "biome format .",
     "start": "node scripts/start.mjs",
     "sync:markets": "bun run lib/predictions/sync.ts",
+    "sync:opening-odds": "bun run lib/predictions/sync-opening-odds.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

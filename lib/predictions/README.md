@@ -63,6 +63,13 @@ This is a deliberately minimal hook; wire it to your platform's real cache
 | `knockoutScores`  | most-likely exact scoreline per decided knockout match with a per-game market, by match number |
 | `knockoutOdds`    | the per-game market's direct read of each decided knockout match: regulation three-way (home/draw/away) + the two-way advance odds it implies |
 | `matchWinOdds`    | win distribution per knockout match (73–104). R32 comes straight from the per-game market; deeper rounds are the BT model |
+| `opening`         | the same bracket outputs (`slots`, `bracketChampion`, `reach`, `knockoutScores`, `knockoutOdds`, `matchWinOdds`, `teamStrengths`) recomputed from each R32 match's **opening** odds — the kickoff-time view, for a before/after comparison |
+
+The `opening` block is a second pass through the same BT bracket, fed by each
+R32 match's price at kickoff instead of the live market (`opening-odds.ts`, from
+the committed `data/knockout-opening-odds.json`). Group and champion futures stay
+live — only the R32 knockout read differs. Refresh the file with
+`bun run sync:opening-odds`.
 
 Teams are FIFA 3-letter codes (`BRA`, `ARG`, …). Probabilities are in `[0, 1]`,
 rounded to four decimals.
@@ -104,6 +111,8 @@ As deeper rounds get decided and priced, the same path covers them.
 | `bradley-terry.ts` | the BT model: SPSA fit + bracket simulation (with winner overrides) |
 | `group-markets.ts` | per-group-fixture exact scoreline + two-way win odds            |
 | `knockout-markets.ts` | per-knockout-match exact scoreline + three-way / advance odds |
+| `opening-odds.ts`  | the committed opening (kickoff) R32 odds, shaped like a knockout-markets read |
+| `sync-opening-odds.ts` | build-time sync: capture each R32 match's kickoff odds into `data/` |
 | `market-api.ts`    | fetch live prices (rate-limited CLOB + Gamma)                   |
 | `markets.json`     | futures catalog (advance / reach / elim / champion token ids)   |
 | `group-markets.json` | per-group-fixture catalog (exact-score + moneyline token ids) |
