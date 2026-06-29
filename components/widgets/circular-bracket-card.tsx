@@ -104,7 +104,7 @@ function polar(deg: number, r: number): { x: number; y: number } {
  *  edge: the outer flags appear first, nodes nearer the centre last. */
 function rippleDelay(x: number, y: number): number {
   const r = Math.hypot(x - C, y - C);
-  return round2((1 - r / R_FLAG) * 0.3);
+  return round2((1 - r / R_FLAG) * 0.5);
 }
 
 /** SVG arc along radius `r` from `a1` to `a2` (the bar joining a node's two
@@ -702,7 +702,9 @@ function matchModel(
 }
 
 /** One bracket node: a skeleton while its data loads, a locked-in flag once the
- *  team is known, or a tappable "?" onto the chances in between. */
+ *  team is known, or a tappable "?" onto the chances in between. The skeleton
+ *  sits outside `NodeReveal` so the outward ripple plays on the real node as it
+ *  loads in — not on the placeholder that precedes it. */
 function BracketNode({
   model,
   loading,
@@ -715,29 +717,31 @@ function BracketNode({
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(model.x), top: pct(model.y) }}
     >
-      <NodeReveal delay={rippleDelay(model.x, model.y)}>
-        {loading ? (
-          <NodeSkeleton size={NODE_SIZE} />
-        ) : model.flagCode ? (
-          <FlagNode
-            id={model.id}
-            code={model.flagCode}
-            size={NODE_SIZE}
-            explainable={model.explainable}
-            openId={openId}
-            onToggle={onToggle}
-          />
-        ) : (
-          <UnsettledNode
-            id={model.id}
-            code={model.predictedCode}
-            size={NODE_SIZE}
-            predict={predict}
-            openId={openId}
-            onToggle={onToggle}
-          />
-        )}
-      </NodeReveal>
+      {loading ? (
+        <NodeSkeleton size={NODE_SIZE} />
+      ) : (
+        <NodeReveal delay={rippleDelay(model.x, model.y)}>
+          {model.flagCode ? (
+            <FlagNode
+              id={model.id}
+              code={model.flagCode}
+              size={NODE_SIZE}
+              explainable={model.explainable}
+              openId={openId}
+              onToggle={onToggle}
+            />
+          ) : (
+            <UnsettledNode
+              id={model.id}
+              code={model.predictedCode}
+              size={NODE_SIZE}
+              predict={predict}
+              openId={openId}
+              onToggle={onToggle}
+            />
+          )}
+        </NodeReveal>
+      )}
     </div>
   );
 }

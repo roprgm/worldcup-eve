@@ -6,7 +6,7 @@
 :root {
   color-scheme: dark;
   --background: oklch(0.12 0 0);
-  --surface: oklch(0.20 0 0); /* origin --card */
+  --surface: oklch(0.2 0 0); /* origin --card */
   --surface-2: oklch(0.28 0 0); /* origin --muted / --secondary */
   --foreground: oklch(0.985 0 0);
   --muted-foreground: oklch(0.708 0 0);
@@ -69,7 +69,7 @@
   --animate-fade-up: wc-fade-up 0.5s var(--ease-geist) both;
   --animate-fade-in: wc-fade-in 0.4s var(--ease-geist) both;
   --animate-pop-in: wc-pop-in 0.14s var(--ease-geist) both;
-  --animate-predict-in: wc-predict-in 0.32s var(--ease-geist) both;
+  --animate-predict-in: wc-predict-in 0.5s var(--ease-geist) both;
 
   @keyframes wc-predict-in {
     from {
