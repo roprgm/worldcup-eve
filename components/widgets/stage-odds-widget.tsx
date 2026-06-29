@@ -123,7 +123,10 @@ export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
     [predictions, results],
   );
 
-  if (!all || !predictions) return <StageOddsCard loading />;
+  // The params already fix the row count for a Top-N cut or a team list, so the
+  // skeleton can match it; the whole field falls back to a default.
+  if (!all || !predictions)
+    return <StageOddsCard loading rowCount={hasList ? teams?.length : top} />;
 
   // Lazily explain a cell on click, from the same snapshot the table is built on.
   const resolveBreakdown: ResolveBreakdown = (code, round) =>

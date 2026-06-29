@@ -65,7 +65,14 @@ const ROUND_LABEL: Record<Round, string> = {
   FINAL: "Final",
 };
 
-const ROW_SKELETON = Array.from({ length: 16 }, (_, i) => `row-${i}`);
+// Skeleton rows: sized to what the table will show when the params already imply
+// it (a Top-N cut or a team list), with a modest fallback for the whole field.
+const DEFAULT_SKELETON_ROWS = 8;
+const skeletonKeys = (count?: number) =>
+  Array.from(
+    { length: Math.min(Math.max(count ?? DEFAULT_SKELETON_ROWS, 1), 48) },
+    (_, i) => `row-${i}`,
+  );
 
 // team · six stage cells. A fixed-but-flexible team column and equal stage cells
 // shared by the header and every row so the heat-map grid lines up. The cells
@@ -398,7 +405,7 @@ function StageRow({
 }
 
 type StageOddsCardProps =
-  | { loading: true }
+  | { loading: true; rowCount?: number }
   | {
       loading?: false;
       rows: StageOddsRow[];
@@ -439,7 +446,7 @@ export function StageOddsCard(props: StageOddsCardProps) {
           ))}
         </StageGrid>
         {props.loading
-          ? ROW_SKELETON.map((key) => (
+          ? skeletonKeys(props.rowCount).map((key) => (
               <div key={key} className="flex h-7 items-center">
                 <Skeleton className="h-5 w-full" />
               </div>
