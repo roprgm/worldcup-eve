@@ -535,7 +535,9 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
   const content = open && view ? openContent(view, open.id) : null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
+    // `isolate` keeps the nodes' z-index inside this card so they don't paint
+    // over the page's sticky section header.
+    <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
         <span className="shrink-0 text-[11px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
