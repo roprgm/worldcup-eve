@@ -187,27 +187,47 @@ const TARGET_LEGS: Partial<Record<Round, number>> = {
   FINAL: 4,
 };
 
+export interface CellPathOptions {
+  /** Reach at or below this is treated as "can't get there" → `undefined`. Pass 0
+   *  to keep the longest shots (any still-alive team). */
+  minReach?: number;
+  /** The round the team is already confirmed into from played results. The path
+   *  then starts there and conditions every later chance on the team being in it
+   *  (its reach there becomes a certain 1), so a match already won isn't shown as
+   *  a pending prediction. Omit for the unconditional path from R32. */
+  fromRound?: Round;
+}
+
 /** The per-cell breakdown behind a team's chance to reach `targetRound`: the
  *  matches it must win and the likely opponent at each. `undefined` for an
- *  unknown team, a non-reach column (R32 / cup), or a team that can't get there. */
+ *  unknown team, a non-reach column (R32 / cup), a team that can't get there, or
+ *  one already at/past the target. */
 export function cellPath(
   predictions: Pick<Predictions, "slots">,
   code: string,
   targetRound: Round,
+  { minReach = MIN_REACH, fromRound }: CellPathOptions = {},
 ): CellPath | undefined {
   const team = teamById[code];
   const legCount = TARGET_LEGS[targetRound];
   if (!team || legCount == null) return undefined;
 
   const steps = PATH_ROUNDS.map((round) => roundStep(predictions, code, round));
-  if (steps[legCount].reachProbability < MIN_REACH) return undefined;
+
+  const fromIdx = fromRound ? PATH_ROUNDS.indexOf(fromRound) : 0;
+  const base = fromRound ? steps[fromIdx].reachProbability : 1;
+  if (fromIdx >= legCount || base <= 0) return undefined;
+
+  // Chance to reach a round, conditioned on the team being in `fromRound`.
+  const reachOf = (idx: number) => steps[idx].reachProbability / base;
+  if (reachOf(legCount) <= minReach) return undefined;
 
   const legs: PathLeg[] = [];
-  for (let k = 0; k < legCount; k++) {
+  for (let k = fromIdx; k < legCount; k++) {
     legs.push({
       round: PATH_ROUNDS[k],
       opponents: steps[k].opponents,
-      reachNext: steps[k + 1].reachProbability,
+      reachNext: reachOf(k + 1),
     });
   }
 
@@ -215,7 +235,7 @@ export function cellPath(
     code,
     name: team.name,
     targetRound,
-    reachProbability: steps[legCount].reachProbability,
+    reachProbability: reachOf(legCount),
     dependsOnGroup: livePlacements(predictions, code).size > 1,
     legs,
   };

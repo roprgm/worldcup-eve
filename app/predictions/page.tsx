@@ -33,7 +33,7 @@ export default function PredictionsPage() {
         <Section title="Road to the final">
           <CardGridFrame className="space-y-3">
             <CircularBracketWidget />
-            <StageOddsWidget top={5} />
+            <StageOddsWidget />
           </CardGridFrame>
         </Section>
 

@@ -5,8 +5,13 @@ import { addMinutes, format } from "date-fns";
 import { Info, Trophy } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import {
+  CellPathExplain,
+  PopupHeader,
+} from "@/components/widgets/cell-path-explain";
 import { Flag } from "@/components/flags";
 import { Popover } from "@/components/ui/popover";
+import type { CellPath } from "@/lib/predictions/team-path";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
 // The knockout bracket as a ring, in the spirit of the source artwork: the 32
@@ -318,6 +323,10 @@ export interface CircularBracketView {
   championOdds: Candidate[];
 }
 
+/** Road-to-the-final breakdown per team code, for the locked-in teams that still
+ *  have a route. A team's flag is tappable only when it has an entry here. */
+export type TeamPaths = Map<string, CellPath>;
+
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
 const formatPct = (p: number) => `${Math.round(p * 100)}%`;
 const lead = (odds?: Candidate[]) => odds?.[0];
@@ -480,16 +489,9 @@ function OddsList({
 }) {
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
-    <>
-  <p className="text-[12px] font-medium tracking-wide text-foreground/80">
-  {title}
-  </p>
-      {subtitle && (
-        <p className="mb-1.5 text-[10px] text-muted-foreground/70">
-          {subtitle}
-        </p>
-      )}
-      <div className={cn("space-y-1", !subtitle && "mt-1.5")}>
+    <div>
+      <PopupHeader title={title} subtitle={subtitle} />
+      <div className="space-y-1">
         {shown.length === 0 ? (
           <p className="text-[11px] text-muted-foreground/50 italic">
             no market
@@ -498,7 +500,7 @@ function OddsList({
           shown.map((c, i) => <OddsRow key={c.code} c={c} top={i === 0} />)
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -518,10 +520,7 @@ function NodeReveal({
   children: ReactNode;
 }) {
   return (
-    <div
-      className="animate-predict-in"
-      style={{ animationDelay: `${delay}s` }}
-    >
+    <div className="animate-predict-in" style={{ animationDelay: `${delay}s` }}>
       {children}
     </div>
   );
@@ -600,81 +599,139 @@ function UnsettledNode({
   );
 }
 
-/** An outer Round-of-32 slot: the team's flag once the group is decided, else a
- *  question-mark circle (or, in `predict` mode, the faded front-runner's flag)
- *  onto the candidates for that spot. */
-function SlotNode({
-  pos,
-  view,
-  predict,
-  openId,
-  onToggle,
-}: NodeProps & { pos: FlagPos; view?: CircularBracketView; predict?: boolean }) {
-  const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
-  const top = lead(odds);
-  const id = `slot:${pos.match}:${pos.side}`;
-  const size = "calc(var(--cf) * 0.85)";
-  return (
-    <div
-      className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
-      style={{ left: pct(pos.x), top: pct(pos.y) }}
-    >
-      <NodeReveal delay={rippleDelay(pos.x, pos.y)}>
-        {confirmed(odds) && top ? (
-          <RoundFlag
-            code={top.code}
-            size={size}
-            className="ring-surface-divider"
-          />
-        ) : (
-          <UnsettledNode
-            id={id}
-            code={top?.code}
-            size={size}
-            predict={predict}
-            openId={openId}
-            onToggle={onToggle}
-          />
-        )}
-      </NodeReveal>
-    </div>
-  );
-}
-
-/** An inner match: the winner's flag once it's played, else a question-mark
- *  circle onto the teams that could still reach it. */
-function MatchNode({
-  node,
-  view,
-  predict,
+/** A locked-in team's flag. Plain when there's no path to explain; otherwise a
+ *  button that opens the team's road to the final. Its selected and hover
+ *  treatment matches the unsettled nodes so the ring never reads as a different
+ *  kind of state — neutral, never the winner's green. */
+function FlagNode({
+  id,
+  code,
+  size,
+  explainable,
   openId,
   onToggle,
 }: NodeProps & {
-  node: InnerNode;
-  view?: CircularBracketView;
-  predict?: boolean;
+  id: string;
+  code: string;
+  size: string;
+  explainable: boolean;
 }) {
-  const win = view?.decided.get(node.match);
+  if (!explainable)
+    return (
+      <RoundFlag code={code} size={size} className="ring-surface-divider" />
+    );
+  const open = openId === id;
+  return (
+    <button
+      type="button"
+      onClick={(e) => onToggle(id, e.currentTarget)}
+      aria-label={`Show ${code} road to the final`}
+      aria-expanded={open}
+      className="group block rounded-full"
+    >
+      <RoundFlag
+        code={code}
+        size={size}
+        className={cn(
+          "transition-[filter] group-hover:brightness-110",
+          open ? "ring-foreground/65" : "ring-surface-divider",
+        )}
+      />
+    </button>
+  );
+}
+
+/** A node still waiting on its data: a plain pulsing circle, kept distinct from
+ *  the "?" so loading never reads as an undecided match. */
+function NodeSkeleton({ size }: { size: string }) {
+  return (
+    <span
+      className="block animate-pulse rounded-full bg-surface-2 ring-1 ring-surface-border"
+      style={{ width: `calc(${size})`, height: `calc(${size})` }}
+    />
+  );
+}
+
+// Every outer/inner node is the same size; only the centre champion differs.
+const NODE_SIZE = "calc(var(--cf) * 0.85)";
+
+/** What a node should paint, read off the view. `flagCode` means the team is
+ *  locked in; otherwise `predictedCode` feeds the unsettled overlay. */
+interface NodeModel {
+  id: string;
+  x: number;
+  y: number;
+  flagCode?: string;
+  predictedCode?: string;
+  explainable: boolean; // the locked-in flag opens a road-to-the-final breakdown
+}
+
+function slotModel(
+  pos: FlagPos,
+  view: CircularBracketView | undefined,
+  teamPaths?: TeamPaths,
+): NodeModel {
+  const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
+  const top = lead(odds);
+  const flagCode = confirmed(odds) ? top?.code : undefined;
+  return {
+    id: `slot:${pos.match}:${pos.side}`,
+    x: pos.x,
+    y: pos.y,
+    flagCode,
+    predictedCode: top?.code,
+    explainable: !!flagCode && !!teamPaths?.has(flagCode),
+  };
+}
+
+function matchModel(
+  node: InnerNode,
+  view: CircularBracketView | undefined,
+  teamPaths?: TeamPaths,
+): NodeModel {
+  const flagCode = view?.decided.get(node.match)?.code;
   const top = lead(view?.matchOdds.get(node.match));
-  const id = `match:${node.match}`;
-  const size = "calc(var(--cf) * 0.85)";
+  return {
+    id: `match:${node.match}`,
+    x: node.x,
+    y: node.y,
+    flagCode,
+    predictedCode: top?.code,
+    explainable: !!flagCode && !!teamPaths?.has(flagCode),
+  };
+}
+
+/** One bracket node: a skeleton while its data loads, a locked-in flag once the
+ *  team is known, or a tappable "?" onto the chances in between. */
+function BracketNode({
+  model,
+  loading,
+  predict,
+  openId,
+  onToggle,
+}: NodeProps & { model: NodeModel; loading: boolean; predict?: boolean }) {
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
-      style={{ left: pct(node.x), top: pct(node.y) }}
+      style={{ left: pct(model.x), top: pct(model.y) }}
     >
-      <NodeReveal delay={rippleDelay(node.x, node.y)}>
-        {win ? (
-          <RoundFlag
-            code={win.code}
-            size={size}
-            className="ring-surface-divider"
+      <NodeReveal delay={rippleDelay(model.x, model.y)}>
+        {loading ? (
+          <NodeSkeleton size={NODE_SIZE} />
+        ) : model.flagCode ? (
+          <FlagNode
+            id={model.id}
+            code={model.flagCode}
+            size={NODE_SIZE}
+            explainable={model.explainable}
+            openId={openId}
+            onToggle={onToggle}
           />
         ) : (
           <UnsettledNode
-            id={id}
-            code={top?.code}
-            size={size}
+            id={model.id}
+            code={model.predictedCode}
+            size={NODE_SIZE}
             predict={predict}
             openId={openId}
             onToggle={onToggle}
@@ -766,8 +823,24 @@ function openContent(
   };
 }
 
+/** The locked-in team behind an open node, if any: a confirmed R32 slot's
+ *  occupant or a played match's winner. Such a node opens its road to the final
+ *  instead of the chances list. */
+function confirmedTeamCode(
+  view: CircularBracketView,
+  id: string,
+): string | undefined {
+  if (id.startsWith("slot:")) {
+    const odds = view.slotOdds.get(id.slice("slot:".length));
+    return confirmed(odds) ? lead(odds)?.code : undefined;
+  }
+  if (id.startsWith("match:"))
+    return view.decided.get(Number(id.slice("match:".length)))?.code;
+  return undefined;
+}
+
 const HELP_TEXT =
-  "Tap any node to see each team's chance of reaching that match. The chances are computed from the betting market and refresh every minute.";
+  "Tap an open node to see each team's chance of reaching that match, or a locked-in flag to see its road to the final. The chances are computed from the betting market and refresh every minute.";
 
 /** Header info affordance — a popover on tap (native `title` is hover-only). */
 function CircularBracketHelp() {
@@ -820,7 +893,7 @@ function PredictToggle({
       className="flex cursor-pointer items-center gap-1.5"
     >
       <span className="text-[12px] font-medium text-muted-foreground/70">
-        Market predictions
+        Show market predictions
       </span>
       <span
         className={cn(
@@ -844,11 +917,14 @@ function PredictToggle({
 export function CircularBracketCard({
   view,
   predict: predictDefault = false,
+  teamPaths,
 }: {
   view?: CircularBracketView;
   /** Initial state of the predictions toggle: show the leading candidate's flag
    *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
   predict?: boolean;
+  /** Road to the final per locked-in team, making those flags tappable. */
+  teamPaths?: TeamPaths;
 }) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
@@ -857,7 +933,12 @@ export function CircularBracketCard({
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
-  const content = open && view ? openContent(view, open.id) : null;
+  const loading = !view;
+
+  // A locked-in flag opens its road to the final; any other node opens chances.
+  const teamCode = open && view ? confirmedTeamCode(view, open.id) : undefined;
+  const teamPath = teamCode ? teamPaths?.get(teamCode) : undefined;
+  const content = open && view && !teamPath ? openContent(view, open.id) : null;
 
   return (
     // `isolate` keeps the nodes' z-index inside this card so they don't paint
@@ -883,20 +964,20 @@ export function CircularBracketCard({
         <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
           <Connectors view={view} />
           {GEOMETRY.nodes.map((node) => (
-            <MatchNode
-              key={node.match}
-              node={node}
-              view={view}
+            <BracketNode
+              key={`match:${node.match}`}
+              model={matchModel(node, view, teamPaths)}
+              loading={loading}
               predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
           ))}
           {GEOMETRY.flags.map((pos) => (
-            <SlotNode
-              key={`${pos.match}:${pos.side}`}
-              pos={pos}
-              view={view}
+            <BracketNode
+              key={`slot:${pos.match}:${pos.side}`}
+              model={slotModel(pos, view, teamPaths)}
+              loading={loading}
               predict={predict}
               openId={openId}
               onToggle={onToggle}
@@ -905,18 +986,24 @@ export function CircularBracketCard({
           <ChampionNode view={view} openId={openId} onToggle={onToggle} />
         </div>
       </div>
-      {open && content && (
+      {open && (teamPath || content) && (
         <Popover
           key={open.id}
           anchor={open.anchor}
           onClose={() => setOpen(null)}
-          className="w-56 p-2.5"
+          className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
         >
-          <OddsList
-            title={content.title}
-            subtitle={content.subtitle}
-            odds={content.odds}
-          />
+          {teamPath ? (
+            <CellPathExplain path={teamPath} />
+          ) : (
+            content && (
+              <OddsList
+                title={content.title}
+                subtitle={content.subtitle}
+                odds={content.odds}
+              />
+            )
+          )}
         </Popover>
       )}
     </div>
