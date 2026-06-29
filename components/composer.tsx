@@ -124,7 +124,7 @@ export function Composer({
 
   return (
     <div className="shrink-0 border-t border-border bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-6">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-6">
         {notice}
         <form
           onSubmit={(event) => {

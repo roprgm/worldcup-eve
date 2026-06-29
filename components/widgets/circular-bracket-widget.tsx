@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import {
   type Candidate,
   CircularBracketCard,
+  CircularBracketRing,
   type CircularBracketView,
   type TeamPaths,
 } from "@/components/widgets/circular-bracket-card";
@@ -90,9 +91,12 @@ function circularView(
   };
 }
 
-/** Connected circular bracket: merges the shared predictions with real results
- *  and paints them onto the radial skeleton. */
-export function CircularBracketWidget() {
+/** Merges the shared predictions with real results into the view and per-team
+ *  road-to-the-final paths the bracket paints onto the radial skeleton. */
+function useBracketData(): {
+  view?: CircularBracketView;
+  teamPaths?: TeamPaths;
+} {
   const predictions = usePredictions();
   const results = useResults();
   const view = useMemo(
@@ -118,6 +122,20 @@ export function CircularBracketWidget() {
     }
     return map;
   }, [predictions, results]);
+  return { view, teamPaths };
+}
+
+/** Connected circular bracket: merges the shared predictions with real results
+ *  and paints them onto the radial skeleton. */
+export function CircularBracketWidget() {
+  const { view, teamPaths } = useBracketData();
   // Market predictions start off; users opt in via the in-card toggle.
   return <CircularBracketCard view={view} teamPaths={teamPaths} />;
+}
+
+/** The bracket ring without the card chrome, for the home hero. The predicted
+ *  flags overlay stays off here — locked-in teams show, undecided nodes stay "?". */
+export function HomeBracket() {
+  const { view, teamPaths } = useBracketData();
+  return <CircularBracketRing view={view} teamPaths={teamPaths} />;
 }

@@ -3,9 +3,11 @@ import { cn } from "cnfast";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
+import { preload } from "react-dom";
 import type { ReactNode } from "react";
 import { Providers } from "@/app/providers";
 import { ChatProvider } from "@/components/chat/chat-context";
+import spriteImage from "@/components/flags-sprite.png";
 import { Header } from "@/components/header";
 import "./globals.css";
 
@@ -52,6 +54,10 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // The sprite is a CSS background, so the browser discovers it late. Preload it
+  // up front to render flags without a flash.
+  preload(spriteImage.src, { as: "image", fetchPriority: "high" });
+
   return (
     <html
       lang="en"
