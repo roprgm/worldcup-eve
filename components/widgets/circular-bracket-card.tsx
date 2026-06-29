@@ -511,10 +511,11 @@ function CircularBracketHelp() {
             type="button"
             tabIndex={-1}
             aria-hidden
-            className="fixed inset-0 z-10 cursor-default"
+            className="fixed inset-0 z-40 cursor-default"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute top-full right-0 z-20 mt-1.5 w-64 rounded-md border border-surface-border bg-surface-2 p-2 text-[10px] leading-relaxed text-muted-foreground shadow-lg">
+          {/* Above the bracket nodes (z-30), which the card isolates. */}
+          <div className="absolute top-full right-0 z-50 mt-1.5 w-64 rounded-md border border-surface-border bg-surface-2 p-2 text-[10px] leading-relaxed text-muted-foreground shadow-lg">
             {HELP_TEXT}
           </div>
         </>
