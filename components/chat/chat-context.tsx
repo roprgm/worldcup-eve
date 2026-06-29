@@ -2,7 +2,6 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
-import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -10,6 +9,7 @@ import {
   useContext,
   useState,
 } from "react";
+import { pushInstantPath } from "@/components/instant-navigation";
 import { activeQuestion } from "@/components/chat/messages";
 
 type Agent = UseEveAgentHelpers<EveMessageData>;
@@ -53,7 +53,6 @@ function loadChat(): SavedChat | null {
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [restored] = useState(loadChat);
-  const router = useRouter();
 
   const agent = useEveAgent({
     initialSession: restored?.session,
@@ -107,9 +106,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const id = newChatId();
       agent.reset(); // start fresh even if a previous chat is still in context
       void agent.send({ message }).catch(() => {});
-      router.push(`/chat/${id}`);
+      pushInstantPath(`/chat/${id}`);
     },
-    [agent, router],
+    [agent],
   );
 
   return (

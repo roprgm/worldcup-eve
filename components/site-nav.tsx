@@ -2,8 +2,11 @@
 
 import { cn } from "cnfast";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  pushInstantPath,
+  useInstantPathname,
+} from "@/components/instant-navigation";
 
 const LAST_CHAT_KEY = "wc26:last-chat-path";
 const SAVED_CHAT_KEY = "wc26-chat";
@@ -23,6 +26,7 @@ function savedChatPath() {
 }
 
 function chatHrefFor(pathname: string) {
+  if (pathname === "/") return "/";
   return pathname.startsWith("/chat/") ? pathname : savedChatPath();
 }
 
@@ -49,13 +53,21 @@ const linkClass = (active: boolean) =>
 
 /** Cross-page nav shared by every page — minimalist inline links. */
 export function SiteNav() {
-  const pathname = usePathname();
+  const pathname = useInstantPathname();
   const chatHref = useChatHref(pathname);
   const onChat = pathname === "/" || pathname.startsWith("/chat/");
 
   return (
     <nav className="flex items-center gap-0.5">
-      <Link href={chatHref} className={linkClass(onChat)}>
+      <Link
+        href={chatHref}
+        onClick={(event) => {
+          if (!chatHref.startsWith("/chat/")) return;
+          event.preventDefault();
+          pushInstantPath(chatHref);
+        }}
+        className={linkClass(onChat)}
+      >
         Chat
       </Link>
       <Link
