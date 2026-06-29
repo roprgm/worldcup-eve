@@ -8,6 +8,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_prediction");
     t.noFailedActions();
-    t.messageIncludes(/%|favou?rite|chance|likely/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer name a favorite or give title-winning odds for a team?",
+    );
   },
 });

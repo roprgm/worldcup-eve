@@ -8,6 +8,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_forecast");
     t.noFailedActions();
-    t.messageIncludes(/Spain|Uruguay/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer say which of Spain or Uruguay is favored?",
+    );
   },
 });

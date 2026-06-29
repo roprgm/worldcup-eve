@@ -9,6 +9,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_forecast");
     t.noFailedActions();
-    t.messageIncludes(/Brazil|Morocco/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer address the Brazil vs Morocco match with a predicted score or win odds?",
+    );
   },
 });

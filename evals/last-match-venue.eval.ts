@@ -9,6 +9,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_venues");
     t.noFailedActions();
-    t.messageIncludes(/Stadium/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer name the stadium or venue where the match was played?",
+    );
   },
 });

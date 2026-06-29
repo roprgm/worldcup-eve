@@ -9,6 +9,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_results");
     t.noFailedActions();
-    t.messageIncludes(/Brazil|Haiti/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer report the final score of the Brazil vs Haiti match?",
+    );
   },
 });
