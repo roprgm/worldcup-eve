@@ -1,15 +1,15 @@
 import { defineAgent } from "eve";
 
 export default defineAgent({
-  model: "openai/gpt-oss-120b",
+  // Base model optimized for perceived latency: a non-reasoning, fast tool-caller.
+  // Llama 3.3 70B on the gateway is served by Groq (low TTFT, function calling),
+  // so replies start immediately instead of waiting on a reasoning preamble.
+  // Hard, multi-step questions are delegated to the `analyst` subagent, which
+  // keeps a reasoning model for the cases where deliberation actually pays off.
+  model: "meta/llama-3.3-70b",
   modelOptions: {
     providerOptions: {
-      // gpt-oss-120b is open-weights; route to the fastest providers that serve it.
-      gateway: { order: ["cerebras", "groq", "fireworks"] },
-      // Medium reasoning keeps tool selection and replies reliable (low let the
-      // model ramble/derail on some multi-step asks); the instructions still tell
-      // the agent not to over-reason, which caps the latency/token cost.
-      openai: { reasoningEffort: "medium" },
+      gateway: { order: ["groq"] },
     },
   },
 });
