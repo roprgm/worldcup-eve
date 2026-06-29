@@ -22,7 +22,7 @@ export function usePredictions<T = Predictions>(
     queryKey: ["predictions"],
     queryFn: () =>
       fetchJson<Predictions>("/predictions/api/predictions", "predictions"),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     select,
   }).data;
 }
@@ -33,7 +33,7 @@ export function useResults<T = Results>(
   return useQuery({
     queryKey: ["results"],
     queryFn: () => fetchJson<Results>("/predictions/api/results", "results"),
-    refetchInterval: 10_000,
+    refetchInterval: 60_000,
     select,
   }).data;
 }
