@@ -564,7 +564,7 @@ function UnsettledNode({
         className={cn(
           "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors duration-300 ease-out",
           open
-            ? "border-pick/60 text-pick"
+            ? "border-foreground/80 text-foreground"
             : "border-surface-border text-muted-foreground group-hover:text-foreground",
         )}
         style={{
@@ -591,7 +591,7 @@ function UnsettledNode({
             faded
             className={cn(
               "transition-[filter] group-hover:brightness-110",
-              open ? "ring-pick/60" : "ring-surface-divider",
+              open ? "ring-foreground/80" : "ring-surface-divider",
             )}
           />
         </span>
