@@ -725,7 +725,7 @@ const HELP_TEXT =
 function CircularBracketHelp() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative ml-auto shrink-0">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -754,20 +754,58 @@ function CircularBracketHelp() {
   );
 }
 
+/** Compact header switch to turn the predicted-flags overlay on or off. */
+function PredictToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Show predictions"
+      onClick={() => onChange(!on)}
+      className="flex cursor-pointer items-center gap-1.5"
+    >
+      <span className="text-[10px] font-medium text-muted-foreground/70">
+        Predict
+      </span>
+      <span
+        className={cn(
+          "relative flex h-3 w-5 shrink-0 items-center rounded-full transition-colors",
+          on ? "bg-pick" : "bg-surface-border",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute size-2 rounded-full bg-card transition-transform",
+            on ? "translate-x-2.5" : "translate-x-0.5",
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
 export function CircularBracketCard({
   view,
-  predict,
+  predict: predictDefault = false,
 }: {
   view?: CircularBracketView;
-  /** Show the leading candidate's flag (faded) in unsettled nodes instead of a
-   *  "?" — reads as a prediction rather than a confirmed result. */
+  /** Initial state of the predictions toggle: show the leading candidate's flag
+   *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
   predict?: boolean;
 }) {
   const [open, setOpen] = useState<{ id: string; anchor: HTMLElement } | null>(
     null,
   );
+  const [predict, setPredict] = useState(predictDefault);
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
@@ -784,7 +822,10 @@ export function CircularBracketCard({
         <span className="min-w-0 truncate text-[10px] text-muted-foreground/55">
           · tap a node to see its chances
         </span>
-        <CircularBracketHelp />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <PredictToggle on={predict} onChange={setPredict} />
+          <CircularBracketHelp />
+        </div>
       </div>
       <div className="px-2 py-4 sm:px-3">
         {/* Sizes are container-relative (cqw), so the whole ring fits any width
