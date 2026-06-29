@@ -21,7 +21,7 @@ const C = SIZE / 2;
 
 // Each half spans 180°−2·GAP, leaving a GAP wedge at top and bottom so the two
 // halves read apart and the finalists meet on the horizontal centre axis.
-const GAP = 10;
+const GAP = 3;
 const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
 // Every node is one full-size circle, so the rings are spaced more than a
