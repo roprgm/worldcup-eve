@@ -26,11 +26,12 @@ type RoundKey = "R32" | "R16" | "QF" | "SF";
 // Every node is one full-size circle, so the rings are spaced more than a
 // diameter apart to keep them from touching toward the centre.
 const RING: Record<RoundKey, number> = { R32: 345, R16: 255, QF: 175, SF: 100 };
-const ROUND_LABEL: Record<RoundKey, string> = {
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarter-final",
-  SF: "Semi-final",
+// The round a match's winner advances to — what its contenders are racing to reach.
+const NEXT_LABEL: Record<RoundKey, string> = {
+  R32: "round of 16",
+  R16: "quarter-final",
+  QF: "semi-final",
+  SF: "final",
 };
 const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
   R16: "R32",
@@ -215,7 +216,7 @@ export interface Candidate {
  *  match, and the title odds. */
 export interface CircularBracketView {
   slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
-  reachOdds: Map<number, Candidate[]>; // match → teams that could reach it
+  matchOdds: Map<number, Candidate[]>; // match → each contender's chance to win
   decided: Map<number, Candidate>; // match → real winner, once played
   championOdds: Candidate[];
 }
@@ -481,13 +482,10 @@ function openContent(
     return odds ? { title: "Chances to reach this match", odds } : null;
   }
   const num = Number(id.slice("match:".length));
-  const odds = view.reachOdds.get(num);
+  const odds = view.matchOdds.get(num);
   if (!odds) return null;
   const round = matchByNumber[num].round as RoundKey;
-  return {
-    title: `Chances to reach the ${ROUND_LABEL[round].toLowerCase()}`,
-    odds,
-  };
+  return { title: `Chances to reach the ${NEXT_LABEL[round]}`, odds };
 }
 
 const HELP_TEXT =

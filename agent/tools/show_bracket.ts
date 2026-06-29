@@ -5,7 +5,7 @@ import { widgetModelOutput } from "@/agent/lib/widget-output";
 import { getPredictions } from "@/lib/predictions";
 import { teamById } from "@/lib/tournament";
 
-const FINAL_MATCH = 104; // the bracket's final node (see bracket-card)
+const FINAL_MATCH = 104; // the bracket's final node
 
 const percent = (p: number) => Math.round(p * 1000) / 10;
 const teamName = (code: string) => teamById[code]?.name ?? code;
