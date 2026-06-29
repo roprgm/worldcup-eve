@@ -8,6 +8,8 @@ export default defineEval({
     t.completed();
     t.calledTool("get_match_schedule");
     t.noFailedActions();
-    t.messageIncludes(/:\d\d|UTC|Jun/i);
+    t.judge.autoevals.closedQA(
+      "Does the answer give a kickoff time or date for the match?",
+    );
   },
 });
