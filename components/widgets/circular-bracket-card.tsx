@@ -393,12 +393,12 @@ function UnknownNode({ id, openId, onToggle }: NodeProps & { id: string }) {
       aria-label="Show chances"
       aria-expanded={openId === id}
       className={cn(
-        "flex size-[var(--cf)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
+        "flex size-[calc(var(--cf)*0.7)] items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors",
         openId === id
           ? "border-pick/60 text-pick"
           : "border-surface-border text-muted-foreground hover:text-foreground",
       )}
-      style={{ fontSize: "calc(var(--cf) * 0.5)" }}
+      style={{ fontSize: "calc(var(--cf) * 0.42)" }}
     >
       ?
     </button>
