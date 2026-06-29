@@ -1,6 +1,7 @@
 import { cn } from "cnfast";
 
 import { Flag } from "@/components/flags";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_PER_SIDE = 8;
@@ -180,10 +181,7 @@ export function PredictionMatchCard({
   away,
 }: PredictionMatchCardProps) {
   return (
-    <div
-      title={title}
-      className="flex h-full flex-col overflow-hidden rounded-lg border border-surface-border bg-card"
-    >
+    <Card title={title} className="flex h-full flex-col">
       <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-left text-foreground/70">
           #{number} - {phaseLabel}
@@ -197,6 +195,6 @@ export function PredictionMatchCard({
         <Side data={home} side="home" />
         <Side data={away} side="away" />
       </div>
-    </div>
+    </Card>
   );
 }

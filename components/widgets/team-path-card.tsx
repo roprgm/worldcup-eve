@@ -5,6 +5,7 @@ import { Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { Flag } from "@/components/flags";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_OPPONENTS = 3;
@@ -226,7 +227,7 @@ export function TeamPathCard({
         : "Most likely opponents to the final";
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-card">
+    <Card className="flex flex-col">
       <CardHeader
         team={team}
         subtitle={headerSubtitle}
@@ -258,6 +259,6 @@ export function TeamPathCard({
           ))
         )}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -10,6 +10,7 @@ import {
   PopupHeader,
 } from "@/components/widgets/cell-path-explain";
 import { Flag } from "@/components/flags";
+import { Card } from "@/components/ui/card";
 import { Popover } from "@/components/ui/popover";
 import type { CellPath } from "@/lib/predictions/team-path";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
@@ -943,7 +944,7 @@ export function CircularBracketCard({
   return (
     // `isolate` keeps the nodes' z-index inside this card so they don't paint
     // over the page's sticky section header.
-    <div className="isolate overflow-hidden rounded-lg border border-surface-border bg-card">
+    <Card className="isolate">
       <div className="flex h-7 items-center gap-1.5 border-b border-surface-divider px-3">
         <span className="shrink-0 text-[12px] font-medium tracking-wide text-foreground/70">
           Prediction bracket
@@ -1006,6 +1007,6 @@ export function CircularBracketCard({
           )}
         </Popover>
       )}
-    </div>
+    </Card>
   );
 }
