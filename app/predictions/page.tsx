@@ -24,7 +24,7 @@ const knockoutSections = [
 ];
 
 // This page owns the whole layout: it lays out the sections and places the
-// widgets it shows in a grid. Each widget fetches its own data and renders its 
+// widgets it shows in a grid. Each widget fetches its own data and renders its
 // own skeleton, so the section headers and grid show immediately.
 export default function PredictionsPage() {
   return (
