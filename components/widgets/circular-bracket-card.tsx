@@ -24,9 +24,28 @@ const C = SIZE / 2;
 const GAP = 0;
 const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
-// Every node is one full-size circle, so the rings are spaced more than a
-// diameter apart to keep them from touching toward the centre.
-const RING: Record<RoundKey, number> = { R32: 325, R16: 255, QF: 175, SF: 100 };
+// ── Ring spacing ──────────────────────────────────────────────────────────
+// The radial gap between each ring, working inward from the outer flags. Tune
+// these to space the rings apart; every ring radius below is derived from them,
+// so this is the single place to adjust the layout's concentric spacing.
+const RING_GAP = {
+  flagToR32: 125, // outer flags (32) → round-of-16 nodes
+  r32ToR16: 70, // round-of-16 nodes → round-of-8 nodes
+  r16ToQF: 80, // quarter-final nodes
+  qfToSF: 75, // semi-final nodes
+};
+// Derived ring radii (distance from centre), outside → in.
+const RING: Record<RoundKey, number> = {
+  R32: R_FLAG - RING_GAP.flagToR32,
+  R16: R_FLAG - RING_GAP.flagToR32 - RING_GAP.r32ToR16,
+  QF: R_FLAG - RING_GAP.flagToR32 - RING_GAP.r32ToR16 - RING_GAP.r16ToQF,
+  SF:
+    R_FLAG -
+    RING_GAP.flagToR32 -
+    RING_GAP.r32ToR16 -
+    RING_GAP.r16ToQF -
+    RING_GAP.qfToSF,
+};
 // The round a match's winner advances to — what its contenders are racing to reach.
 const NEXT_LABEL: Record<RoundKey, string> = {
   R32: "round of 16",
