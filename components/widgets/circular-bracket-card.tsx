@@ -44,15 +44,12 @@ const ROUND_NAME: Record<string, string> = {
   FINAL: "Final",
 };
 
-// "2026-07-01T19:00:00Z" → "Jul 1 · 19h" (UTC). date-fns formats in local time,
-// so shift by the offset to render the UTC wall clock deterministically.
-function kickoffLabel(kickoffAt: string): string {
+// "2026-07-01T19:00:00Z" → "Jul 1". Date only (no time) to avoid timezone
+// confusion; the UTC shift keeps the calendar day stable across timezones.
+function matchDateLabel(kickoffAt: string): string {
   const date = new Date(kickoffAt);
   const utc = addMinutes(date, date.getTimezoneOffset());
-  return format(
-    utc,
-    utc.getMinutes() === 0 ? "MMM d · H'h'" : "MMM d · H:mm'h'",
-  );
+  return format(utc, "MMM d");
 }
 const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
   R16: "R32",
@@ -507,7 +504,7 @@ function ChampionNode({
 /** Which match a node belongs to and when it kicks off. */
 function matchSubtitle(num: number): string {
   const m = matchByNumber[num];
-  return `${ROUND_NAME[m.round]} · #${num} · ${kickoffLabel(m.kickoffAt)}`;
+  return `${ROUND_NAME[m.round]} · #${num} · ${matchDateLabel(m.kickoffAt)}`;
 }
 
 /** The header, sub-header and team list for the currently open node. */
