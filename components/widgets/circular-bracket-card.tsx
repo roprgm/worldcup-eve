@@ -327,8 +327,9 @@ export interface Candidate {
   name?: string;
   probability: number;
   /** The same team's chance at the start of the match (the opening snapshot),
-   *  when one exists. The bar paints this in the base colour and the move since
-   *  in amber. Absent for settled/unsnapshotted nodes — then the bar is solid. */
+   *  when one exists. The bar paints the shared value in the base colour and the
+   *  move since in green (rose) or red (fell). Absent for settled/unsnapshotted
+   *  nodes — then the bar is solid. */
   opening?: number;
 }
 
@@ -464,11 +465,12 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  used across the prediction widgets. Rows fade in and their bars sweep out
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
-  // Split the bar into the value shared with kickoff (base colour) and the move
-  // since (amber). With no opening snapshot the bar is a single solid segment.
+  // The bar reaches max(now, start): a foreground base up to the value both
+  // share, then the move since kickoff — green if the chance rose, red if it
+  // fell. With no opening snapshot it's a single solid segment.
   const base =
     c.opening == null ? c.probability : Math.min(c.probability, c.opening);
-  const delta = c.opening == null ? 0 : Math.abs(c.probability - c.opening);
+  const delta = c.opening == null ? 0 : c.probability - c.opening;
   const barTitle =
     c.opening == null
       ? undefined
@@ -492,14 +494,17 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
         <span
           className={cn(
             "animate-bar-grow h-full origin-left",
-            top ? "bg-pick" : "bg-muted-foreground/30",
+            top ? "bg-foreground" : "bg-muted-foreground/30",
           )}
           style={{ width: formatPct(base) }}
         />
-        {delta > 0 && (
+        {delta !== 0 && (
           <span
-            className="animate-bar-grow h-full origin-left bg-amber-500"
-            style={{ width: formatPct(delta) }}
+            className={cn(
+              "animate-bar-grow h-full origin-left",
+              delta > 0 ? "bg-pick" : "bg-red-500",
+            )}
+            style={{ width: formatPct(Math.abs(delta)) }}
           />
         )}
       </span>
