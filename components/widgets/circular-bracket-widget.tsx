@@ -21,19 +21,19 @@ const named = (c: { code: string; probability: number }): Candidate => ({
   probability: c.probability,
 });
 
-// code → opening probability, for one match's or slot's opening candidate list.
-const openingMap = (candidates?: { code: string; probability: number }[]) =>
+// code → baseline probability, for one match's or slot's baseline candidate list.
+const baselineMap = (candidates?: { code: string; probability: number }[]) =>
   candidates && new Map(candidates.map((c) => [c.code, c.probability]));
 
-// Tag each live candidate with its opening chance (0 when the team wasn't on the
-// opening list but the snapshot exists; left absent when there's no snapshot).
-const withOpening = (
+// Tag each live candidate with its baseline chance (0 when the team wasn't on the
+// baseline list but the snapshot exists; left absent when there's no snapshot).
+const withBaseline = (
   candidates: { code: string; probability: number }[],
-  opening?: Map<string, number>,
+  baseline?: Map<string, number>,
 ): Candidate[] =>
   candidates.map((c) => ({
     ...named(c),
-    ...(opening ? { opening: opening.get(c.code) ?? 0 } : {}),
+    ...(baseline ? { baseline: baseline.get(c.code) ?? 0 } : {}),
   }));
 
 // Knockout wins → the round the team is now in, for the road-to-the-final start.
@@ -84,35 +84,35 @@ function circularView(
 ): CircularBracketView {
   const decided = decidedWinners(results);
 
-  // Opening (kickoff) counterparts, to paint the move since the start in amber.
-  const openingSlots = new Map(
-    predictions.opening.slots.map((s) => [
+  // Start-of-day baseline counterparts, to paint the move since the day's start.
+  const baselineSlots = new Map(
+    predictions.baseline.slots.map((s) => [
       `${s.match}:${s.side}`,
-      openingMap(s.candidates),
+      baselineMap(s.candidates),
     ]),
   );
-  const openingMatch = new Map(
-    Object.entries(predictions.opening.matchWinOdds).map(([match, cands]) => [
+  const baselineMatch = new Map(
+    Object.entries(predictions.baseline.matchWinOdds).map(([match, cands]) => [
       Number(match),
-      openingMap(cands),
+      baselineMap(cands),
     ]),
   );
 
   const slotOdds = new Map<string, Candidate[]>();
   for (const slot of predictions.slots) {
     const key = `${slot.match}:${slot.side}`;
-    slotOdds.set(key, withOpening(slot.candidates, openingSlots.get(key)));
+    slotOdds.set(key, withBaseline(slot.candidates, baselineSlots.get(key)));
   }
 
   // Each contender's chance to win the match — a finished match is pinned to
-  // its real winner (no opening split: it's settled).
+  // its real winner (no baseline split: it's settled).
   const matchOdds = new Map<number, Candidate[]>();
   for (const [match, candidates] of Object.entries(predictions.matchWinOdds)) {
     const num = Number(match);
     const win = decided.get(num);
     matchOdds.set(
       num,
-      win ? [win] : withOpening(candidates, openingMatch.get(num)),
+      win ? [win] : withBaseline(candidates, baselineMatch.get(num)),
     );
   }
 
@@ -125,9 +125,9 @@ function circularView(
     matchOdds,
     decided,
     live,
-    championOdds: withOpening(
+    championOdds: withBaseline(
       predictions.bracketChampion,
-      openingMap(predictions.opening.bracketChampion),
+      baselineMap(predictions.baseline.bracketChampion),
     ),
   };
 }

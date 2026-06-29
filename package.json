@@ -13,12 +13,12 @@
     "format:check": "biome format .",
     "start": "node scripts/start.mjs",
     "sync:markets": "bun run lib/predictions/sync.ts",
-    "sync:opening-odds": "bun run lib/predictions/sync-opening-odds.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "^2.5.0",
     "@vercel/functions": "^3.7.2",
     "ai": "7.0.0-beta.178",
     "bottleneck": "^2.19.5",

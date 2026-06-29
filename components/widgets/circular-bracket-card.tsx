@@ -326,11 +326,11 @@ export interface Candidate {
   code: string;
   name?: string;
   probability: number;
-  /** The same team's chance at the start of the match (the opening snapshot),
-   *  when one exists. The bar paints the shared value in the base colour and the
-   *  move since in green (rose) or red (fell). Absent for settled/unsnapshotted
-   *  nodes — then the bar is solid. */
-  opening?: number;
+  /** The same team's chance at the start of the current tournament day (the
+   *  persisted baseline), when one exists. The bar paints the shared value in the
+   *  base colour and the move since in green (rose) or red (fell). Absent for
+   *  settled/unsnapshotted nodes — then the bar is solid. */
+  baseline?: number;
 }
 
 /** Everything the card paints onto the skeleton: the candidates for each R32
@@ -467,19 +467,19 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   // The bar reaches max(now, start): a foreground base up to the value both
-  // share, then the move since kickoff — green if the chance rose, red if it
-  // fell. With no opening snapshot it's a single solid segment.
+  // share, then the move since the day's start — green if the chance rose, red
+  // if it fell. With no baseline snapshot it's a single solid segment.
   const base =
-    c.opening == null ? c.probability : Math.min(c.probability, c.opening);
-  const delta = c.opening == null ? 0 : c.probability - c.opening;
+    c.baseline == null ? c.probability : Math.min(c.probability, c.baseline);
+  const delta = c.baseline == null ? 0 : c.probability - c.baseline;
   const barTitle =
-    c.opening == null
+    c.baseline == null
       ? undefined
-      : `now ${formatPct(c.probability)} · start ${formatPct(c.opening)}`;
+      : `now ${formatPct(c.probability)} · start ${formatPct(c.baseline)}`;
   // When the move is worth noting (>1pt), spell out both ends: "start -> now".
   const pctLabel =
-    c.opening != null && Math.abs(delta) > 0.01
-      ? `${formatPct(c.opening)} -> ${formatPct(c.probability)}`
+    c.baseline != null && Math.abs(delta) > 0.01
+      ? `${formatPct(c.baseline)} -> ${formatPct(c.probability)}`
       : formatPct(c.probability);
   return (
     <div className="animate-fade-in flex h-5 items-center gap-1.5">
