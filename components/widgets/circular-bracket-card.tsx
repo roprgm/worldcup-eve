@@ -1076,8 +1076,14 @@ export function CircularBracketRing({
   const teamPath = teamCode ? teamPaths?.get(teamCode) : undefined;
   const content = open && view && !teamPath ? openContent(view, open.id) : null;
 
-  const { containerRef, field, onPointerMove, onPointerLeave } =
-    useProximityField<NodeMeta>(scaleByProximity);
+  const {
+    containerRef,
+    field,
+    onPointerDown,
+    onPointerMove,
+    onPointerLeave,
+    onPointerCancel,
+  } = useProximityField<NodeMeta>(scaleByProximity);
 
   return (
     <>
@@ -1085,10 +1091,14 @@ export function CircularBracketRing({
           without scrolling and the flags scale up with it. */}
       <div
         ref={containerRef}
+        onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
+        onPointerCancel={onPointerCancel}
         className={cn(
-          "relative mx-auto aspect-square w-full [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]",
+          // touch-action: pan-y keeps vertical page scroll while letting a
+          // horizontal finger drag sweep the proximity magnet across the ring.
+          "relative mx-auto aspect-square w-full touch-pan-y [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]",
           className,
         )}
       >

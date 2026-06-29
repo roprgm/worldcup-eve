@@ -51,8 +51,10 @@ export function useProximityField<
 ): {
   containerRef: RefObject<E | null>;
   field: ProximityField<M>;
+  onPointerDown: (e: ReactPointerEvent<E>) => void;
   onPointerMove: (e: ReactPointerEvent<E>) => void;
   onPointerLeave: () => void;
+  onPointerCancel: () => void;
 } {
   const containerRef = useRef<E>(null);
   const nodes = useRef(new Map<string, ProximityNode<M>>());
@@ -76,7 +78,10 @@ export function useProximityField<
     for (const node of nodes.current.values()) cb.current(node, c, rect);
   }, false);
 
-  const onPointerMove = useCallback(
+  // Track the pointer and (re)start the loop. Used for both move and down so a
+  // touch shows the effect on first contact — touch has no hover-before-contact
+  // state, so the finger's position acts as the cursor while it's down.
+  const track = useCallback(
     (e: ReactPointerEvent<E>) => {
       const container = containerRef.current;
       if (!container) return;
@@ -88,8 +93,9 @@ export function useProximityField<
   );
 
   // Idle the loop and let each node reset to its resting state (onFrame with a
-  // null cursor).
-  const onPointerLeave = useCallback(() => {
+  // null cursor). Fires when the mouse leaves, a touch lifts (pointerleave), or
+  // the browser steals the gesture for scrolling (pointercancel).
+  const reset = useCallback(() => {
     const container = containerRef.current;
     cursor.current = null;
     stop();
@@ -98,5 +104,12 @@ export function useProximityField<
     for (const node of nodes.current.values()) cb.current(node, null, rect);
   }, [stop]);
 
-  return { containerRef, field, onPointerMove, onPointerLeave };
+  return {
+    containerRef,
+    field,
+    onPointerDown: track,
+    onPointerMove: track,
+    onPointerLeave: reset,
+    onPointerCancel: reset,
+  };
 }
