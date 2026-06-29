@@ -16,33 +16,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CellPath, PathOpponent } from "@/lib/predictions/team-path";
 import type { Round } from "@/lib/tournament";
 
-// One team's chance of reaching each knockout round, all 0–1.
+// Per-round reach probability (0–1); r32 is group advance, champion is the cup.
 export interface StageOddsRow {
   code: string;
   name?: string;
-  r32: number; // P(reach Round of 32) — group stage advance
-  r16: number; // P(reach Round of 16)
-  qf: number; // P(reach Quarter-finals)
-  sf: number; // P(reach Semi-finals)
-  final: number; // P(reach Final)
-  champion: number; // P(win the cup)
-  // Highest stage index (see STAGES) the team has actually reached per real
-  // results; -1 if none yet. Those cells show a check instead of a prediction.
+  r32: number;
+  r16: number;
+  qf: number;
+  sf: number;
+  final: number;
+  champion: number;
+  // Highest stage index (see STAGES) reached per results; -1 if none. Reached
+  // cells show a check, not a prediction.
   reachedIdx: number;
-  // Knocked out per real results: its not-yet-reached cells are a dash, not odds.
+  // Knocked out per results; its unreached cells show a cross.
   eliminated: boolean;
 }
 
-/** Resolve the breakdown behind a cell (team + round); `undefined` if there's
- *  nothing to explain (R32, the cup, or a team that can't get there). */
+/** The breakdown behind a cell, or `undefined` if there's nothing to explain. */
 export type ResolveBreakdown = (
   code: string,
   round: Round,
 ) => CellPath | undefined;
 
-// The stage columns, in bracket order. `key` indexes StageOddsRow; `round` marks
-// the reach columns whose cell opens a why-this-number breakdown (R32 is the
-// group result and the cup its own market, so neither carries one).
+// Columns in bracket order; `round` marks the cells that open a breakdown.
 const STAGES = [
   { key: "r32", label: "R32" },
   { key: "r16", label: "R16", round: "R16" },
@@ -65,8 +62,7 @@ const ROUND_LABEL: Record<Round, string> = {
   FINAL: "Final",
 };
 
-// Skeleton rows: sized to what the table will show when the params already imply
-// it (a Top-N cut or a team list), with a modest fallback for the whole field.
+// Match the row count the params imply, else a modest default.
 const DEFAULT_SKELETON_ROWS = 8;
 const skeletonKeys = (count?: number) =>
   Array.from(
@@ -74,15 +70,12 @@ const skeletonKeys = (count?: number) =>
     (_, i) => `row-${i}`,
   );
 
-// team · six stage cells. A fixed-but-flexible team column and equal stage cells
-// shared by the header and every row so the heat-map grid lines up. The cells
-// widen a touch once the card has room (container query).
+// Shared by the header and every row so the columns line up.
 const STAGE_GRID =
   "grid grid-cols-[minmax(0,1fr)_repeat(6,2.4rem)] items-center gap-1 @lg:grid-cols-[minmax(0,1fr)_repeat(6,3.25rem)] @lg:gap-1.5";
 
-// A still-alive team always keeps a sliver of a chance, so a value that rounds to
-// zero floors at "<1%" rather than reading as none. Only a confirmed-out team
-// shows a dash (handled in HeatCell).
+// A live team keeps a sliver of a chance, so a value that rounds to 0 floors
+// at "<1%" rather than reading as none.
 function formatPct(value: number): string {
   const p = value * 100;
   if (p < 0.95) return "<1%";
@@ -92,9 +85,6 @@ function formatPct(value: number): string {
 
 const roundPct = (p: number) => `${Math.round(p * 100)}%`;
 
-// What the table is showing, surfaced in the header. A field cut (the whole
-// field, or its Top-N) toggles between the two; a fixed team list just labels how
-// many it shows.
 export type StageOddsHeader =
   | { toggleable: true; showAll: boolean; top: number; onToggle: () => void }
   | { toggleable: false; count: number };
@@ -119,8 +109,6 @@ function Card({
   );
 }
 
-// Right side of the header: a button toggling field ⇄ Top-N, or a static count
-// for a fixed list.
 function HeaderControl({ header }: { header: StageOddsHeader }) {
   if (!header.toggleable)
     return (
@@ -149,10 +137,7 @@ function StageGrid({
   return <div className={cn(STAGE_GRID, className)}>{children}</div>;
 }
 
-// A heat-mapped probability cell. A stage the team has *actually* reached (per
-// results) shows a green check; a stage it is *confirmed out* of shows a muted
-// cross; anything still open shows its predicted number (floored at "<1%", never
-// 100% as a check) with the green deepening as the chance grows.
+// Reached → green check, out → muted cross, else the heat-mapped number.
 function HeatCell({
   value,
   reached,
@@ -212,8 +197,7 @@ function ColumnLabel({ children }: { children: ReactNode }) {
   );
 }
 
-// Every plausible opponent in one match, biggest first — a single locked-in
-// opponent drops its "100%".
+// Opponents in one match; a single locked-in one drops its "100%".
 function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
   const shown = opponents.filter((o) => o.probability >= 0.05);
   if (!shown.length)
@@ -236,9 +220,7 @@ function OpponentList({ opponents }: { opponents: PathOpponent[] }) {
   );
 }
 
-// The why-this-number content: the matches the team must win to reach the round,
-// each with its likely opponents and the running reach. Chrome comes from the
-// popover that hosts it.
+// The matches the team must win to reach the round, with the running reach.
 function CellExplain({ path }: { path: CellPath }) {
   return (
     <div className="text-[11px]">
@@ -267,10 +249,8 @@ function CellExplain({ path }: { path: CellPath }) {
   );
 }
 
-// A click-opened tooltip anchored to a cell. Portaled to the body and positioned
-// fixed, so it floats over the table without shifting layout or being clipped by
-// the card. Re-places on scroll/resize, follows the anchor, and closes on an
-// outside click, Escape, or the anchor leaving the page.
+// Tooltip anchored to a cell, portaled and fixed so the card can't clip it and
+// it shifts no layout. Follows the anchor; closes on outside click or Escape.
 function CellPopover({
   anchor,
   onClose,
@@ -374,8 +354,7 @@ function StageRow({
             eliminated={row.eliminated}
           />
         );
-        // Only an open prediction in a reach column with a real chance has a
-        // story to tell.
+        // Only an open prediction with a real chance has a breakdown.
         const interactive =
           canExplain &&
           "round" in stage &&
@@ -413,12 +392,10 @@ type StageOddsCardProps =
       resolveBreakdown?: ResolveBreakdown;
     };
 
-/** A heat-map table of each team's chance to reach every knockout round and win
- *  the cup — the "road to the final" at a glance. Clicking a reach cell opens the
- *  matches behind that number. */
+/** Heat-map table of each team's chance to reach each round; cells open a
+ *  breakdown. */
 export function StageOddsCard(props: StageOddsCardProps) {
-  // The cell whose breakdown is open (team + round + the clicked cell to anchor
-  // the popover to); null when none.
+  // The open cell, anchored to its button for the popover; null when none.
   const [open, setOpen] = useState<{
     code: string;
     round: Round;
@@ -468,8 +445,7 @@ export function StageOddsCard(props: StageOddsCardProps) {
             ))}
       </div>
       {open && breakdown && (
-        // Key per cell so the popover remounts — and replays its entrance — each
-        // time it appears, including when moving straight to another cell.
+        // Key per cell so it replays its entrance when moving between cells.
         <CellPopover
           key={`${open.code}:${open.round}`}
           anchor={open.anchor}

@@ -15,29 +15,24 @@ import { teamById } from "@/lib/tournament";
 
 const isTeam = (code: string) => Boolean(teamById[code]);
 
-// Stage index a team reaches by *winning* the given knockout match — R32 win →
-// R16 (1), … , Final win → champion (5). Keyed by FIFA match number range.
+// Stage index a team reaches by winning the given knockout match (R32 win → R16,
+// … , Final win → champion), by FIFA match number; null for the play-off (103).
 function winStage(match: number): number | null {
-  if (match >= 73 && match <= 88) return 1; // won R32 → reached R16
-  if (match >= 89 && match <= 96) return 2; // won R16 → reached QF
-  if (match >= 97 && match <= 100) return 3; // won QF → reached SF
-  if (match === 101 || match === 102) return 4; // won SF → reached Final
-  if (match === 104) return 5; // won Final → champion
-  return null; // 103 is the third-place play-off
+  if (match >= 73 && match <= 88) return 1;
+  if (match >= 89 && match <= 96) return 2;
+  if (match >= 97 && match <= 100) return 3;
+  if (match === 101 || match === 102) return 4;
+  if (match === 104) return 5;
+  return null;
 }
 
 interface ResultFacts {
-  // Highest stage index (see STAGES) each team has actually reached; absent if
-  // none yet.
-  reached: Map<string, number>;
-  // Teams knocked out: they lost a completed knockout match.
-  eliminated: Set<string>;
+  reached: Map<string, number>; // highest stage index reached
+  eliminated: Set<string>; // lost a completed knockout match
 }
 
-// What the real results settle, separate from the model: the round each team has
-// reached and whether it is out. Group qualification counts once a group is fully
-// played (top two, plus the assigned best thirds once every group is settled);
-// each knockout result then advances its winner one stage and eliminates its loser.
+// What the results settle (not the model): each team's reached round and whether
+// it's out, from settled group finishes and completed knockout matches.
 function resultFacts(results: Results): ResultFacts {
   const reached = new Map<string, number>();
   const eliminated = new Set<string>();
@@ -50,8 +45,7 @@ function resultFacts(results: Results): ResultFacts {
     bump(order[0], 0);
     bump(order[1], 0);
   }
-  // Best-third slots are only final once all twelve groups are; until then the
-  // assignment is provisional, so leave those teams as predictions.
+  // Third-place slots are provisional until all twelve groups are settled.
   if (Object.keys(results.settledGroupOrder).length === 12)
     for (const slot of results.thirdSlots) bump(slot.teamId, 0);
 
@@ -66,11 +60,8 @@ function resultFacts(results: Results): ResultFacts {
   return { reached, eliminated };
 }
 
-// Join each team's per-round reach (BT model) with its group-stage advance
-// chance (the R32 column) and what the results have settled, keep everyone still
-// in the bracket, and order by title odds — the champion-market read laid out as
-// a full road-to-the-final table. Needs both inputs: without the results, settled
-// rounds would render as ~100% predictions and then flip to checks.
+// Build the table rows: per-round reach (model) + group advance (R32) + settled
+// results, dropping the eliminated and ranking by title odds.
 function stageRows(predictions: Predictions, results: Results): StageOddsRow[] {
   const advanceByCode = new Map<string, number>();
   for (const group of predictions.groups)
@@ -103,32 +94,27 @@ interface StageOddsWidgetProps {
 
 const DEFAULT_TOP = 5;
 
-/** Teams ranked by title odds with their chance to reach each round and a check
- *  on the rounds they've reached. Defaults to the whole field; `teams` pins it to
- *  a fixed list, `top` opens it on a Top-N cut the user can expand. */
+/** The road-to-the-final table. Whole field by default; `teams` pins a list,
+ *  `top` opens on a Top-N cut. */
 export function StageOddsWidget({ teams, top }: StageOddsWidgetProps) {
   const hasList = Boolean(teams?.length);
-  // Field view starts on the Top-N cut only when a `top` was requested; the team
-  // list ignores it. State depends on props alone, so the loading→loaded swap
-  // never resets it.
+  // Start on the Top-N cut only when `top` was given. Derived from props so the
+  // loading→loaded swap never resets it.
   const [showAll, setShowAll] = useState(!(top != null) || hasList);
   const predictions = usePredictions();
   const results = useResults();
-  // Wait for both: results carry the settled-round facts, so rendering on
-  // predictions alone would briefly show confirmed teams as ~100% before the
-  // checks land — a visible flip and layout shift.
+  // Wait for both: results carry the settled-round facts, else confirmed teams
+  // flash ~100% before the checks land.
   const all = useMemo(
     () =>
       predictions && results ? stageRows(predictions, results) : undefined,
     [predictions, results],
   );
 
-  // The params already fix the row count for a Top-N cut or a team list, so the
-  // skeleton can match it; the whole field falls back to a default.
+  // The params fix the row count, so the skeleton can match it.
   if (!all || !predictions)
     return <StageOddsCard loading rowCount={hasList ? teams?.length : top} />;
 
-  // Lazily explain a cell on click, from the same snapshot the table is built on.
   const resolveBreakdown: ResolveBreakdown = (code, round) =>
     cellPath(predictions, code, round);
 

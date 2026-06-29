@@ -160,28 +160,26 @@ export function outMessage(out: { name: string }): string {
   return `${out.name} is out of the tournament, so there's no road to the final to show.`;
 }
 
-// One match a team must win on the way to a target round: who it likely faces in
-// that round, and the running chance to reach the NEXT round once it wins.
+// One match on the way to a target round: the likely opponents and the running
+// chance to reach the next round once it's won.
 export interface PathLeg {
-  round: Round; // the match round the team plays and must win
-  opponents: PathOpponent[]; // likely opponents in that match, high→low
-  reachNext: number; // P(reach the following round) — the running reach
+  round: Round;
+  opponents: PathOpponent[];
+  reachNext: number;
 }
 
-// Why a single cell of the road-to-the-final table reads the way it does: the
-// chain of matches the team must win to reach `targetRound`, ending at the cell's
-// own probability.
+// The chain of matches a team must win to reach `targetRound`, ending at the
+// cell's own probability.
 export interface CellPath {
   code: string;
   name: string;
   targetRound: Round;
-  reachProbability: number; // P(reach targetRound) — equals the table cell
+  reachProbability: number; // equals the table cell
   dependsOnGroup: boolean;
-  legs: PathLeg[]; // R32 → the match that yields the target round
+  legs: PathLeg[];
 }
 
-// Reach columns only: how many matches must be won to land in each. (R32 is the
-// group result, not a knockout match; the cup is its own market, not a reach.)
+// Matches to win to reach each column (R32 is the group result, the cup a market).
 const TARGET_LEGS: Partial<Record<Round, number>> = {
   R16: 1,
   QF: 2,

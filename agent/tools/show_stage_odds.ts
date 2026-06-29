@@ -39,8 +39,7 @@ export default defineTool({
       return { error: "Unknown team.", requested: { teams } };
     }
 
-    // Just the rows the widget shows, for a one-line caption — the listed teams,
-    // or the leaders (capped, since the widget already renders the full table).
+    // A short caption summary; the widget renders the full table.
     const picked = wanted?.length
       ? ranked.filter((t) => wanted.includes(t.code))
       : ranked.slice(0, Math.min(top ?? 5, 8));

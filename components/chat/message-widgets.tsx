@@ -77,8 +77,7 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
             .map((t) => (typeof t === "string" ? codeFor(t) : undefined))
             .filter((c): c is string => Boolean(c))
         : undefined;
-      // A team list that resolves to nothing means the call is unusable — skip it
-      // rather than silently falling back to the whole field.
+      // A team list that resolves to nothing: skip rather than show all teams.
       if (Array.isArray(args.teams) && args.teams.length > 0 && !teams?.length)
         return null;
       const top = typeof args.top === "number" ? args.top : undefined;
