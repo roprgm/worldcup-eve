@@ -819,19 +819,19 @@ function PredictToggle({
       onClick={() => onChange(!on)}
       className="flex cursor-pointer items-center gap-1.5"
     >
-      <span className="text-[10px] font-medium text-muted-foreground/70">
+      <span className="text-[12px] font-medium text-muted-foreground/70">
         Market predictions
       </span>
       <span
         className={cn(
-          "relative flex h-3 w-5 shrink-0 items-center rounded-full transition-colors",
+          "relative flex h-3.5 w-6 shrink-0 items-center rounded-full transition-colors",
           on ? "bg-pick" : "bg-surface-border",
         )}
       >
         <span
           className={cn(
-            "absolute size-2 rounded-full bg-card transition-transform",
-            on ? "translate-x-2.5" : "translate-x-0.5",
+            "absolute size-2.5 rounded-full bg-card transition-transform",
+            on ? "translate-x-3" : "translate-x-0.5",
           )}
         />
       </span>
@@ -871,11 +871,13 @@ export function CircularBracketCard({
           · tap a node to see its chances
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <PredictToggle on={predict} onChange={setPredict} />
           <CircularBracketHelp />
         </div>
       </div>
       <div className="px-2 py-4 sm:px-3">
+        <div className="mb-2 flex justify-end px-1">
+          <PredictToggle on={predict} onChange={setPredict} />
+        </div>
         {/* Sizes are container-relative (cqw), so the whole ring fits any width
             without scrolling and the flags scale up with it. */}
         <div className="relative mx-auto aspect-square w-full max-w-[680px] [--cf:clamp(20px,7.2cqw,44px)] [container-type:inline-size]">
