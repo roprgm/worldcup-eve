@@ -559,12 +559,13 @@ function UnsettledNode({
       )}
       style={{ width: `calc(${size})`, height: `calc(${size})` }}
     >
-      {/* "?" layer — fades/scales out as the flag comes in. */}
+      {/* "?" layer — stays fully opaque underneath so the crossfade never
+          exposes the card behind it; the flag (with its own solid base) simply
+          fades in on top, giving a clean A→B transition. */}
       <span
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-[opacity,transform,color,border-color] duration-300 ease-out",
-          showFlag ? "scale-50 opacity-0" : "scale-100 opacity-100",
+          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors duration-300 ease-out",
           open
             ? "border-pick/60 text-pick"
             : "border-surface-border text-muted-foreground group-hover:text-foreground",
@@ -577,14 +578,14 @@ function UnsettledNode({
       >
         ?
       </span>
-      {/* Predicted-flag layer — fades/scales in over the solid base, which keeps
-          the connector lines covered. */}
+      {/* Predicted-flag layer — fades in over the solid base, which keeps the
+          connector lines covered and hides the "?" beneath. */}
       {code && (
         <span
           aria-hidden
           className={cn(
-            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-[opacity,transform] duration-300 ease-out",
-            showFlag ? "scale-100 opacity-100" : "scale-50 opacity-0",
+            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out",
+            showFlag ? "opacity-100" : "opacity-0",
           )}
         >
           <RoundFlag
