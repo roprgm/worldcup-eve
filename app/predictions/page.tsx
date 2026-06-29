@@ -1,6 +1,6 @@
 import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
-import { BracketWidget } from "@/components/widgets/bracket-widget";
+import { CircularBracketWidget } from "@/components/widgets/circular-bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
@@ -33,7 +33,7 @@ export default function PredictionsPage() {
         <Section title="Road to the final">
           <CardGridFrame className="space-y-3">
             <StageOddsWidget top={5} />
-            <BracketWidget />
+            <CircularBracketWidget />
           </CardGridFrame>
         </Section>
 
