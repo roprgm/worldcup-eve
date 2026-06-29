@@ -26,7 +26,7 @@ const R_FLAG = 450; // outer ring: the 32 team slots
 type RoundKey = "R32" | "R16" | "QF" | "SF";
 // Every node is one full-size circle, so the rings are spaced more than a
 // diameter apart to keep them from touching toward the centre.
-const RING: Record<RoundKey, number> = { R32: 345, R16: 255, QF: 175, SF: 100 };
+const RING: Record<RoundKey, number> = { R32: 338, R16: 255, QF: 175, SF: 100 };
 // The round a match's winner advances to — what its contenders are racing to reach.
 const NEXT_LABEL: Record<RoundKey, string> = {
   R32: "round of 16",
