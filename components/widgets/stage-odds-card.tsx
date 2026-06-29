@@ -261,7 +261,12 @@ function CellPopover({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{
+    top: number;
+    left: number;
+    side: "top" | "bottom";
+    arrow: number; // caret offset from the popover's left edge
+  } | null>(null);
 
   useLayoutEffect(() => {
     const place = () => {
@@ -271,16 +276,17 @@ function CellPopover({
       const a = anchor.getBoundingClientRect();
       const { offsetWidth: w, offsetHeight: h } = el;
       const margin = 8;
+      const center = a.left + a.width / 2;
       const left = Math.min(
-        Math.max(margin, a.left + a.width / 2 - w / 2),
+        Math.max(margin, center - w / 2),
         window.innerWidth - w - margin,
       );
-      const below = a.bottom + 6;
-      const top =
-        below + h > window.innerHeight - margin && a.top - h - 6 > margin
-          ? a.top - h - 6
-          : below;
-      setPos({ top, left });
+      const above = a.top - h - 6;
+      const flip =
+        a.bottom + 6 + h > window.innerHeight - margin && above > margin;
+      const top = flip ? above : a.bottom + 6;
+      const arrow = Math.min(Math.max(center - left, 14), w - 14);
+      setPos({ top, left, side: flip ? "bottom" : "top", arrow });
     };
     place();
     window.addEventListener("scroll", place, true);
@@ -308,18 +314,34 @@ function CellPopover({
   return createPortal(
     <div
       ref={ref}
-      role="dialog"
       style={{
         top: pos?.top ?? 0,
         left: pos?.left ?? 0,
         visibility: pos ? "visible" : "hidden",
       }}
       className={cn(
-        "fixed z-50 max-h-[60vh] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl",
+        "fixed z-50 w-[min(20rem,calc(100vw-1rem))]",
         pos && "animate-pop-in",
       )}
     >
-      {children}
+      <div
+        role="dialog"
+        className="max-h-[60vh] overflow-y-auto rounded-lg border border-border-strong bg-card p-2.5 shadow-xl"
+      >
+        {children}
+      </div>
+      {pos && (
+        <span
+          aria-hidden
+          style={{ left: pos.arrow - 4 }}
+          className={cn(
+            "absolute size-2 rotate-45 border-border-strong bg-card",
+            pos.side === "top"
+              ? "-top-1 border-t border-l"
+              : "-bottom-1 border-r border-b",
+          )}
+        />
+      )}
     </div>,
     document.body,
   );
