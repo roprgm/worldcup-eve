@@ -58,6 +58,29 @@ function knockoutForecast(
   };
 }
 
+// Neutral-site head-to-head from the fitted BT strengths: P(A beats B) =
+// s_A / (s_A + s_B). A hypothetical matchup — no fixture, no draw required —
+// so it's a model estimate, weaker than a priced market.
+function strengthForecast(
+  snapshot: Predictions,
+  homeCode: string,
+  awayCode: string,
+) {
+  const home = snapshot.teamStrengths[homeCode];
+  const away = snapshot.teamStrengths[awayCode];
+  if (home == null || away == null) return undefined;
+  const total = home + away;
+  if (total <= 0) return undefined;
+  return {
+    updatedAt: snapshot.updatedAt,
+    home: homeCode,
+    away: awayCode,
+    homeWinPercent: percent(home / total),
+    awayWinPercent: percent(away / total),
+    hypothetical: true,
+  };
+}
+
 // The decided knockout match between two teams, in either bracket orientation.
 function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
   for (const m of knockoutMatches) {
@@ -77,7 +100,7 @@ function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
 
 export default defineTool({
   description:
-    "Predicted scoreline and two-way win odds for an upcoming group match (1-72), or the head-to-head win odds for a knockout match (73-104) once both teams are decided. Give it the two teams or the match number.",
+    "Two-way win odds for any matchup between two teams. A real fixture uses its market: predicted scoreline + win odds for an upcoming group match (1-72), or head-to-head win odds for a decided knockout match (73-104). Any other pairing (two teams who haven't been drawn together) falls back to a neutral-site model estimate (`hypothetical: true`). Give it the two teams or the match number.",
   inputSchema: z.object({
     matchId: z
       .number()
@@ -128,12 +151,14 @@ export default defineTool({
 
     const fixture = groupFixture(codeA, codeB);
     if (!fixture) {
-      // Not a group pairing — try a decided knockout matchup before giving up.
+      // Not a group pairing — try a decided knockout matchup, then fall back to
+      // a neutral-site estimate from the model's team strengths.
       const knockout = knockoutBetween(snapshot, codeA, codeB);
       if (knockout) return knockout;
+      const estimate = strengthForecast(snapshot, codeA, codeB);
+      if (estimate) return estimate;
       return {
-        error:
-          "No forecast available (not a group fixture, and not a decided knockout matchup).",
+        error: "No forecast available — couldn't resolve both teams.",
         requested: { teamA: codeA, teamB: codeB },
       };
     }
