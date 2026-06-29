@@ -160,6 +160,67 @@ export function outMessage(out: { name: string }): string {
   return `${out.name} is out of the tournament, so there's no road to the final to show.`;
 }
 
+// One match on the way to a target round: the likely opponents and the running
+// chance to reach the next round once it's won.
+export interface PathLeg {
+  round: Round;
+  opponents: PathOpponent[];
+  reachNext: number;
+}
+
+// The chain of matches a team must win to reach `targetRound`, ending at the
+// cell's own probability.
+export interface CellPath {
+  code: string;
+  name: string;
+  targetRound: Round;
+  reachProbability: number; // equals the table cell
+  dependsOnGroup: boolean;
+  legs: PathLeg[];
+}
+
+// Matches to win to reach each column (R32 is the group result, the cup a market).
+const TARGET_LEGS: Partial<Record<Round, number>> = {
+  R16: 1,
+  QF: 2,
+  SF: 3,
+  FINAL: 4,
+};
+
+/** The per-cell breakdown behind a team's chance to reach `targetRound`: the
+ *  matches it must win and the likely opponent at each. `undefined` for an
+ *  unknown team, a non-reach column (R32 / cup), or a team that can't get there. */
+export function cellPath(
+  predictions: Pick<Predictions, "slots">,
+  code: string,
+  targetRound: Round,
+): CellPath | undefined {
+  const team = teamById[code];
+  const legCount = TARGET_LEGS[targetRound];
+  if (!team || legCount == null) return undefined;
+
+  const steps = PATH_ROUNDS.map((round) => roundStep(predictions, code, round));
+  if (steps[legCount].reachProbability < MIN_REACH) return undefined;
+
+  const legs: PathLeg[] = [];
+  for (let k = 0; k < legCount; k++) {
+    legs.push({
+      round: PATH_ROUNDS[k],
+      opponents: steps[k].opponents,
+      reachNext: steps[k + 1].reachProbability,
+    });
+  }
+
+  return {
+    code,
+    name: team.name,
+    targetRound,
+    reachProbability: steps[legCount].reachProbability,
+    dependsOnGroup: livePlacements(predictions, code).size > 1,
+    legs,
+  };
+}
+
 /** Build the team's projected path, the "out" verdict when it can't reach the
  *  knockouts, or `undefined` for an unknown team code. */
 export function teamPath(
