@@ -592,7 +592,7 @@ function UnsettledNode({
             code={code}
             size={`calc(${size} * 0.82)`}
             faded
-            className="border border-dashed border-surface-border transition-[filter] group-hover:brightness-110"
+            className="border border-solid border-border-strong transition-[filter] group-hover:brightness-110"
           />
         </span>
       )}
