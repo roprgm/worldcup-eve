@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "cnfast";
+import { addMinutes, format } from "date-fns";
 import { Info, Trophy } from "lucide-react";
 import { useState } from "react";
 
@@ -33,6 +34,26 @@ const NEXT_LABEL: Record<RoundKey, string> = {
   QF: "semi-final",
   SF: "final",
 };
+// Display name of a match's own round, for the popover sub-header.
+const ROUND_NAME: Record<string, string> = {
+  R32: "Round of 32",
+  R16: "Round of 16",
+  QF: "Quarter-final",
+  SF: "Semi-final",
+  TP: "Third place",
+  FINAL: "Final",
+};
+
+// "2026-07-01T19:00:00Z" → "Jul 1 · 19h" (UTC). date-fns formats in local time,
+// so shift by the offset to render the UTC wall clock deterministically.
+function kickoffLabel(kickoffAt: string): string {
+  const date = new Date(kickoffAt);
+  const utc = addMinutes(date, date.getTimezoneOffset());
+  return format(
+    utc,
+    utc.getMinutes() === 0 ? "MMM d · H'h'" : "MMM d · H:mm'h'",
+  );
+}
 const CHILD_ROUND: Record<Exclude<RoundKey, "R32">, RoundKey> = {
   R16: "R32",
   QF: "R16",
@@ -326,15 +347,28 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
   );
 }
 
-/** The body of a chances popover: a titled, ranked list of teams. */
-function OddsList({ title, odds }: { title: string; odds: Candidate[] }) {
+/** The body of a chances popover: which match it is, then a titled ranked list. */
+function OddsList({
+  title,
+  subtitle,
+  odds,
+}: {
+  title: string;
+  subtitle?: string;
+  odds: Candidate[];
+}) {
   const shown = odds.filter((c) => c.probability >= 0.01).slice(0, 8);
   return (
     <>
-      <p className="mb-1.5 text-[11px] font-medium tracking-wide text-muted-foreground/80">
+      <p className="text-[11px] font-medium tracking-wide text-foreground/80">
         {title}
       </p>
-      <div className="space-y-1">
+      {subtitle && (
+        <p className="mb-1.5 text-[10px] text-muted-foreground/70">
+          {subtitle}
+        </p>
+      )}
+      <div className={cn("space-y-1", !subtitle && "mt-1.5")}>
         {shown.length === 0 ? (
           <p className="text-[11px] text-muted-foreground/50 italic">
             no market
@@ -470,22 +504,42 @@ function ChampionNode({
   );
 }
 
-/** The title + team list for the currently open node. */
+/** Which match a node belongs to and when it kicks off. */
+function matchSubtitle(num: number): string {
+  const m = matchByNumber[num];
+  return `${ROUND_NAME[m.round]} · #${num} · ${kickoffLabel(m.kickoffAt)}`;
+}
+
+/** The header, sub-header and team list for the currently open node. */
 function openContent(
   view: CircularBracketView,
   id: string,
-): { title: string; odds: Candidate[] } | null {
+): { title: string; subtitle: string; odds: Candidate[] } | null {
   if (id === "champion")
-    return { title: "Chances to win the title", odds: view.championOdds };
+    return {
+      title: "Chances to win the title",
+      subtitle: matchSubtitle(104),
+      odds: view.championOdds,
+    };
   if (id.startsWith("slot:")) {
-    const odds = view.slotOdds.get(id.slice("slot:".length));
-    return odds ? { title: "Chances to reach this match", odds } : null;
+    const sideKey = id.slice("slot:".length);
+    const odds = view.slotOdds.get(sideKey);
+    if (!odds) return null;
+    return {
+      title: "Chances to reach this match",
+      subtitle: matchSubtitle(Number(sideKey.split(":")[0])),
+      odds,
+    };
   }
   const num = Number(id.slice("match:".length));
   const odds = view.matchOdds.get(num);
   if (!odds) return null;
   const round = matchByNumber[num].round as RoundKey;
-  return { title: `Chances to reach the ${NEXT_LABEL[round]}`, odds };
+  return {
+    title: `Chances to reach the ${NEXT_LABEL[round]}`,
+    subtitle: matchSubtitle(num),
+    odds,
+  };
 }
 
 const HELP_TEXT =
@@ -581,7 +635,11 @@ export function CircularBracketCard({ view }: { view?: CircularBracketView }) {
           onClose={() => setOpen(null)}
           className="w-48 p-2.5"
         >
-          <OddsList title={content.title} odds={content.odds} />
+          <OddsList
+            title={content.title}
+            subtitle={content.subtitle}
+            odds={content.odds}
+          />
         </Popover>
       )}
     </div>
