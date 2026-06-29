@@ -468,22 +468,25 @@ function SlotNode({
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
   const id = `slot:${pos.match}:${pos.side}`;
+  // Outer ring slots shrink slightly (less than the inner match nodes).
+  const size = "calc(var(--cf) * 0.9)";
   return (
     <div
       className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
       style={{ left: pct(pos.x), top: pct(pos.y) }}
     >
       {confirmed(odds) && top ? (
-        <RoundFlag code={top.code} size="var(--cf)" />
+        <RoundFlag code={top.code} size={size} />
       ) : predict && top ? (
         <PredictedNode
           id={id}
           code={top.code}
+          size={size}
           openId={openId}
           onToggle={onToggle}
         />
       ) : (
-        <UnknownNode id={id} openId={openId} onToggle={onToggle} />
+        <UnknownNode id={id} size={size} openId={openId} onToggle={onToggle} />
       )}
     </div>
   );
