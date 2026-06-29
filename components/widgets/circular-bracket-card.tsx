@@ -206,12 +206,11 @@ function buildGeometry(): Geometry {
       if (num === root) sfAngle.set(num, ang);
 
       const kids = childMatches(m);
-      // The two feeding paths merge at a midpoint radius between this node's ring
-      // and its children's ring: a short radial trunk runs out from the node to
-      // that midpoint, an arc there spreads to each child's angle, and a short
-      // radial spoke then enters each child head-on (from the front).
       if (!kids) {
-        // R32: children are the two team flags on the outer ring.
+        // R32 → flags: the two feeding paths merge at a midpoint radius between
+        // this node's ring and the flag ring — a short radial trunk runs out to
+        // that midpoint, an arc there spreads to each flag's angle, and a short
+        // radial spoke then enters each flag head-on (from the front).
         const rMid = (rN + R_FLAG) / 2;
         const trunk = polar(ang, rMid);
         const base = polar(ang, rN);
@@ -237,31 +236,23 @@ function buildGeometry(): Geometry {
           });
         }
       } else {
-        // Inner node: children are the two feeding match nodes one ring out.
+        // Inner nodes keep the original side-entry style: a spoke from each child
+        // out to the parent's ring, and an arc at the parent radius that bends
+        // into the node from the side.
         const rChild = RING[CHILD_ROUND[round as Exclude<RoundKey, "R32">]];
-        const rMid = (rN + rChild) / 2;
-        const trunk = polar(ang, rMid);
-        const base = polar(ang, rN);
-        segs.push({
-          x1: base.x,
-          y1: base.y,
-          x2: trunk.x,
-          y2: trunk.y,
-          solid: { kind: "trunk", match: num },
-        });
         for (const cm of kids) {
           const ca = nodeAngle.get(cm)!;
+          const inner = polar(ca, rN);
+          const outer = polar(ca, rChild);
           const leg: SolidWhen = { kind: "innerleg", parent: num, child: cm };
-          arcs.push({ d: arcPath(rMid, ca, ang), solid: leg });
-          const mid = polar(ca, rMid);
-          const tip = polar(ca, rChild);
           segs.push({
-            x1: mid.x,
-            y1: mid.y,
-            x2: tip.x,
-            y2: tip.y,
+            x1: inner.x,
+            y1: inner.y,
+            x2: outer.x,
+            y2: outer.y,
             solid: leg,
           });
+          arcs.push({ d: arcPath(rN, ca, ang), solid: leg });
         }
       }
     }
