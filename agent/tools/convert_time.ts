@@ -47,15 +47,9 @@ export default defineTool({
     };
     const weekday = inZone({ weekday: "long" });
     if (weekday === null) return `Unknown time zone: ${timeZone}.`;
-    const utcOffset = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      timeZoneName: "shortOffset",
-    })
-      .formatToParts(date)
-      .find((p) => p.type === "timeZoneName")?.value;
     return {
-      iso,
-      timeZone,
+      // Just the facts to phrase from; the zone name/offset are intentionally
+      // omitted so the answer stays in the user's own time without labelling it.
       relativeDay: relativeDay(date, timeZone),
       weekday,
       date: inZone({ month: "long", day: "numeric" }),
@@ -64,7 +58,6 @@ export default defineTool({
         "en-GB",
       ),
       time12: inZone({ hour: "numeric", minute: "2-digit", hour12: true }),
-      utcOffset,
     };
   },
 });
