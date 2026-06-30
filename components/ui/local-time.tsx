@@ -4,11 +4,14 @@ import { cn } from "cnfast";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
-type TimeFormat = "auto" | "datetime" | "date" | "time";
+type TimeFormat = "auto" | "relative" | "datetime" | "date" | "time";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
+const WEEK_MS = 7 * DAY_MS;
+const MONTH_MS = 30 * DAY_MS;
+const YEAR_MS = 365 * DAY_MS;
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
@@ -19,9 +22,9 @@ const DATE_YEAR: Intl.DateTimeFormatOptions = { year: "numeric", ...DATE };
 // the actual value, only on the language.
 const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
 
-// Explicit inline presets the agent can force via the `format` attribute.
+// Explicit absolute presets the agent can force via the `format` attribute.
 const FORMATS: Record<
-  Exclude<TimeFormat, "auto">,
+  Exclude<TimeFormat, "auto" | "relative">,
   Intl.DateTimeFormatOptions
 > = {
   datetime: { ...DATE, ...TIME },
@@ -39,7 +42,10 @@ const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
 };
 
 function asFormat(value: unknown): TimeFormat {
-  return value === "datetime" || value === "date" || value === "time"
+  return value === "relative" ||
+    value === "datetime" ||
+    value === "date" ||
+    value === "time"
     ? value
     : "auto";
 }
@@ -118,6 +124,24 @@ function relative(
     value,
     unit,
   );
+}
+
+// A standalone "how long until / ago" phrase in the coarsest fitting unit:
+// "in 38 minutes", "in 3 days", "tomorrow", "2 weeks ago". Zone-independent —
+// it's a pure duration from now.
+function relativeBest(diffMs: number, locale?: string): string {
+  const abs = Math.abs(diffMs);
+  if (abs < HOUR_MS)
+    return relative(Math.round(diffMs / MINUTE_MS) || 1, "minute", locale);
+  if (abs < DAY_MS)
+    return relative(Math.round(diffMs / HOUR_MS), "hour", locale);
+  if (abs < WEEK_MS)
+    return relative(Math.round(diffMs / DAY_MS), "day", locale);
+  if (abs < MONTH_MS)
+    return relative(Math.round(diffMs / WEEK_MS), "week", locale);
+  if (abs < YEAR_MS)
+    return relative(Math.round(diffMs / MONTH_MS), "month", locale);
+  return relative(Math.round(diffMs / YEAR_MS), "year", locale);
 }
 
 // The locale's word joining a date to a time (e.g. " at " in English), pulled
@@ -265,7 +289,9 @@ export function LocalTime({
     setDisplay(
       f === "auto"
         ? autoLabel(date, Date.now(), locale, zone)
-        : formatIn(date, FORMATS[f], locale, zone),
+        : f === "relative"
+          ? relativeBest(date.getTime() - Date.now(), locale)
+          : formatIn(date, FORMATS[f], locale, zone),
     );
   }, [date, format, locale, zone]);
 
