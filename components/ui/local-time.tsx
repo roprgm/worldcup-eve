@@ -10,19 +10,26 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-// Minimal inline presets — no zone name; the tap-through breakdown carries that.
+const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
+const WEEKDAY_TIME: Intl.DateTimeFormatOptions = { weekday: "long", ...TIME };
+const DATE_TIME: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+  ...TIME,
+};
+const DATE_TIME_YEAR: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  ...DATE_TIME,
+};
+
+// Explicit inline presets the agent can force via the `format` attribute.
 const FORMATS: Record<
   Exclude<TimeFormat, "auto">,
   Intl.DateTimeFormatOptions
 > = {
-  datetime: {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  },
+  datetime: DATE_TIME,
   date: { weekday: "short", month: "short", day: "numeric" },
-  time: { hour: "numeric", minute: "2-digit" },
+  time: TIME,
 };
 
 // Breakdown rows show a full date + time + zone so the instant is unambiguous.
@@ -30,13 +37,9 @@ const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
   weekday: "short",
   month: "short",
   day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
+  ...TIME,
   timeZoneName: "short",
 };
-
-// Reused for both the inline countdown and the breakdown header.
-const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 function asFormat(value: unknown): TimeFormat {
   return value === "datetime" || value === "date" || value === "time"
@@ -44,64 +47,111 @@ function asFormat(value: unknown): TimeFormat {
     : "auto";
 }
 
+// The agent can pass a junk locale/zone; validate so a bad value silently falls
+// back to the reader's own rather than throwing.
+function safeLocale(locale?: string): string | undefined {
+  if (!locale) return undefined;
+  try {
+    return Intl.getCanonicalLocales(locale)[0];
+  } catch {
+    return undefined;
+  }
+}
+
+function safeZone(zone?: string): string | undefined {
+  if (!zone) return undefined;
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: zone });
+    return zone;
+  } catch {
+    return undefined;
+  }
+}
+
 // IANA id → human label: "America/Mexico_City" → "Mexico City", "UTC" → "UTC".
 function zoneLabel(zone: string): string {
   return (zone.split("/").pop() ?? zone).replace(/_/g, " ");
 }
 
-// Format an instant in a zone; null on a bad instant or an unknown zone (the
-// model can pass an invalid IANA name).
 function formatIn(
   date: Date,
   options: Intl.DateTimeFormatOptions,
+  locale?: string,
   zone?: string,
-): string | null {
-  try {
-    const opts = zone ? { ...options, timeZone: zone } : options;
-    return new Intl.DateTimeFormat(undefined, opts).format(date);
-  } catch {
-    return null;
-  }
+): string {
+  const opts = zone ? { ...options, timeZone: zone } : options;
+  return new Intl.DateTimeFormat(locale, opts).format(date);
 }
 
 function readerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-// YYYY-MM-DD in a given zone, for "is it the same calendar day" checks.
-function dayKey(date: Date, zone?: string): string {
-  return (
-    formatIn(
-      date,
-      { year: "numeric", month: "2-digit", day: "2-digit" },
-      zone,
-    ) ?? date.toISOString().slice(0, 10)
+// Calendar-day index of an instant in a zone (always latin digits, locale-
+// independent) so we can tell today / tomorrow / this week apart.
+function zonedDayNumber(date: Date, zone?: string): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return Math.floor(
+    Date.UTC(part("year"), part("month") - 1, part("day")) / DAY_MS,
   );
 }
 
-// "in 38 minutes" / "in 3 hours" / "tomorrow" — picks the coarsest fitting
-// unit. Null past a week, where the absolute date already says enough.
-function relativeLabel(diffMs: number): string | null {
-  const abs = Math.abs(diffMs);
-  if (abs >= 7 * DAY_MS) return null;
-  if (abs < HOUR_MS)
-    return rtf.format(Math.round(diffMs / MINUTE_MS) || 1, "minute");
-  if (abs < DAY_MS) return rtf.format(Math.round(diffMs / HOUR_MS), "hour");
-  return rtf.format(Math.round(diffMs / DAY_MS), "day");
+function zonedYear(date: Date, zone?: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: zone,
+      year: "numeric",
+    }).format(date),
+  );
 }
 
-// The concise inline label: a countdown when kickoff is within the hour, just
-// the time when it's later today, otherwise a short date + time.
-function autoLabel(date: Date, now: number, zone?: string): string | null {
+function relative(
+  value: number,
+  unit: Intl.RelativeTimeFormatUnit,
+  locale?: string,
+): string {
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+    value,
+    unit,
+  );
+}
+
+// The concise inline label, all in the reader's (or `locale`'s) language:
+//   < 1h away  → "in 38 minutes"
+//   today      → "today 2:00 PM"
+//   ±1 day     → "tomorrow 2:00 PM" / "yesterday 2:00 PM"
+//   this week  → "Thursday 12:30 PM"
+//   otherwise  → "Jul 2, 2:00 PM" (with year when it differs)
+function autoLabel(
+  date: Date,
+  now: number,
+  locale?: string,
+  zone?: string,
+): string {
   const diffMs = date.getTime() - now;
   if (diffMs > 0 && diffMs < HOUR_MS)
-    return rtf.format(Math.max(1, Math.round(diffMs / MINUTE_MS)), "minute");
-  const sameDay = dayKey(date, zone) === dayKey(new Date(now), zone);
-  return formatIn(date, sameDay ? FORMATS.time : FORMATS.datetime, zone);
-}
+    return relative(
+      Math.max(1, Math.round(diffMs / MINUTE_MS)),
+      "minute",
+      locale,
+    );
 
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  const dayDiff =
+    zonedDayNumber(date, zone) - zonedDayNumber(new Date(now), zone);
+  if (dayDiff >= -1 && dayDiff <= 1)
+    return `${relative(dayDiff, "day", locale)} ${formatIn(date, TIME, locale, zone)}`;
+  if (dayDiff >= 2 && dayDiff <= 6)
+    return formatIn(date, WEEKDAY_TIME, locale, zone);
+
+  const sameYear = zonedYear(date, zone) === zonedYear(new Date(now), zone);
+  return formatIn(date, sameYear ? DATE_TIME : DATE_TIME_YEAR, locale, zone);
 }
 
 function ZoneRow({
@@ -128,35 +178,36 @@ function ZoneRow({
   );
 }
 
-// Tap-through detail: how long until kickoff, then the full instant across the
-// shown zone, the reader's own device zone, and UTC.
-function ZoneBreakdown({ date, tz }: { date: Date; tz?: string }) {
-  const [now] = useState(() => Date.now());
-  const relative = relativeLabel(date.getTime() - now);
+// Tap-through detail: the same label shown inline, then the full instant across
+// the shown zone, the reader's own device zone, and UTC.
+function ZoneBreakdown({
+  title,
+  date,
+  locale,
+  zone,
+}: {
+  title: string;
+  date: Date;
+  locale?: string;
+  zone?: string;
+}) {
   const local = readerZone();
-  const primary = tz || local;
+  const primary = zone || local;
   const zones = [primary, local, "UTC"].filter(
-    (zone, i, all) => all.indexOf(zone) === i,
+    (z, i, all) => all.indexOf(z) === i,
   );
   return (
     <div className="flex flex-col gap-2">
-      {relative && (
-        <div className="text-xs font-medium text-foreground">
-          {capitalize(relative)}
-        </div>
-      )}
+      <div className="text-sm font-medium text-foreground">{title}</div>
       <div className="flex flex-col gap-1.5">
-        {zones.map((zone) => {
-          const value = formatIn(date, DETAIL_FORMAT, zone);
-          return value ? (
-            <ZoneRow
-              key={zone}
-              zone={zone}
-              value={value}
-              primary={zone === primary}
-            />
-          ) : null;
-        })}
+        {zones.map((z) => (
+          <ZoneRow
+            key={z}
+            zone={z}
+            value={formatIn(date, DETAIL_FORMAT, locale, z)}
+            primary={z === primary}
+          />
+        ))}
       </div>
     </div>
   );
@@ -168,10 +219,9 @@ function ZoneBreakdown({ date, tz }: { date: Date; tz?: string }) {
  * already has, and this component does the conversion and phrasing — so the
  * model never does timezone math or writes a countdown (it got both wrong).
  *
- * By default (`format="auto"`) it shows a relative countdown when kickoff is
- * near, just the time when it's later today, or a short date otherwise; the
- * reader taps to see the full instant across zones. The agent can pass
- * `tz="Europe/Madrid"` to target a specific zone instead of the reader's.
+ * Defaults to the reader's language and zone. `tz` overrides the zone (for "what
+ * time in Madrid?") and `lang` the language; both validated, falling back to the
+ * reader's on junk. A tap reveals the same label plus the full instant per zone.
  *
  * Formatting is deferred to a mount effect: the server has no reader time zone,
  * so the UTC fallback renders first (matching SSR, degrading without JS) and the
@@ -181,11 +231,13 @@ export function LocalTime({
   iso,
   format,
   tz,
+  lang,
   children,
 }: {
   iso?: string;
   format?: string;
   tz?: string;
+  lang?: string;
   children?: ReactNode;
 }) {
   const date = useMemo(() => {
@@ -193,6 +245,8 @@ export function LocalTime({
     const parsed = new Date(iso);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }, [iso]);
+  const locale = useMemo(() => safeLocale(lang), [lang]);
+  const zone = useMemo(() => safeZone(tz), [tz]);
 
   const [display, setDisplay] = useState<string | null>(null);
   useEffect(() => {
@@ -200,10 +254,10 @@ export function LocalTime({
     const f = asFormat(format);
     setDisplay(
       f === "auto"
-        ? autoLabel(date, Date.now(), tz)
-        : formatIn(date, FORMATS[f], tz),
+        ? autoLabel(date, Date.now(), locale, zone)
+        : formatIn(date, FORMATS[f], locale, zone),
     );
-  }, [date, format, tz]);
+  }, [date, format, locale, zone]);
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
@@ -224,7 +278,14 @@ export function LocalTime({
         onClose={() => setAnchor(null)}
         className="w-max max-w-[min(18rem,calc(100vw-1rem))] p-3"
       >
-        <ZoneBreakdown date={date} tz={tz} />
+        {display && (
+          <ZoneBreakdown
+            title={display}
+            date={date}
+            locale={locale}
+            zone={zone}
+          />
+        )}
       </Popover>
     </>
   );
