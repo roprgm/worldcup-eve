@@ -23,7 +23,7 @@ function useChatHref(pathname: string, chatId: string | null) {
 
 const linkClass = (active: boolean) =>
   cn(
-    "rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-surface",
+    "rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-surface",
     active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
   );
 

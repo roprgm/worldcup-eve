@@ -28,7 +28,7 @@ export function Suggestion({
       type="button"
       onClick={() => onSelect(suggestion)}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/50 py-2 pr-2.5 pl-3.5 text-left text-[0.8125rem] text-muted-foreground transition-all duration-150 hover:border-border-strong hover:bg-surface hover:text-foreground active:scale-[0.98]",
+        "group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/50 py-2 pr-2.5 pl-3.5 text-left text-sm text-muted-foreground transition-all duration-150 hover:border-border-strong hover:bg-surface hover:text-foreground active:scale-[0.98]",
         className,
       )}
     >

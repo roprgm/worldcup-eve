@@ -127,7 +127,7 @@ const fadeDelay = (index: number) => ({
 
 function Activity({ label }: { label: string }) {
   return (
-    <div className="flex min-h-7 items-center text-[0.8125rem] leading-snug">
+    <div className="flex min-h-7 items-center text-sm leading-snug">
       <span className="wc-shimmer">{label}</span>
     </div>
   );
@@ -149,7 +149,7 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
     <div className="flex flex-col gap-2.5">
       <Markdown>{request.prompt}</Markdown>
       {chosen ? (
-        <span className="w-fit rounded-full border border-border bg-surface px-3 py-1.5 text-[0.8125rem] text-muted-foreground">
+        <span className="w-fit rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-muted-foreground">
           {chosen}
         </span>
       ) : options.length > 0 ? (

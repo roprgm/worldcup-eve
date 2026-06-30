@@ -50,7 +50,7 @@ export function PredictionChampionCard({
             leader ? "text-pick" : "text-muted-foreground/40",
           )}
         />
-        <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Most likely champion
         </span>
         {loading ? (
@@ -73,7 +73,7 @@ export function PredictionChampionCard({
             {champ.slice(1, 5).map((candidate) => (
               <span
                 key={candidate.code}
-                className="flex items-center gap-1 text-[12px] text-muted-foreground"
+                className="flex items-center gap-1 text-xs text-muted-foreground"
               >
                 <Flag code={candidate.code} size={12} />
                 <span className="font-medium">{candidate.code}</span>

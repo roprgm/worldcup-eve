@@ -45,7 +45,7 @@ function Card({
 }) {
   return (
     <CardFrame className="flex h-full flex-col">
-      <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-[11px] font-medium tracking-wide text-muted-foreground">
+      <div className="flex h-7 items-center justify-between border-b border-surface-divider px-3 text-xs font-medium tracking-wide text-muted-foreground">
         <h3 className="truncate text-foreground/70">{title}</h3>
         {hint && (
           <span className="shrink-0 text-muted-foreground/60">{hint}</span>
@@ -66,7 +66,7 @@ function ColumnLabel({
   return (
     <span
       className={cn(
-        "text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase",
+        "text-xs font-medium tracking-wide text-muted-foreground/70 uppercase",
         className,
       )}
     >
@@ -111,7 +111,7 @@ function ChanceBar({
           style={{ width: pct }}
         />
       </span>
-      <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+      <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
         {pct}
       </span>
     </span>
@@ -148,7 +148,7 @@ function SlotBreakdown({ segments }: { segments: ThirdSlotChance[] }) {
       {segments.map((s, i) => (
         <div key={s.match} className={cn(RANKING_GRID, "relative h-[18px]")}>
           <TreeConnector last={i === segments.length - 1} />
-          <span className="col-span-5 truncate pl-[28px] text-[11px] text-muted-foreground tabular-nums">
+          <span className="col-span-5 truncate pl-[28px] text-xs text-muted-foreground tabular-nums">
             Match {s.match} · Winner {s.host}
           </span>
           <ChanceBar value={s.prob} className="bg-pick/55" />
@@ -194,22 +194,22 @@ function RankingRow({
           <Flag code={row.code} size={14} />
           <span
             title={row.name}
-            className="min-w-0 truncate text-[12px] font-semibold tracking-wide"
+            className="min-w-0 truncate text-xs font-semibold tracking-wide"
           >
             <span className="@2xl:hidden">{row.code}</span>
             <span className="hidden @2xl:inline">{row.name ?? row.code}</span>
           </span>
         </span>
-        <span className="text-center text-[11px] text-muted-foreground">
+        <span className="text-center text-xs text-muted-foreground">
           {row.group}
         </span>
-        <span className="text-right text-[12px] font-semibold">
+        <span className="text-right text-xs font-semibold">
           {row.points}
         </span>
-        <span className="text-right text-[11px] text-muted-foreground">
+        <span className="text-right text-xs text-muted-foreground">
           {row.goalDiff}
         </span>
-        <span className="text-right text-[11px] text-muted-foreground">
+        <span className="text-right text-xs text-muted-foreground">
           {row.goalsFor}
         </span>
         <ChanceBar value={row.chance} />

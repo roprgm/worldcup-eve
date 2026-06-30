@@ -81,7 +81,7 @@ function LiveDot({ className }: { className?: string }) {
 
 function LiveBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold tracking-wide text-rose-400 uppercase">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-400 uppercase">
       <LiveDot className="size-1.5" />
       Live
     </span>
@@ -109,10 +109,10 @@ function MatchStatusLabel({
       className={cn(
         "text-center",
         status === "live"
-          ? "text-[11px] text-rose-400"
+          ? "text-xs text-rose-400"
           : status === "final"
-            ? "text-[10px] text-pick"
-            : "text-[10px] text-muted-foreground/75",
+            ? "text-xs text-pick"
+            : "text-xs text-muted-foreground/75",
       )}
     >
       {text}
@@ -141,14 +141,14 @@ function TeamColumn({
       <Flag code={team.code} size={32} />
       <span
         className={cn(
-          "text-[13px] font-semibold tracking-wide",
+          "text-sm font-semibold tracking-wide",
           settled && team.winner ? "text-pick" : "text-foreground",
         )}
       >
         {team.code}
       </span>
       <span
-        className="max-w-[8rem] truncate text-center text-[10px] leading-tight text-muted-foreground"
+        className="max-w-[8rem] truncate text-center text-xs leading-tight text-muted-foreground"
         title={team.name}
       >
         {team.name}
@@ -163,10 +163,10 @@ function OddsLine({ prediction }: { prediction: MatchPrediction }) {
 
   return (
     <div className="mt-2 flex flex-col items-center">
-      <Caption className="text-center text-[10px] text-muted-foreground/75">
+      <Caption className="text-center text-xs text-muted-foreground/75">
         Odds
       </Caption>
-      <div className="flex items-center gap-1 text-[11px] tabular-nums">
+      <div className="flex items-center gap-1 text-xs tabular-nums">
         <span
           className={cn(
             homeLead ? "font-semibold text-pick" : "text-muted-foreground",
@@ -206,7 +206,7 @@ function Score({
   return (
     <span
       className={cn(
-        "text-2xl font-semibold leading-none tabular-nums",
+        "text-xl font-semibold leading-none tabular-nums",
         played ? "text-foreground" : "text-muted-foreground/40",
       )}
     >
@@ -237,7 +237,7 @@ export function MatchWidget({
 }: MatchWidgetProps) {
   return (
     <Card className="flex h-36 flex-col">
-      <div className="flex h-7 items-center justify-between gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="flex h-7 items-center justify-between gap-2 border-b border-surface-divider px-3 text-xs font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-foreground/70">
           #{number}
           {phaseLabel ? ` · ${phaseLabel}` : ""}
@@ -245,7 +245,7 @@ export function MatchWidget({
         {live ? (
           <LiveBadge />
         ) : kickoff ? (
-          <Caption className="shrink-0 text-[10px] text-muted-foreground/75">
+          <Caption className="shrink-0 text-xs text-muted-foreground/75">
             {kickoff}
           </Caption>
         ) : null}

@@ -59,7 +59,7 @@ function CandidateRow({
     <span
       title={candidate.name}
       className={cn(
-        "w-8 shrink-0 text-[12px] font-semibold tracking-wide",
+        "w-8 shrink-0 text-xs font-semibold tracking-wide",
         lead ? "text-foreground" : "text-muted-foreground",
         side === "home" ? "text-left" : "text-right",
       )}
@@ -70,7 +70,7 @@ function CandidateRow({
   const value = (
     <span
       className={cn(
-        "min-w-10 text-[12px] tabular-nums",
+        "min-w-10 text-xs tabular-nums",
         lead
           ? "font-semibold text-foreground"
           : isZero
@@ -138,7 +138,7 @@ function Side({ data, side }: { data: MatchSide; side: SideName }) {
     >
       <p
         className={cn(
-          "truncate text-[11px] leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase",
+          "truncate text-xs leading-4 font-medium tracking-wide text-muted-foreground/75 uppercase",
           side === "home" ? "text-left" : "text-right",
         )}
       >
@@ -150,7 +150,7 @@ function Side({ data, side }: { data: MatchSide; side: SideName }) {
         ) : shown.length === 0 ? (
           <p
             className={cn(
-              "text-[12px] text-muted-foreground/40 italic",
+              "text-xs text-muted-foreground/40 italic",
               side === "away" && "text-right",
             )}
           >
@@ -182,7 +182,7 @@ export function PredictionMatchCard({
 }: PredictionMatchCardProps) {
   return (
     <Card title={title} className="flex h-full flex-col">
-      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 text-[11px] font-medium text-muted-foreground tabular-nums tracking-wide">
+      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-surface-divider px-3 text-xs font-medium text-muted-foreground tabular-nums tracking-wide">
         <span className="min-w-0 truncate text-left text-foreground/70">
           #{number} - {phaseLabel}
         </span>

@@ -52,10 +52,12 @@
     var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  --text-xs: 0.68rem;
-  --text-sm: 0.8rem;
+  --text-xs: 0.70rem; 
+  --text-sm: 0.85rem;
   --text-base: 0.95rem;
-  --text-lg: 1.15rem;
+  --text-lg: 1.20rem;
+  --text-xl: 1.50rem;
+  --text-2xl: 1.95rem;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

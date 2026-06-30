@@ -58,7 +58,7 @@ function OpponentRow({ opponent }: { opponent: Opponent }) {
   return (
     <div title={opponent.name} className="flex h-4 items-center gap-1.5">
       <Flag code={opponent.code} size={12} />
-      <span className="w-7 shrink-0 text-[11px] font-semibold tracking-wide text-foreground/85">
+      <span className="w-7 shrink-0 text-xs font-semibold tracking-wide text-foreground/85">
         {opponent.code}
       </span>
       <span className="flex h-1.5 flex-1 overflow-hidden rounded-[1px] bg-muted/50">
@@ -72,7 +72,7 @@ function OpponentRow({ opponent }: { opponent: Opponent }) {
       </span>
       <span
         className={cn(
-          "min-w-8 text-right text-[11px] tabular-nums",
+          "min-w-8 text-right text-xs tabular-nums",
           certain ? "font-semibold text-pick" : "text-muted-foreground",
         )}
       >
@@ -99,7 +99,7 @@ function Step({
         {!last && <span className="my-1 w-px flex-1 bg-surface-border" />}
       </div>
       <div className="pb-2">
-        <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] font-medium tracking-wide text-muted-foreground/75 uppercase">
+        <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs font-medium tracking-wide text-muted-foreground/75 uppercase">
           <span>{step.roundLabel}</span>
           {step.venue && (
             <span className="font-normal tracking-normal text-muted-foreground/55 normal-case">
@@ -108,7 +108,7 @@ function Step({
           )}
         </p>
         {opponents.length === 0 ? (
-          <p className="mt-1 text-[12px] text-muted-foreground/40 italic">
+          <p className="mt-1 text-xs text-muted-foreground/40 italic">
             to be decided
           </p>
         ) : (
@@ -170,7 +170,7 @@ function CardHeader({
         <p className="truncate text-sm font-semibold text-foreground">
           {team?.name ?? "—"}
         </p>
-        <p className="flex flex-wrap items-center gap-x-1 text-[11px] text-muted-foreground">
+        <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
           <span>{subtitle ?? "Most likely opponents to the final"}</span>
           {hint && (
             <button
@@ -239,13 +239,13 @@ export function TeamPathCard({
         onToggleAll={() => setShowAll((open) => !open)}
       />
       {hint && hintOpen && (
-        <p className="border-b border-surface-divider bg-muted/30 px-3 py-2 text-[11px] leading-snug text-muted-foreground">
+        <p className="border-b border-surface-divider bg-muted/30 px-3 py-2 text-xs leading-snug text-muted-foreground">
           {hint}
         </p>
       )}
       <div className="px-3 pt-3">
         {note !== undefined ? (
-          <p className="pb-3 text-[13px] text-muted-foreground">{note}</p>
+          <p className="pb-3 text-sm text-muted-foreground">{note}</p>
         ) : steps === undefined ? (
           <StepsSkeleton />
         ) : (

@@ -1,15 +1,10 @@
 "use client";
 
 import { cn } from "cnfast";
-import spriteImage from "@/components/flags-sprite.png";
-import { useSpriteLoaded } from "@/hooks/use-sprite-loaded";
+import { useEffect, useState } from "react";
 
-// The flag order for the spritesheet. This list is the single source of truth
-// for which cell each team occupies, and the lookup below maps a code to that
-// same cell. It is deliberately self-contained — NOT derived from the team list
-// in `@/lib/tournament` — so reordering teams there can never shift a flag onto
-// the wrong cell. flags-sprite.png is a vendored asset (origin-fixture sprite
-// script), imported so Next content-hashes it for long-term caching.
+const SPRITE_URL = "/assets/flags-sprite.png";
+
 // biome-ignore format: keep this list as a compact grid
 export const FLAG_CODES = [
   "alg", "arg", "aus", "aut", "bel", "bih", "bra", "can",
@@ -20,20 +15,43 @@ export const FLAG_CODES = [
   "sen", "sui", "swe", "tun", "tur", "uru", "usa", "uzb",
 ] as const;
 
-const SPRITE_URL = spriteImage.src;
 // 8 columns keeps the 48-flag sheet near-square (512x288, 6 rows of 64x48).
 const COLS = 8;
 const ROWS = Math.ceil(FLAG_CODES.length / COLS);
+
+function loadSprite() {
+  return new Promise<void>((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => resolve();
+    img.onerror = () => {
+      reject(new Error(`Failed to load sprite: ${SPRITE_URL}`));
+    };
+
+    img.src = SPRITE_URL;
+
+    if (img.complete && img.naturalWidth > 0) {
+      resolve();
+    }
+  });
+}
+
+const spritePromise: Promise<void> = loadSprite();
+
+function useSpriteLoaded() {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    spritePromise.then(() => setLoaded(true));
+  }, []);
+  return loaded;
+}
 
 const cellByCode = new Map<string, number>(
   FLAG_CODES.map((code, index) => [code, index] as [string, number]),
 );
 
 interface FlagProps {
-  /** FIFA 3-letter team code, e.g. "MEX" — selects the cell in the sprite. */
   code?: string;
-  /** Width: a px number, or any CSS length (e.g. a `var(--flag)`) to size the
-   *  flag responsively. Height is derived at a 4:3 ratio. */
   size?: number | string;
   className?: string;
 }
@@ -60,16 +78,9 @@ function flagMetrics(size: number | string) {
   };
 }
 
-/**
- * Small country flag rendered from the shared spritesheet. Instance it with a
- * team's FIFA code — no per-flag asset wiring at the call site. Flags only
- * render at <=24px, so the 64x48 cells stay crisp at retina while the whole
- * tournament costs one request. Falls back to a muted box for undetermined
- * slots or codes missing from the sheet.
- */
 export function Flag({ code, size = 18, className }: FlagProps) {
   const { width, height, bgSize, pos } = flagMetrics(size);
-  const loaded = useSpriteLoaded(SPRITE_URL);
+  const loaded = useSpriteLoaded();
   const base = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
 
   const index = code ? cellByCode.get(code.toLowerCase()) : undefined;
