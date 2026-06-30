@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { tournamentDay } from "@/agent/lib/time";
+import { relativeTournamentDay, tournamentDay } from "@/agent/lib/time";
 import { getPredictions } from "@/lib/predictions";
 import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
 
@@ -58,11 +58,10 @@ interface Fixture {
   venue: string;
 }
 
-function line(m: Fixture): string {
-  const date = m.kickoffAt.slice(0, 10);
-  const time = m.kickoffAt.slice(11, 16);
+function line(m: Fixture, now: Date): string {
+  const day = relativeTournamentDay(new Date(m.kickoffAt), now);
   const venueTz = venueTimeZone(m.venue) ?? "UTC";
-  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — ${date} ${time} UTC, ${m.venue} (venue_tz ${venueTz})`;
+  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — day ${day}, kickoff_iso ${m.kickoffAt}, ${m.venue} (venue_tz ${venueTz})`;
 }
 
 export default defineTool({
@@ -105,12 +104,15 @@ export default defineTool({
     const upcoming = selected.filter((m) => !played(m));
     const finished = selected.filter(played);
 
-    const today = tournamentDay(new Date(now));
+    const nowDate = new Date(now);
+    const today = tournamentDay(nowDate);
+    const fmt = (list: Fixture[]) =>
+      list.length ? list.map((m) => line(m, nowDate)).join("\n") : "none";
     const out = [
-      `Today is ${today} (UTC). Times are UTC — don't write them or a countdown yourself; wrap each kickoff in a <local-time> tag and the component shows a concise local label. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
+      `Today is ${today}. Each match's "day" is given relative to today — base any today/tomorrow statement on that, never on the kickoff_iso (it is UTC and may show a different calendar date). Put kickoff_iso in a <local-time> tag for the time. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
       "",
-      `## Upcoming\n${upcoming.length ? upcoming.map(line).join("\n") : "none"}`,
-      `## Already played\n${finished.length ? finished.map(line).join("\n") : "none"}`,
+      `## Upcoming\n${fmt(upcoming)}`,
+      `## Already played\n${fmt(finished)}`,
     ];
     if (team && upcoming.length === 0)
       out.push(

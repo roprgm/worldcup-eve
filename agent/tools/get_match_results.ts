@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { tournamentDateTime } from "@/agent/lib/time";
+import { relativeTournamentDay, tournamentDateTime } from "@/agent/lib/time";
 import { getMatchResults } from "@/lib/results";
 import { matchSchedule, venueTimeZone } from "@/lib/tournament";
 
@@ -47,6 +47,7 @@ export default defineTool({
   }),
   async execute({ status, from, to }) {
     const { matches } = await getMatchResults();
+    const now = new Date();
 
     const results = matches
       .map((match) => {
@@ -56,6 +57,8 @@ export default defineTool({
           id: match.n,
           status: match.status,
           detail: match.detail,
+          // Day relative to today; use this for today/yesterday, not kickoffAtUtc.
+          day: kickoff ? relativeTournamentDay(kickoff, now) : undefined,
           kickoffAtUtc: kickoff?.toISOString(),
           tournamentKickoffAt: kickoff
             ? tournamentDateTime(kickoff)

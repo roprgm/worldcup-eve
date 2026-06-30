@@ -4,27 +4,15 @@ import { cn } from "cnfast";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
-// What kind of phrase to render. The agent picks the one that matches the
-// user's question; every mode produces a complete, self-contained phrase in the
-// reader's language, so the agent never adds a connector of its own. Durations
-// ("how long until") aren't here — they need no timezone conversion, so the
-// agent just says them in prose.
-type Mode = "datetime" | "time" | "date";
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
 const DATE: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 const DATE_YEAR: Intl.DateTimeFormatOptions = { year: "numeric", ...DATE };
-const WEEKDAY_DATE: Intl.DateTimeFormatOptions = { weekday: "short", ...DATE };
-const WEEKDAY_DATE_YEAR: Intl.DateTimeFormatOptions = {
-  year: "numeric",
-  ...WEEKDAY_DATE,
-};
 
 // Breakdown rows show a full date + time + zone so the instant is unambiguous.
-const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
+const DETAIL: Intl.DateTimeFormatOptions = {
   weekday: "short",
   month: "short",
   day: "numeric",
@@ -32,16 +20,12 @@ const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
   timeZoneName: "short",
 };
 
-// Any instant works — the locale's date↔time connector word doesn't depend on
-// the actual value, only on the language.
+// Any instant works — the locale's date↔time connector word depends only on the
+// language, not the value.
 const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
 
-function asMode(value: unknown): Mode {
-  return value === "time" || value === "date" ? value : "datetime";
-}
-
-// The agent can pass a junk locale/zone; validate so a bad value silently falls
-// back to the reader's own rather than throwing.
+// The agent can pass a junk locale/zone; validate so a bad value falls back to
+// the reader's own rather than throwing.
 function safeLocale(locale?: string): string | undefined {
   if (!locale) return undefined;
   try {
@@ -80,8 +64,8 @@ function readerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-// Calendar-day index of an instant in a zone (always latin digits, locale-
-// independent) so we can tell today / tomorrow / this week apart.
+// Calendar-day index of an instant in a zone (latin digits, locale-independent)
+// so "this week" can be told apart from further out.
 function zonedDayNumber(date: Date, zone?: string): number {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: zone,
@@ -105,9 +89,8 @@ function sameZonedYear(a: Date, b: Date, zone?: string): boolean {
   return year(a) === year(b);
 }
 
-// The locale's word joining a date to a time (e.g. " at " in English), pulled
-// from a long/short pattern. Falls back to a plain space when the locale joins
-// them without a word.
+// The locale's word joining a date to a time (" at " in English, " a las " in
+// Spanish), from a long/short pattern. Falls back to a space.
 function connector(locale?: string): string {
   const parts = new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
@@ -120,31 +103,12 @@ function connector(locale?: string): string {
   return before?.type === "literal" ? before.value : " ";
 }
 
-// "at 1:00 PM" / "a las 13:00" — clock time with the locale's connector, so it
-// drops into a sentence on its own.
-function timePhrase(date: Date, locale?: string, zone?: string): string {
-  return `${connector(locale).trimStart()}${formatIn(date, TIME, locale, zone)}`;
-}
-
-// "Sun, Jul 12" — a date, with the year only when it differs from now.
-function datePhrase(
-  date: Date,
-  now: number,
-  locale?: string,
-  zone?: string,
-): string {
-  const opts = sameZonedYear(date, new Date(now), zone)
-    ? WEEKDAY_DATE
-    : WEEKDAY_DATE_YEAR;
-  return formatIn(date, opts, locale, zone);
-}
-
-// The "when": an absolute day + time — the weekday within the coming week
-// ("Sunday at 1:00 PM"), otherwise a date ("Jul 20 at 1:00 PM", with year when
-// it differs). Deliberately no relative words like "today": those reject a
-// leading article in some languages ("el hoy"), and the agent can't see the
-// rendered text to phrase around them. Relative wording lives in `relative`.
-function datetimePhrase(
+// An absolute day + time in the reader's (or `locale`'s) language and zone,
+// always self-contained: the weekday within the coming week ("Sunday at
+// 1:00 PM"), otherwise a date ("Jul 20 at 1:00 PM", with year when it differs).
+// Deliberately no relative words like "today" — they reject a leading article
+// in some languages and the agent can't see the rendered text.
+function phrase(
   date: Date,
   now: number,
   locale?: string,
@@ -156,26 +120,8 @@ function datetimePhrase(
     zonedDayNumber(date, zone) - zonedDayNumber(new Date(now), zone);
   if (dayDiff >= 0 && dayDiff <= 6)
     return `${formatIn(date, WEEKDAY, locale, zone)}${at}${time}`;
-
   const opts = sameZonedYear(date, new Date(now), zone) ? DATE : DATE_YEAR;
   return `${formatIn(date, opts, locale, zone)}${at}${time}`;
-}
-
-function phraseFor(
-  mode: Mode,
-  date: Date,
-  now: number,
-  locale?: string,
-  zone?: string,
-): string {
-  switch (mode) {
-    case "time":
-      return timePhrase(date, locale, zone);
-    case "date":
-      return datePhrase(date, now, locale, zone);
-    default:
-      return datetimePhrase(date, now, locale, zone);
-  }
 }
 
 function ZoneRow({
@@ -224,7 +170,7 @@ function ZoneBreakdown({
         <ZoneRow
           key={z}
           zone={z}
-          value={formatIn(date, DETAIL_FORMAT, locale, z)}
+          value={formatIn(date, DETAIL, locale, z)}
           primary={z === primary}
         />
       ))}
@@ -233,18 +179,13 @@ function ZoneBreakdown({
 }
 
 /**
- * Renders a UTC instant as a localized phrase. The agent emits
- * `<local-time iso="...Z" mode="..." lang="...">fallback</local-time>` with the
- * raw UTC instant it already has; this component does the conversion and
- * phrasing, so the model never does timezone math itself (it got it wrong).
- *
- * `mode` selects the phrasing — "datetime" (default, an absolute day + time),
- * "time", or "date". Every mode is a complete, self-contained phrase, so the
- * agent places the tag as the whole time expression with no preposition of its
- * own. `tz` and `lang` override the zone and language (validated, falling back
- * to the reader's). A tap shows the full instant across zones. (Durations like
- * "in 3 days" aren't a mode — they need no conversion, so the agent says them in
- * prose.)
+ * Renders a UTC instant as an absolute day + time in the reader's own zone and
+ * language. The agent emits `<local-time iso="...Z" lang="...">fallback</...>`
+ * with the raw UTC instant; this component does the conversion, so the model
+ * never does timezone math (it got it wrong). The phrase always carries the day,
+ * so the model can't state the day separately and get it wrong. `tz` overrides
+ * the zone (venue / a named place) and `lang` the language; both validated,
+ * falling back to the reader's. A tap shows the full instant across zones.
  *
  * Formatting is deferred to a mount effect: the server has no reader time zone,
  * so the UTC fallback renders first (matching SSR, degrading without JS) and the
@@ -252,13 +193,11 @@ function ZoneBreakdown({
  */
 export function LocalTime({
   iso,
-  mode,
   tz,
   lang,
   children,
 }: {
   iso?: string;
-  mode?: string;
   tz?: string;
   lang?: string;
   children?: ReactNode;
@@ -273,9 +212,8 @@ export function LocalTime({
 
   const [display, setDisplay] = useState<string | null>(null);
   useEffect(() => {
-    if (date)
-      setDisplay(phraseFor(asMode(mode), date, Date.now(), locale, zone));
-  }, [date, mode, locale, zone]);
+    if (date) setDisplay(phrase(date, Date.now(), locale, zone));
+  }, [date, locale, zone]);
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
