@@ -12,9 +12,6 @@ const matches = matchSchedule
   }))
   .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime());
 
-// No countdown here: the <local-time> component derives "starts in N minutes"
-// from kickoff on the client, so surfacing it would only invite the model to
-// repeat it in prose.
 function matchLine(match: (typeof matches)[number]): string {
   return `match ${match.number}: ${match.homeId ?? "TBD"} vs ${match.awayId ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}, ${match.venue}`;
 }

@@ -5,9 +5,8 @@ import { LocalTime } from "@/components/ui/local-time";
 
 type StreamdownProps = ComponentProps<typeof Streamdown>;
 
-// The agent wraps a date/time it wrote in `<local-time iso>`; LocalTime makes it
-// tappable to see the instant across zones. allowedTags lets the tag past
-// sanitization, literalTagContent keeps its text from being parsed as markdown.
+// The agent wraps a date/time in `<local-time iso>`; allowedTags lets it past
+// sanitization and literalTagContent keeps its text out of markdown parsing.
 const COMPONENTS = {
   "local-time": LocalTime,
 } as unknown as StreamdownProps["components"];

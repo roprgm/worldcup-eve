@@ -14,16 +14,14 @@ export function tournamentDay(date: Date): string {
   return tournamentClock(date).slice(0, 10);
 }
 
-// Whole-day index of a tournament day, so day differences (today vs tomorrow)
-// are a subtraction instead of date math.
 function tournamentDayIndex(date: Date): number {
   return Math.floor(
     (date.getTime() - DAY_ROLLOVER_UTC_HOUR * HOUR_MS) / (24 * HOUR_MS),
   );
 }
 
-// "today" / "tomorrow" / "yesterday" relative to now, else the tournament day,
-// all by tournament day — never the raw UTC calendar date, which can differ.
+// By tournament day, not the raw UTC date — a late kickoff can fall on the next
+// UTC calendar day yet still belong to today's slate.
 export function relativeTournamentDay(kickoff: Date, now: Date): string {
   const diff = tournamentDayIndex(kickoff) - tournamentDayIndex(now);
   if (diff === 0) return "today";

@@ -57,7 +57,6 @@ export default defineTool({
           id: match.n,
           status: match.status,
           detail: match.detail,
-          // Day relative to today; use this for today/yesterday, not kickoffAtUtc.
           day: kickoff ? relativeTournamentDay(kickoff, now) : undefined,
           kickoffAtUtc: kickoff?.toISOString(),
           tournamentKickoffAt: kickoff

@@ -3,7 +3,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
-// Rows show a full date + time + zone so the instant is unambiguous.
 const DETAIL: Intl.DateTimeFormatOptions = {
   weekday: "short",
   month: "short",
@@ -13,7 +12,7 @@ const DETAIL: Intl.DateTimeFormatOptions = {
   timeZoneName: "short",
 };
 
-// IANA id → human label: "America/Mexico_City" → "Mexico City", "UTC" → "UTC".
+// "America/Mexico_City" → "Mexico City", "UTC" → "UTC".
 function zoneLabel(zone: string): string {
   return (zone.split("/").pop() ?? zone).replace(/_/g, " ");
 }
@@ -36,7 +35,6 @@ function ZoneRow({ zone, date }: { zone: string; date: Date }) {
   );
 }
 
-// Tap-through detail: the instant in the reader's own zone and UTC.
 function ZoneBreakdown({ date }: { date: Date }) {
   const local = readerZone();
   const zones = local === "UTC" ? ["UTC"] : [local, "UTC"];
@@ -49,13 +47,9 @@ function ZoneBreakdown({ date }: { date: Date }) {
   );
 }
 
-/**
- * Wraps an agent-written date/time so it can be tapped to see the instant across
- * zones. The agent writes the human text itself (in the user's zone and
- * language, via the convert_time tool) and passes the raw UTC instant as `iso`;
- * this component only renders that text and reveals the breakdown on tap, so it
- * never has to phrase anything and the agent owns the wording.
- */
+/** Makes an agent-written date/time tappable to reveal the instant across zones.
+ *  The agent writes the text (via convert_time) and passes the UTC instant as
+ *  `iso`; this only renders that text and the breakdown. */
 export function LocalTime({
   iso,
   children,
@@ -68,7 +62,6 @@ export function LocalTime({
     const parsed = new Date(iso);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }, [iso]);
-
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   if (!date) return <>{children}</>;
