@@ -1,8 +1,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { tournamentDateTime } from "@/agent/lib/time";
+import { relativeTournamentDay, tournamentDateTime } from "@/agent/lib/time";
 import { getMatchResults } from "@/lib/results";
+import { matchSchedule, venueTimeZone } from "@/lib/tournament";
+
+const venueByNumber = new Map(matchSchedule.map((m) => [m.number, m.venue]));
 
 const tournamentDate = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/);
 
@@ -44,20 +47,25 @@ export default defineTool({
   }),
   async execute({ status, from, to }) {
     const { matches } = await getMatchResults();
+    const now = new Date();
 
     const results = matches
       .map((match) => {
         const kickoff = match.kickoff ? new Date(match.kickoff) : undefined;
+        const venue = venueByNumber.get(match.n);
         return {
           id: match.n,
           status: match.status,
           detail: match.detail,
+          day: kickoff ? relativeTournamentDay(kickoff, now) : undefined,
           kickoffAtUtc: kickoff?.toISOString(),
           tournamentKickoffAt: kickoff
             ? tournamentDateTime(kickoff)
             : undefined,
           home: match.home,
           away: match.away,
+          venue,
+          venueTimeZone: venue ? venueTimeZone(venue) : undefined,
         };
       })
       .filter(

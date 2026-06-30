@@ -1,9 +1,16 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { tournamentDay } from "@/agent/lib/time";
+import { relativeTournamentDay, tournamentDay } from "@/agent/lib/time";
 import { getPredictions } from "@/lib/predictions";
-import { matchSchedule, teamById } from "@/lib/tournament";
+import { getMatchResults } from "@/lib/results";
+import {
+  knockoutMatches,
+  matchSchedule,
+  type SlotRef,
+  teamById,
+  venueTimeZone,
+} from "@/lib/tournament";
 
 // A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
@@ -21,32 +28,58 @@ const involvesTeam = (code: string | null, query: string) => {
   return norm(code) === q || norm(teamById[code]?.name ?? "").includes(q);
 };
 
-// Knockout fixtures are TBD in the static schedule; resolve the decided ones
-// from the prediction slots (same source the forecast uses) so a team's next
-// knockout game shows up by name.
-async function resolvedKnockoutTeams(): Promise<
-  Map<number, { home: string | null; away: string | null }>
-> {
-  const resolved = new Map<
-    number,
-    { home: string | null; away: string | null }
-  >();
+type Side = "home" | "away";
+type ResolvedSides = { home: string | null; away: string | null };
+
+// Knockout fixtures are TBD in the static schedule. Resolve them from the real
+// results first (settled group order + assigned third slots), then fall back to
+// prediction slots for anything not yet decided, so a team's next knockout game
+// shows up by name as soon as it's known.
+async function resolvedKnockoutTeams(): Promise<Map<number, ResolvedSides>> {
+  const resolved = new Map<number, ResolvedSides>();
+  const set = (match: number, side: Side, code: string | null) => {
+    if (!code) return;
+    const sides = resolved.get(match) ?? { home: null, away: null };
+    sides[side] = code;
+    resolved.set(match, sides);
+  };
+
+  try {
+    const { settledGroupOrder, thirdSlots } = await getMatchResults();
+    const thirdByMatch = new Map(thirdSlots.map((t) => [t.match, t.teamId]));
+    const fromResults = (ref: SlotRef, match: number): string | null => {
+      if (ref.kind === "winner")
+        return settledGroupOrder[ref.group]?.[0] ?? null;
+      if (ref.kind === "runner")
+        return settledGroupOrder[ref.group]?.[1] ?? null;
+      if (ref.kind === "third") return thirdByMatch.get(match) ?? null;
+      return null; // match/loser refs resolve from predictions below
+    };
+    for (const m of knockoutMatches) {
+      set(m.number, "home", fromResults(m.home, m.number));
+      set(m.number, "away", fromResults(m.away, m.number));
+    }
+  } catch {
+    // Results unavailable — predictions still fill in below.
+  }
+
   try {
     const { slots } = await getPredictions();
-    const settled = (match: number, side: "home" | "away") => {
+    const settled = (match: number, side: Side) => {
       const top = slots.find((s) => s.match === match && s.side === side)
         ?.candidates[0];
       return top && top.probability >= SETTLED ? top.code : null;
     };
     for (const m of matchSchedule) {
       if (m.number <= 72) continue;
-      const home = settled(m.number, "home");
-      const away = settled(m.number, "away");
-      if (home || away) resolved.set(m.number, { home, away });
+      const sides = resolved.get(m.number);
+      if (!sides?.home) set(m.number, "home", settled(m.number, "home"));
+      if (!sides?.away) set(m.number, "away", settled(m.number, "away"));
     }
   } catch {
-    // Predictions unavailable — knockout sides stay TBD.
+    // Predictions unavailable — keep whatever the results gave us.
   }
+
   return resolved;
 }
 
@@ -58,10 +91,10 @@ interface Fixture {
   venue: string;
 }
 
-function line(m: Fixture): string {
-  const date = m.kickoffAt.slice(0, 10);
-  const time = m.kickoffAt.slice(11, 16);
-  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — ${date} ${time} UTC, ${m.venue}`;
+function line(m: Fixture, now: Date): string {
+  const day = relativeTournamentDay(new Date(m.kickoffAt), now);
+  const venueTz = venueTimeZone(m.venue) ?? "UTC";
+  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — day ${day}, kickoff_iso ${m.kickoffAt}, ${m.venue} (venue_tz ${venueTz})`;
 }
 
 export default defineTool({
@@ -80,7 +113,10 @@ export default defineTool({
   async execute({ team, matches }) {
     const now = Date.now();
     const resolved = await resolvedKnockoutTeams();
-    const wanted = matches && new Set(matches);
+    // Ignore out-of-range match numbers (models sometimes pass a stray 0); an
+    // all-invalid list means "no match filter" rather than "match nothing".
+    const valid = matches?.filter((n) => n >= 1 && n <= 104);
+    const wanted = valid?.length ? new Set(valid) : undefined;
 
     const selected: Fixture[] = matchSchedule
       .map((m) => ({
@@ -104,12 +140,15 @@ export default defineTool({
     const upcoming = selected.filter((m) => !played(m));
     const finished = selected.filter(played);
 
-    const today = tournamentDay(new Date(now));
+    const nowDate = new Date(now);
+    const today = tournamentDay(nowDate);
+    const fmt = (list: Fixture[]) =>
+      list.length ? list.map((m) => line(m, nowDate)).join("\n") : "none";
     const out = [
-      `Today is ${today} (UTC). Times are UTC — convert to the user's time zone when known. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
+      `Today is ${today}. Each match's "day" is given relative to today — base any today/tomorrow statement on that, never on the kickoff_iso (it is UTC and may show a different calendar date). Put kickoff_iso in a <local-time> tag for the time. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
       "",
-      `## Upcoming\n${upcoming.length ? upcoming.map(line).join("\n") : "none"}`,
-      `## Already played\n${finished.length ? finished.map(line).join("\n") : "none"}`,
+      `## Upcoming\n${fmt(upcoming)}`,
+      `## Already played\n${fmt(finished)}`,
     ];
     if (team && upcoming.length === 0)
       out.push(

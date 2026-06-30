@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { matchSchedule, teamById } from "@/lib/tournament";
+import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
 
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";
@@ -32,7 +32,8 @@ export default defineTool({
       .describe("Only matches at this stadium or city (substring match)."),
   }),
   execute({ team, matches, venue }) {
-    const wanted = matches && new Set(matches);
+    const valid = matches?.filter((n) => n >= 1 && n <= 104);
+    const wanted = valid?.length ? new Set(valid) : undefined;
     const venueQuery = venue && norm(venue);
     const selected = matchSchedule
       .filter(
@@ -47,7 +48,7 @@ export default defineTool({
     return selected
       .map(
         (m) =>
-          `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} at ${m.venue}`,
+          `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} at ${m.venue} (venue_tz ${venueTimeZone(m.venue) ?? "UTC"})`,
       )
       .join("\n");
   },
