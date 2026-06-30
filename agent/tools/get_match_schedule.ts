@@ -106,7 +106,7 @@ export default defineTool({
 
     const today = tournamentDay(new Date(now));
     const out = [
-      `Today is ${today} (UTC). Times are UTC — convert to the user's time zone when known. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
+      `Today is ${today} (UTC). Times are UTC — don't convert them; wrap kickoffs in a <local-time> tag so the client localizes them. Answer "when does it play" from the upcoming list; only mention played matches if asked about the past.`,
       "",
       `## Upcoming\n${upcoming.length ? upcoming.map(line).join("\n") : "none"}`,
       `## Already played\n${finished.length ? finished.map(line).join("\n") : "none"}`,
