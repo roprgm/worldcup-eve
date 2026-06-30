@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "cnfast";
 import { type ReactNode, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
@@ -79,10 +78,7 @@ export function LocalTime({
       <button
         type="button"
         onClick={(e) => setAnchor((cur) => (cur ? null : e.currentTarget))}
-        className={cn(
-          "cursor-pointer underline decoration-dotted decoration-muted-foreground/50",
-          "underline-offset-2 hover:decoration-foreground",
-        )}
+        className="cursor-pointer underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground"
       >
         <time dateTime={iso}>{children}</time>
       </button>

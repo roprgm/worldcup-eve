@@ -5,9 +5,9 @@ import { LocalTime } from "@/components/ui/local-time";
 
 type StreamdownProps = ComponentProps<typeof Streamdown>;
 
-// The agent emits `<local-time>` for any user-facing date/time; LocalTime renders
-// it in the reader's locale and zone. allowedTags lets it past sanitization,
-// literalTagContent keeps the UTC fallback from being parsed as markdown.
+// The agent wraps a date/time it wrote in `<local-time iso>`; LocalTime makes it
+// tappable to see the instant across zones. allowedTags lets the tag past
+// sanitization, literalTagContent keeps its text from being parsed as markdown.
 const COMPONENTS = {
   "local-time": LocalTime,
 } as unknown as StreamdownProps["components"];

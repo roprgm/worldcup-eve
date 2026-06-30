@@ -1000,7 +1000,7 @@ export const matchSchedule: ScheduledMatch[] = [
 
 // IANA time zone of each host-city stadium, so a kickoff can be shown in the
 // venue's own local time when the user asks about the time there.
-export const venueTimeZones: Record<string, string> = {
+const venueTimeZones: Record<string, string> = {
   "Atlanta Stadium": "America/New_York",
   "BC Place Vancouver": "America/Vancouver",
   "Boston Stadium": "America/New_York",

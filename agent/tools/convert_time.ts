@@ -36,11 +36,12 @@ export default defineTool({
   execute({ iso, timeZone }) {
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return `Invalid iso: ${iso}.`;
-    const inZone = (options: Intl.DateTimeFormatOptions, locale = "en-US") => {
+    const inZone = (options: Intl.DateTimeFormatOptions) => {
       try {
-        return new Intl.DateTimeFormat(locale, { timeZone, ...options }).format(
-          date,
-        );
+        return new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          ...options,
+        }).format(date);
       } catch {
         return null;
       }
@@ -53,10 +54,7 @@ export default defineTool({
       relativeDay: relativeDay(date, timeZone),
       weekday,
       date: inZone({ month: "long", day: "numeric" }),
-      time24: inZone(
-        { hour: "2-digit", minute: "2-digit", hour12: false },
-        "en-GB",
-      ),
+      time24: inZone({ hour: "2-digit", minute: "2-digit", hour12: false }),
       time12: inZone({ hour: "numeric", minute: "2-digit", hour12: true }),
     };
   },

@@ -16,7 +16,7 @@ export function tournamentDay(date: Date): string {
 
 // Whole-day index of a tournament day, so day differences (today vs tomorrow)
 // are a subtraction instead of date math.
-export function tournamentDayIndex(date: Date): number {
+function tournamentDayIndex(date: Date): number {
   return Math.floor(
     (date.getTime() - DAY_ROLLOVER_UTC_HOUR * HOUR_MS) / (24 * HOUR_MS),
   );
