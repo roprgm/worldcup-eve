@@ -178,12 +178,12 @@ function knockoutMarketOverride(
     const home = decidedTeam(r32Slots.get(`${m.number}:home`));
     const away = decidedTeam(r32Slots.get(`${m.number}:away`));
     if (!home || !away) continue;
-    const market = markets.byPair.get(pairKey(home, away));
-    if (!market) continue;
 
     // "Team to Advance", not the regulation money line: a knockout match can end
     // level after 90' (a draw) yet still send one side through, so we read each
-    // side's reach-the-next-round future (R32 → reach R16) instead.
+    // side's reach-the-next-round future (R32 → reach R16) instead. This pins the
+    // simulation and must not depend on the per-game market below — that's only
+    // needed for the scoreline/3-way display, and may be absent from the catalog.
     const advance = advanceOdds(prices, "reach_r16", home, away);
     if (advance)
       override.set(
@@ -193,6 +193,9 @@ function knockoutMarketOverride(
           [away, advance.away],
         ]),
       );
+
+    const market = markets.byPair.get(pairKey(home, away));
+    if (!market) continue;
 
     if (market.score) {
       // The catalog stores goals as (teams[0]=`a`, teams[1]=`b`); orient to ours.
