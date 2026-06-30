@@ -349,7 +349,7 @@ export interface CircularBracketView {
 export type TeamPaths = Map<string, CellPath>;
 
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
-const formatPct = (p: number) => `${Math.round(p * 100)}%`;
+const formatPct = (p: number) => `${(p * 100).toPrecision(4)}%`;
 const lead = (odds?: Candidate[]) => odds?.[0];
 const confirmed = (odds?: Candidate[]) =>
   (lead(odds)?.probability ?? 0) >= CONFIRMED;
@@ -575,9 +575,7 @@ function OddsList({
       <PopupHeader title={title} subtitle={subtitle} />
       <div className="space-y-1">
         {shown.length === 0 ? (
-          <p className="text-xs text-muted-foreground/50 italic">
-            no market
-          </p>
+          <p className="text-xs text-muted-foreground/50 italic">no market</p>
         ) : (
           shown.map((c, i) => <OddsRow key={c.code} c={c} top={i === 0} />)
         )}
