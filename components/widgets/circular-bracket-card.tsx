@@ -615,6 +615,7 @@ function UnsettledNode({
   code,
   size = "var(--cf)",
   predict,
+  live,
   openId,
   onToggle,
 }: NodeProps & {
@@ -623,6 +624,9 @@ function UnsettledNode({
   code?: string;
   size?: string;
   predict?: boolean;
+  /** The node's match is in progress: the leader's flag shows extra-faded so it
+   *  never reads as a confirmed result. */
+  live?: boolean;
 }) {
   const open = openId === id;
   const showFlag = !!(predict && code);
@@ -652,7 +656,8 @@ function UnsettledNode({
           fontSize: `calc(${size} * 0.42)`,
         }}
       >
-        ?
+        {/* Hidden under a live leader's flag so the "?" doesn't show through. */}
+        {live && showFlag ? "" : "?"}
       </span>
       {/* Predicted-flag layer — fades in over the solid base, which keeps the
           connector lines covered and hides the "?" beneath. */}
@@ -661,7 +666,7 @@ function UnsettledNode({
           aria-hidden
           className={cn(
             "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out",
-            showFlag ? "opacity-100" : "opacity-0",
+            showFlag ? (live ? "opacity-30" : "opacity-100") : "opacity-0",
           )}
         >
           <RoundFlag
@@ -935,6 +940,7 @@ function BracketNode({
                   code={model.liveLeaderCode ?? model.predictedCode}
                   size={NODE_SIZE}
                   predict={predict || !!model.liveLeaderCode}
+                  live={model.live}
                   openId={openId}
                   onToggle={onToggle}
                 />
