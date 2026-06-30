@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { tournamentDay } from "@/agent/lib/time";
 import { getPredictions } from "@/lib/predictions";
-import { matchSchedule, teamById } from "@/lib/tournament";
+import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
 
 // A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
@@ -61,7 +61,8 @@ interface Fixture {
 function line(m: Fixture): string {
   const date = m.kickoffAt.slice(0, 10);
   const time = m.kickoffAt.slice(11, 16);
-  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — ${date} ${time} UTC, ${m.venue}`;
+  const venueTz = venueTimeZone(m.venue) ?? "UTC";
+  return `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} — ${date} ${time} UTC, ${m.venue} (venue_tz ${venueTz})`;
 }
 
 export default defineTool({

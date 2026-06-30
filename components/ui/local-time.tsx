@@ -193,15 +193,13 @@ function ZoneRow({
   );
 }
 
-// Tap-through detail: the same label shown inline, then the full instant across
-// the shown zone, the reader's own device zone, and UTC.
+// Tap-through detail: the full instant across the shown zone, the reader's own
+// device zone, and UTC.
 function ZoneBreakdown({
-  title,
   date,
   locale,
   zone,
 }: {
-  title: string;
   date: Date;
   locale?: string;
   zone?: string;
@@ -212,18 +210,15 @@ function ZoneBreakdown({
     (z, i, all) => all.indexOf(z) === i,
   );
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-sm font-medium text-foreground">{title}</div>
-      <div className="flex flex-col gap-1.5">
-        {zones.map((z) => (
-          <ZoneRow
-            key={z}
-            zone={z}
-            value={formatIn(date, DETAIL_FORMAT, locale, z)}
-            primary={z === primary}
-          />
-        ))}
-      </div>
+    <div className="flex flex-col gap-1.5">
+      {zones.map((z) => (
+        <ZoneRow
+          key={z}
+          zone={z}
+          value={formatIn(date, DETAIL_FORMAT, locale, z)}
+          primary={z === primary}
+        />
+      ))}
     </div>
   );
 }
@@ -293,14 +288,7 @@ export function LocalTime({
         onClose={() => setAnchor(null)}
         className="w-max max-w-[min(18rem,calc(100vw-1rem))] p-3"
       >
-        {display && (
-          <ZoneBreakdown
-            title={display}
-            date={date}
-            locale={locale}
-            zone={zone}
-          />
-        )}
+        <ZoneBreakdown date={date} locale={locale} zone={zone} />
       </Popover>
     </>
   );

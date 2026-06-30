@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { matchSchedule, teamById } from "@/lib/tournament";
+import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
 
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";
@@ -47,7 +47,7 @@ export default defineTool({
     return selected
       .map(
         (m) =>
-          `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} at ${m.venue}`,
+          `Match ${m.number}: ${teamName(m.homeId)} vs ${teamName(m.awayId)} at ${m.venue} (venue_tz ${venueTimeZone(m.venue) ?? "UTC"})`,
       )
       .join("\n");
   },

@@ -997,3 +997,28 @@ export const matchSchedule: ScheduledMatch[] = [
     venue: m.venue,
   })),
 ].sort((x, y) => x.number - y.number);
+
+// IANA time zone of each host-city stadium, so a kickoff can be shown in the
+// venue's own local time when the user asks about the time there.
+export const venueTimeZones: Record<string, string> = {
+  "Atlanta Stadium": "America/New_York",
+  "BC Place Vancouver": "America/Vancouver",
+  "Boston Stadium": "America/New_York",
+  "Dallas Stadium": "America/Chicago",
+  "Guadalajara Stadium": "America/Mexico_City",
+  "Houston Stadium": "America/Chicago",
+  "Kansas City Stadium": "America/Chicago",
+  "Los Angeles Stadium": "America/Los_Angeles",
+  "Mexico City Stadium": "America/Mexico_City",
+  "Miami Stadium": "America/New_York",
+  "Monterrey Stadium": "America/Monterrey",
+  "New York/New Jersey Stadium": "America/New_York",
+  "Philadelphia Stadium": "America/New_York",
+  "San Francisco Bay Area Stadium": "America/Los_Angeles",
+  "Seattle Stadium": "America/Los_Angeles",
+  "Toronto Stadium": "America/Toronto",
+};
+
+export function venueTimeZone(venue: string): string | undefined {
+  return venueTimeZones[venue];
+}
