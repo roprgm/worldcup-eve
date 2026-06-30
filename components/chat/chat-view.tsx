@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useChat } from "@/components/chat/chat-context";
+import { useChatAgent } from "@/components/chat/chat-context";
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { Thread } from "@/components/chat/thread";
 import { Composer } from "@/components/composer";
 import { MessageScroller } from "@/components/ui/message-scroller";
 
-/** The active conversation: message list plus composer. Shared by the home
- *  route (once a chat starts) and the `/chat/[id]` route, so starting a chat
- *  shows messages immediately without waiting on navigation. */
+/** The single active conversation: message list plus composer. Mounted by the
+ *  `/chat` route inside a `ChatSession`. */
 export function ChatView() {
-  const { agent, send } = useChat();
+  const { agent, send } = useChatAgent();
   const [input, setInput] = useState("");
 
   const handleSubmit = () => {

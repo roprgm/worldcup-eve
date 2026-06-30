@@ -2,84 +2,137 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import { activeQuestion } from "@/components/chat/messages";
 
 type Agent = UseEveAgentHelpers<EveMessageData>;
 
-type ChatContextValue = {
-  agent: Agent;
-  send: (message: string) => void;
-  start: (message: string) => void;
-  // The chat held in memory, if any — the nav links back to it. Null on the
-  // new-chat screen with nothing to resume.
-  chatId: string | null;
-};
-
 type SavedChat = {
-  id: string;
   session?: Agent["session"];
   events?: Agent["events"];
 };
 
-const ChatContext = createContext<ChatContextValue | null>(null);
-
 const STORAGE_KEY = "wc26-chat";
-const newChatId = () => Math.random().toString(36).slice(2, 10);
-const chatIdFromPath = (path: string) =>
-  path.match(/^\/chat\/([^/]+)/)?.[1] ?? null;
 
-// Restore the saved chat into memory so the agent can show it again — except
-// under a different `/chat/<id>` than the one saved, where a fresh id must stay
-// empty. The home screen renders its new-chat UI off the URL, so a restored chat
-// sits in memory there without showing until the user returns to it via the nav.
 function loadChat(): SavedChat | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  let saved: SavedChat;
   try {
-    saved = JSON.parse(raw) as SavedChat;
+    return JSON.parse(raw) as SavedChat;
   } catch {
     return null;
   }
-  const urlId = chatIdFromPath(window.location.pathname);
-  return urlId && urlId !== saved.id ? null : saved;
 }
 
+function clearChat() {
+  if (typeof window !== "undefined") localStorage.removeItem(STORAGE_KEY);
+}
+
+// --- Navigation layer ---------------------------------------------------------
+// There is a single active chat, owned by the agent layer below. This layer
+// drives "new chat": it bumps an epoch so the agent remounts into a fresh eve
+// session (eve's reset re-seeds the original session, so only a remount is truly
+// fresh). The epoch changes ONLY on new-chat/start — never on route navigation —
+// so moving between pages keeps an in-flight conversation alive.
+
+type ChatNavValue = {
+  // Whether a chat exists to return to. Drives the nav link and guards `/chat`
+  // from rendering a blank conversation. Once true it stays true: going home
+  // keeps the chat; only starting another one replaces it.
+  active: boolean;
+  // Begin a chat from the home screen: replace any previous one and open the
+  // chat route with the first message queued.
+  start: (message: string) => void;
+};
+
+const ChatNavContext = createContext<ChatNavValue | null>(null);
+
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [restored] = useState(loadChat);
-  // Only a chat with content is worth linking back to; a parse with no events
-  // would otherwise resolve to a blank conversation.
-  const [chatId, setChatId] = useState<string | null>(() =>
-    restored?.events?.length ? restored.id : null,
+  const [epoch, setEpoch] = useState(0);
+  // A saved chat means there's one to resume; otherwise we start inactive.
+  const [active, setActive] = useState(() => loadChat() !== null);
+  const pending = useRef<string | null>(null);
+  const router = useRouter();
+
+  const start = useCallback(
+    (text: string) => {
+      const message = text.trim();
+      if (!message) return;
+      clearChat(); // a new chat replaces any previous one
+      pending.current = message;
+      setActive(true);
+      setEpoch((e) => e + 1); // remount the agent into a fresh session
+      router.push("/chat");
+    },
+    [router],
   );
 
+  const takePending = useCallback(() => {
+    const message = pending.current;
+    pending.current = null;
+    return message ?? undefined;
+  }, []);
+
+  return (
+    <ChatNavContext.Provider value={{ active, start }}>
+      <ChatSession key={epoch} takePending={takePending}>
+        {children}
+      </ChatSession>
+    </ChatNavContext.Provider>
+  );
+}
+
+export function useChatNav(): ChatNavValue {
+  const value = useContext(ChatNavContext);
+  if (!value) throw new Error("useChatNav must be used within <ChatProvider>");
+  return value;
+}
+
+// --- Agent layer --------------------------------------------------------------
+// One `useEveAgent` for the single active chat, mounted in the layout so it
+// survives route changes. Seeded from localStorage so a reload resumes; remounts
+// (via the epoch key) into a fresh session on new-chat.
+
+type ChatAgentValue = {
+  agent: Agent;
+  send: (message: string) => void;
+};
+
+const ChatAgentContext = createContext<ChatAgentValue | null>(null);
+
+function ChatSession({
+  children,
+  takePending,
+}: {
+  children: ReactNode;
+  takePending: () => string | undefined;
+}) {
+  const [initial] = useState(loadChat);
+
   const agent = useEveAgent({
-    initialSession: restored?.session,
-    initialEvents: restored?.events,
+    initialSession: initial?.session,
+    initialEvents: initial?.events,
     prepareSend: (input) => ({
       ...input,
       clientContext: {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }),
-    // Persist when a turn settles, keyed by the chat in the URL. Skip empty
-    // turns so a failed first message can't clobber the saved chat.
+    // Persist when a turn settles. Skip empty turns so a failed first message
+    // can't clobber the saved chat.
     onFinish: ({ session, events }) => {
-      const id = chatIdFromPath(window.location.pathname);
-      if (id && events.length > 0) {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ id, session, events }),
-        );
-      }
+      if (events.length > 0)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ session, events }));
     },
   });
 
@@ -91,8 +144,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // "ignored"; route it back as the answer to the pending request.
       const question = activeQuestion(agent.data.messages);
       // Don't start a new message while a turn is still running — the user must
-      // let it finish or hit stop first. (eve's store also throws here; this
-      // makes the no-op explicit so a stray submit can't interleave a turn.)
+      // let it finish or hit stop first.
       if (
         !question &&
         (agent.status === "submitted" || agent.status === "streaming")
@@ -106,29 +158,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [agent],
   );
 
-  const start = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      const id = newChatId();
-      agent.reset(); // start fresh even if a previous chat is still in context
-      send(text); // optimistic message lands before the view swaps in
-      setChatId(id);
-      // Update the URL without a route navigation: the conversation already
-      // renders from shared context, so a real navigation only adds a flicker.
-      window.history.pushState(null, "", `/chat/${id}`);
-    },
-    [agent, send],
-  );
+  // Send the queued first message once, after the fresh store mounts.
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  useEffect(() => {
+    const first = takePending();
+    if (first) sendRef.current(first);
+  }, [takePending]);
 
   return (
-    <ChatContext.Provider value={{ agent, send, start, chatId }}>
+    <ChatAgentContext.Provider value={{ agent, send }}>
       {children}
-    </ChatContext.Provider>
+    </ChatAgentContext.Provider>
   );
 }
 
-export function useChat(): ChatContextValue {
-  const value = useContext(ChatContext);
-  if (!value) throw new Error("useChat must be used within <ChatProvider>");
+export function useChatAgent(): ChatAgentValue {
+  const value = useContext(ChatAgentContext);
+  if (!value)
+    throw new Error("useChatAgent must be used within <ChatProvider>");
   return value;
 }
