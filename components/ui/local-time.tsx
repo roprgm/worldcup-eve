@@ -11,24 +11,21 @@ const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
-const WEEKDAY_TIME: Intl.DateTimeFormatOptions = { weekday: "long", ...TIME };
-const DATE_TIME: Intl.DateTimeFormatOptions = {
-  month: "short",
-  day: "numeric",
-  ...TIME,
-};
-const DATE_TIME_YEAR: Intl.DateTimeFormatOptions = {
-  year: "numeric",
-  ...DATE_TIME,
-};
+const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
+const DATE: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+const DATE_YEAR: Intl.DateTimeFormatOptions = { year: "numeric", ...DATE };
+
+// Any instant works — the locale's date↔time connector word doesn't depend on
+// the actual value, only on the language.
+const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
 
 // Explicit inline presets the agent can force via the `format` attribute.
 const FORMATS: Record<
   Exclude<TimeFormat, "auto">,
   Intl.DateTimeFormatOptions
 > = {
-  datetime: DATE_TIME,
-  date: { weekday: "short", month: "short", day: "numeric" },
+  datetime: { ...DATE, ...TIME },
+  date: { weekday: "short", ...DATE },
   time: TIME,
 };
 
@@ -123,12 +120,28 @@ function relative(
   );
 }
 
-// The concise inline label, all in the reader's (or `locale`'s) language:
+// The locale's word joining a date to a time — " at " (en), " a las " (es),
+// " às " (pt), " à " (fr) — pulled from a long/short pattern. Falls back to a
+// plain space when the locale joins them without a word.
+function connector(locale?: string): string {
+  const parts = new Intl.DateTimeFormat(locale, {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).formatToParts(CONNECTOR_SAMPLE);
+  const timeIndex = parts.findIndex(
+    (p) => p.type === "hour" || p.type === "dayPeriod",
+  );
+  const before = timeIndex > 0 ? parts[timeIndex - 1] : undefined;
+  return before?.type === "literal" ? before.value : " ";
+}
+
+// A self-contained, natural time phrase in the reader's (or `locale`'s)
+// language, so the agent drops it in without any connector of its own:
 //   < 1h away  → "in 38 minutes"
-//   today      → "today 2:00 PM"
-//   ±1 day     → "tomorrow 2:00 PM" / "yesterday 2:00 PM"
-//   this week  → "Thursday 12:30 PM"
-//   otherwise  → "Jul 2, 2:00 PM" (with year when it differs)
+//   today      → "today at 2:00 PM"
+//   ±1 day     → "tomorrow at 2:00 PM" / "yesterday at 2:00 PM"
+//   this week  → "Thursday at 12:30 PM"
+//   otherwise  → "Jul 2 at 2:00 PM" (with year when it differs)
 function autoLabel(
   date: Date,
   now: number,
@@ -143,15 +156,17 @@ function autoLabel(
       locale,
     );
 
+  const time = formatIn(date, TIME, locale, zone);
+  const at = connector(locale);
   const dayDiff =
     zonedDayNumber(date, zone) - zonedDayNumber(new Date(now), zone);
   if (dayDiff >= -1 && dayDiff <= 1)
-    return `${relative(dayDiff, "day", locale)} ${formatIn(date, TIME, locale, zone)}`;
+    return `${relative(dayDiff, "day", locale)}${at}${time}`;
   if (dayDiff >= 2 && dayDiff <= 6)
-    return formatIn(date, WEEKDAY_TIME, locale, zone);
+    return `${formatIn(date, WEEKDAY, locale, zone)}${at}${time}`;
 
   const sameYear = zonedYear(date, zone) === zonedYear(new Date(now), zone);
-  return formatIn(date, sameYear ? DATE_TIME : DATE_TIME_YEAR, locale, zone);
+  return `${formatIn(date, sameYear ? DATE : DATE_YEAR, locale, zone)}${at}${time}`;
 }
 
 function ZoneRow({

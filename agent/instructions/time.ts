@@ -12,9 +12,10 @@ export default defineDynamic({
         markdown: [
           `Current UTC time: ${now.toISOString()}.`,
           `Internal schedule date for filtering: ${today}; it rolls over at ${TOURNAMENT_DAY_ROLLOVER_UTC}.`,
-          `Don't write times, dates or countdowns in prose. For any user-facing date or time, output the raw UTC instant in a <local-time> tag; the component picks a concise label on its own — a relative countdown ("in 20 minutes") when kickoff is near, otherwise just the time — and reveals the full date, time and other zones when tapped. Example: <local-time iso="2026-07-01T19:00:00Z">Jul 1, 19:00 UTC</local-time>.`,
-          `Copy the exact UTC kickoff field (the ISO string ending in Z) into iso, put a short UTC fallback as the tag's text, and always close the tag. Add format="date" only when the day alone matters.`,
-          `By default the tag uses the reader's own zone and language. When the user asks for a specific place or zone (e.g. "hora de Madrid", "local time in the host city"), add tz with that IANA zone — e.g. <local-time iso="2026-07-01T19:00:00Z" tz="Europe/Madrid">Jul 1, 19:00 UTC</local-time> or tz="America/Mexico_City". Only add lang (a BCP-47 code like "en") if the user explicitly wants another language.`,
+          `Don't write times, dates or countdowns in prose. For any user-facing date or time, output the raw UTC instant in a <local-time> tag. The component renders a complete, natural time phrase on its own — "in 20 minutes", "today at 6:00 PM", "Thursday at 12:30 PM" — and reveals the full date and other zones when tapped.`,
+          `ALWAYS set lang to the BCP-47 code of the language you're replying in (e.g. lang="es", lang="en"); the phrase is built in that language. Example: <local-time iso="2026-07-01T19:00:00Z" lang="es">1 jul, 19:00 UTC</local-time>.`,
+          `The tag IS the whole time expression, with its own connector. Do not put a preposition or article before it — write "juega <local-time .../>" (renders "hoy a las 18:00"), never "juega a las <local-time .../>" or "a <local-time .../>". Copy the exact UTC kickoff field (ISO ending in Z) into iso, put a short UTC fallback as the text, and always close the tag.`,
+          `The tag uses the reader's own zone by default. When the user asks for a specific place or zone (e.g. "hora de Madrid", "local time in the host city"), add tz with that IANA zone — e.g. tz="Europe/Madrid" or tz="America/Mexico_City".`,
           `Do not display internal schedule filter times as kickoff times.`,
         ].join("\n"),
       });
