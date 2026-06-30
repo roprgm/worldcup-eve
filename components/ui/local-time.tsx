@@ -172,30 +172,22 @@ function datePhrase(
   return formatIn(date, opts, locale, zone);
 }
 
-// The friendly "when": a relative countdown when it's very soon, otherwise a
-// day word / weekday / date joined to the time — "today at 6:00 PM",
-// "Thursday at 12:30 PM", "Jul 20 at 1:00 PM".
+// The "when": an absolute day + time — the weekday within the coming week
+// ("Sunday at 1:00 PM"), otherwise a date ("Jul 20 at 1:00 PM", with year when
+// it differs). Deliberately no relative words like "today": those reject a
+// leading article in some languages ("el hoy"), and the agent can't see the
+// rendered text to phrase around them. Relative wording lives in `relative`.
 function datetimePhrase(
   date: Date,
   now: number,
   locale?: string,
   zone?: string,
 ): string {
-  const diffMs = date.getTime() - now;
-  if (diffMs > 0 && diffMs < HOUR_MS)
-    return relative(
-      Math.max(1, Math.round(diffMs / MINUTE_MS)),
-      "minute",
-      locale,
-    );
-
   const time = formatIn(date, TIME, locale, zone);
   const at = connector(locale);
   const dayDiff =
     zonedDayNumber(date, zone) - zonedDayNumber(new Date(now), zone);
-  if (dayDiff >= -1 && dayDiff <= 1)
-    return `${relative(dayDiff, "day", locale)}${at}${time}`;
-  if (dayDiff >= 2 && dayDiff <= 6)
+  if (dayDiff >= 0 && dayDiff <= 6)
     return `${formatIn(date, WEEKDAY, locale, zone)}${at}${time}`;
 
   const opts = sameZonedYear(date, new Date(now), zone) ? DATE : DATE_YEAR;
