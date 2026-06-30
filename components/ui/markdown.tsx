@@ -12,7 +12,7 @@ const COMPONENTS = {
   "local-time": LocalTime,
 } as unknown as StreamdownProps["components"];
 const ALLOWED_TAGS: NonNullable<StreamdownProps["allowedTags"]> = {
-  "local-time": ["iso", "tz", "lang"],
+  "local-time": ["iso"],
 };
 const LITERAL_TAG_CONTENT = ["local-time"];
 

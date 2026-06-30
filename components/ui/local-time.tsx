@@ -1,213 +1,67 @@
 "use client";
 
 import { cn } from "cnfast";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
-const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
-const DATE: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-const DATE_YEAR: Intl.DateTimeFormatOptions = { year: "numeric", ...DATE };
-
-// Tap-through rows add the zone name so the instant is unambiguous.
+// Rows show a full date + time + zone so the instant is unambiguous.
 const DETAIL: Intl.DateTimeFormatOptions = {
   weekday: "short",
-  ...DATE,
-  ...TIME,
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
   timeZoneName: "short",
 };
-
-// Any instant works — the locale's date↔time connector word depends only on the
-// language, not the value.
-const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
-
-// The agent can pass a junk locale/zone; validate so a bad value falls back to
-// the reader's own rather than throwing.
-function safeLocale(locale?: string): string | undefined {
-  if (!locale) return undefined;
-  try {
-    return Intl.getCanonicalLocales(locale)[0];
-  } catch {
-    return undefined;
-  }
-}
-
-function safeZone(zone?: string): string | undefined {
-  if (!zone) return undefined;
-  try {
-    new Intl.DateTimeFormat(undefined, { timeZone: zone });
-    return zone;
-  } catch {
-    return undefined;
-  }
-}
 
 // IANA id → human label: "America/Mexico_City" → "Mexico City", "UTC" → "UTC".
 function zoneLabel(zone: string): string {
   return (zone.split("/").pop() ?? zone).replace(/_/g, " ");
 }
 
-function formatIn(
-  date: Date,
-  options: Intl.DateTimeFormatOptions,
-  locale?: string,
-  zone?: string,
-): string {
-  const opts = zone ? { ...options, timeZone: zone } : options;
-  return new Intl.DateTimeFormat(locale, opts).format(date);
-}
-
 function readerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-// Calendar-day index of an instant in a zone (latin digits, locale-independent)
-// so today / tomorrow / this week can be told apart.
-function zonedDayNumber(date: Date, zone?: string): number {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const part = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  return Math.floor(
-    Date.UTC(part("year"), part("month") - 1, part("day")) / DAY_MS,
-  );
-}
-
-function sameZonedYear(a: Date, b: Date, zone?: string): boolean {
-  const year = (d: Date) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: zone,
-      year: "numeric",
-    }).format(d);
-  return year(a) === year(b);
-}
-
-// The locale's word joining a date to a time (e.g. " at " in English), from a
-// long/short pattern. Falls back to a space.
-function connector(locale?: string): string {
-  const parts = new Intl.DateTimeFormat(locale, {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).formatToParts(CONNECTOR_SAMPLE);
-  const timeIndex = parts.findIndex(
-    (p) => p.type === "hour" || p.type === "dayPeriod",
-  );
-  const before = timeIndex > 0 ? parts[timeIndex - 1] : undefined;
-  return before?.type === "literal" ? before.value : " ";
-}
-
-// A complete, natural phrase in the reader's zone and language, so the agent
-// drops the tag in and adds nothing: the day word for today/tomorrow/yesterday
-// ("today at 6:00 PM"), a weekday within the week ("Tuesday at 6:00 PM"), else a
-// date ("Jul 5 at 6:00 PM", with year when it differs). The locale supplies the
-// connectors, so the agent never writes one.
-function phrase(
-  date: Date,
-  now: number,
-  locale?: string,
-  zone?: string,
-): string {
-  const time = formatIn(date, TIME, locale, zone);
-  const at = connector(locale);
-  const dayDiff =
-    zonedDayNumber(date, zone) - zonedDayNumber(new Date(now), zone);
-  if (dayDiff >= -1 && dayDiff <= 1) {
-    const day = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
-      dayDiff,
-      "day",
-    );
-    return `${day}${at}${time}`;
-  }
-  if (dayDiff >= 2 && dayDiff <= 6)
-    return `${formatIn(date, WEEKDAY, locale, zone)}${at}${time}`;
-  const opts = sameZonedYear(date, new Date(now), zone) ? DATE : DATE_YEAR;
-  return `${formatIn(date, opts, locale, zone)}${at}${time}`;
-}
-
-function ZoneRow({
-  zone,
-  value,
-  primary,
-}: {
-  zone: string;
-  value: string;
-  primary: boolean;
-}) {
+function ZoneRow({ zone, date }: { zone: string; date: Date }) {
   return (
     <div className="flex items-baseline justify-between gap-5">
-      <span
-        className={cn(
-          "text-xs",
-          primary ? "font-medium text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {zoneLabel(zone)}
+      <span className="text-xs text-muted-foreground">{zoneLabel(zone)}</span>
+      <span className="text-sm whitespace-nowrap tabular-nums">
+        {new Intl.DateTimeFormat(undefined, {
+          ...DETAIL,
+          timeZone: zone,
+        }).format(date)}
       </span>
-      <span className="text-sm whitespace-nowrap tabular-nums">{value}</span>
     </div>
   );
 }
 
-// Tap-through detail: the full instant across the shown zone, the reader's own
-// device zone, and UTC.
-function ZoneBreakdown({
-  date,
-  locale,
-  zone,
-}: {
-  date: Date;
-  locale?: string;
-  zone?: string;
-}) {
+// Tap-through detail: the instant in the reader's own zone and UTC.
+function ZoneBreakdown({ date }: { date: Date }) {
   const local = readerZone();
-  const primary = zone || local;
-  const zones = [primary, local, "UTC"].filter(
-    (z, i, all) => all.indexOf(z) === i,
-  );
+  const zones = local === "UTC" ? ["UTC"] : [local, "UTC"];
   return (
     <div className="flex flex-col gap-1.5">
-      {zones.map((z) => (
-        <ZoneRow
-          key={z}
-          zone={z}
-          value={formatIn(date, DETAIL, locale, z)}
-          primary={z === primary}
-        />
+      {zones.map((zone) => (
+        <ZoneRow key={zone} zone={zone} date={date} />
       ))}
     </div>
   );
 }
 
 /**
- * Renders a UTC instant as a complete, natural date/time phrase in the reader's
- * own zone and language — "today at 6:00 PM", "Tuesday at 6:00 PM", "Jul 5 at
- * 6:00 PM". The agent emits `<local-time iso="...Z" lang="...">fallback</...>`
- * and drops it in as the whole date/time, adding no day word or connector of its
- * own;
- * the component does the conversion and phrasing, so the model never does
- * timezone math (it got it wrong). `tz` overrides the zone (venue / a named
- * place) and `lang` the language; both validated, falling back to the reader's.
- * A tap shows the full instant across zones.
- *
- * Formatting is deferred to a mount effect: the server has no reader time zone,
- * so the UTC fallback renders first (matching SSR, degrading without JS) and the
- * localized value swaps in on the client.
+ * Wraps an agent-written date/time so it can be tapped to see the instant across
+ * zones. The agent writes the human text itself (in the user's zone and
+ * language, via the convert_time tool) and passes the raw UTC instant as `iso`;
+ * this component only renders that text and reveals the breakdown on tap, so it
+ * never has to phrase anything and the agent owns the wording.
  */
 export function LocalTime({
   iso,
-  tz,
-  lang,
   children,
 }: {
   iso?: string;
-  tz?: string;
-  lang?: string;
   children?: ReactNode;
 }) {
   const date = useMemo(() => {
@@ -215,13 +69,6 @@ export function LocalTime({
     const parsed = new Date(iso);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }, [iso]);
-  const locale = useMemo(() => safeLocale(lang), [lang]);
-  const zone = useMemo(() => safeZone(tz), [tz]);
-
-  const [display, setDisplay] = useState<string | null>(null);
-  useEffect(() => {
-    if (date) setDisplay(phrase(date, Date.now(), locale, zone));
-  }, [date, locale, zone]);
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
@@ -232,9 +79,12 @@ export function LocalTime({
       <button
         type="button"
         onClick={(e) => setAnchor((cur) => (cur ? null : e.currentTarget))}
-        className="cursor-pointer underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground"
+        className={cn(
+          "cursor-pointer underline decoration-dotted decoration-muted-foreground/50",
+          "underline-offset-2 hover:decoration-foreground",
+        )}
       >
-        <time dateTime={iso}>{display ?? children}</time>
+        <time dateTime={iso}>{children}</time>
       </button>
       <Popover
         open={Boolean(anchor)}
@@ -242,7 +92,7 @@ export function LocalTime({
         onClose={() => setAnchor(null)}
         className="w-max max-w-[min(18rem,calc(100vw-1rem))] p-3"
       >
-        <ZoneBreakdown date={date} locale={locale} zone={zone} />
+        <ZoneBreakdown date={date} />
       </Popover>
     </>
   );
