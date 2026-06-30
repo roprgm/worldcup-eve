@@ -7,10 +7,9 @@ export default defineEval({
     await t.send("When is Argentina vs Cape Verde played?");
 
     t.completed();
-    // show_knockout_match (slot chances) and show_team_path (whole route) are
-    // the wrong widgets for a single fixture question.
-    t.notCalledTool("show_knockout_match");
-    t.notCalledTool("show_team_path");
+    // outlook backs the <path> (whole route) and <slot> (slot chances) widgets —
+    // the wrong tools for a single fixture, which should use the matches tool.
+    t.notCalledTool("outlook");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
       "Does the answer address the single Argentina vs Cape Verde fixture (when/where it's played or its odds), rather than listing a team's path through several rounds or each side's chances of reaching a slot?",

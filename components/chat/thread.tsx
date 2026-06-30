@@ -7,6 +7,7 @@ import { useChatAgent } from "@/components/chat/chat-context";
 import {
   MessageWidgets,
   messageWidgets,
+  stripWidgetTags,
 } from "@/components/chat/message-widgets";
 import {
   assistantActivityLabel,
@@ -176,12 +177,13 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
   );
 }
 
-// Drop a trailing list/table that a widget already renders, so it isn't shown
-// twice. Keeps the lead-in prose.
+// Strip the widget tags the model wrote (they render as cards, not text), then
+// drop a trailing list/table a widget already renders so it isn't shown twice.
+// Keeps the lead-in prose.
 function visibleText(text: string, hasWidgets: boolean): string {
-  const trimmed = text.trim();
-  if (!hasWidgets || trimmed.length === 0) return trimmed;
-  return trimmed
+  const stripped = stripWidgetTags(text).trim();
+  if (!hasWidgets || stripped.length === 0) return stripped;
+  return stripped
     .split(/\n\s*(?:[-*•]|\d+[.)])\s+/u, 1)[0]
     .split(/\n\s*\|/u, 1)[0]
     .trim();

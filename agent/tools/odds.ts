@@ -11,9 +11,7 @@ import {
   matchByNumber,
 } from "@/lib/tournament";
 
-function percent(value: number): number {
-  return Math.round(value * 1000) / 10;
-}
+const percent = (value: number): number => Math.round(value * 1000) / 10;
 
 // A knockout slot counts as decided once its leading team is all but certain;
 // only then is the matchup a real head-to-head rather than a field of candidates.
@@ -43,24 +41,21 @@ function knockoutForecast(
   const away = byCode.get(awayCode) ?? 0;
   const total = home + away;
   if (total <= 0) return undefined;
-  // For R32, matchWinOdds and the scoreline come straight from the per-game
-  // market; deeper rounds are still the BT model's inference.
   const score = snapshot.knockoutScores[match];
   return {
-    updatedAt: snapshot.updatedAt,
+    asOf: snapshot.updatedAt,
     match,
     round: matchByNumber[match]?.round,
     home: homeCode,
     away: awayCode,
-    homeWinPercent: percent(home / total),
-    awayWinPercent: percent(away / total),
+    homeWinPct: percent(home / total),
+    awayWinPct: percent(away / total),
     predictedScore: score ? { home: score.h, away: score.a } : undefined,
   };
 }
 
 // Neutral-site head-to-head from the fitted BT strengths: P(A beats B) =
-// s_A / (s_A + s_B). A hypothetical matchup — no fixture, no draw required —
-// so it's a model estimate, weaker than a priced market.
+// s_A / (s_A + s_B). A hypothetical matchup — no fixture — so it's an estimate.
 function strengthForecast(
   snapshot: Predictions,
   homeCode: string,
@@ -72,12 +67,12 @@ function strengthForecast(
   const total = home + away;
   if (total <= 0) return undefined;
   return {
-    updatedAt: snapshot.updatedAt,
+    asOf: snapshot.updatedAt,
     home: homeCode,
     away: awayCode,
-    homeWinPercent: percent(home / total),
-    awayWinPercent: percent(away / total),
-    hypothetical: true,
+    homeWinPct: percent(home / total),
+    awayWinPct: percent(away / total),
+    estimate: true,
   };
 }
 
@@ -100,9 +95,9 @@ function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
 
 export default defineTool({
   description:
-    "Two-way win odds for any matchup between two teams. A real fixture uses its market: predicted scoreline + win odds for an upcoming group match (1-72), or head-to-head win odds for a decided knockout match (73-104). Any other pairing (two teams who haven't been drawn together) falls back to a neutral-site model estimate (`hypothetical: true`). Give it the two teams or the match number.",
+    "Win odds and a predicted score for ONE matchup. Give two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns a number, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
   inputSchema: z.object({
-    matchId: z
+    match: z
       .number()
       .int()
       .min(1)
@@ -112,40 +107,40 @@ export default defineTool({
     teamA: z.string().optional().describe("First team name or code."),
     teamB: z.string().optional().describe("Second team name or code."),
   }),
-  async execute({ matchId, teamA, teamB }) {
+  async execute({ match, teamA, teamB }) {
     const snapshot = await getPredictions();
 
     // Knockout match by number: read the decided sides from the bracket slots.
-    if (matchId && matchId > 72) {
-      const home = settledTeam(snapshot, matchId, "home");
-      const away = settledTeam(snapshot, matchId, "away");
+    if (match && match > 72) {
+      const home = settledTeam(snapshot, match, "home");
+      const away = settledTeam(snapshot, match, "away");
       const forecast =
         home && away
-          ? knockoutForecast(snapshot, matchId, home, away)
+          ? knockoutForecast(snapshot, match, home, away)
           : undefined;
       return (
         forecast ?? {
-          updatedAt: snapshot.updatedAt,
-          match: matchId,
+          asOf: snapshot.updatedAt,
+          match,
           error:
-            "No head-to-head odds yet — the matchup isn't decided (use show_knockout_match for who might play).",
+            'No head-to-head odds yet — the matchup isn\'t decided (use a <slot n="..."> for who might play).',
         }
       );
     }
 
-    const match = matchId
-      ? groupMatches.find((m) => m.number === matchId)
+    const fixtureMatch = match
+      ? groupMatches.find((m) => m.number === match)
       : undefined;
-    if (matchId && !match) {
-      return { error: "Match not found.", requested: { matchId } };
+    if (match && !fixtureMatch) {
+      return { error: "Match not found.", requested: { match } };
     }
 
-    const codeA = codeFor(match?.homeId ?? teamA);
-    const codeB = codeFor(match?.awayId ?? teamB);
+    const codeA = codeFor(fixtureMatch?.homeId ?? teamA);
+    const codeB = codeFor(fixtureMatch?.awayId ?? teamB);
     if (!codeA || !codeB) {
       return {
         error: "Could not resolve both teams.",
-        requested: { matchId, teamA, teamB },
+        requested: { match, teamA, teamB },
       };
     }
 
@@ -167,22 +162,21 @@ export default defineTool({
     const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
     if (!score && !odds) {
       return {
-        updatedAt: snapshot.updatedAt,
-        fixture: fixture.id,
+        asOf: snapshot.updatedAt,
+        match: fixture.number,
         error:
           "No forecast available (the match may be played or has no market).",
       };
     }
 
     return {
-      updatedAt: snapshot.updatedAt,
+      asOf: snapshot.updatedAt,
       match: fixture.number,
-      fixture: fixture.id,
       home: fixture.homeId,
       away: fixture.awayId,
       predictedScore: score ? { home: score.h, away: score.a } : undefined,
-      homeWinPercent: odds ? percent(odds.homeWin) : undefined,
-      awayWinPercent: odds ? percent(odds.awayWin) : undefined,
+      homeWinPct: odds ? percent(odds.homeWin) : undefined,
+      awayWinPct: odds ? percent(odds.awayWin) : undefined,
     };
   },
 });
