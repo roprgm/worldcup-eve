@@ -1,0 +1,46 @@
+name: Refresh OG bracket image
+
+# Screenshots the live home bracket into app/opengraph-image.png and
+# app/twitter-image.png so the social card tracks the tournament. Chromium runs
+# only in the GitHub runner (installed fresh each run) — nothing ships to
+# production. Pushing the new PNG triggers a Vercel deploy, whose new content
+# hash busts the social caches.
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # daily, ~08:00 ET (after the prior day's matches)
+  workflow_dispatch: {} # run on demand from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: og-bracket
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
+
+      - name: Render the bracket
+        run: OG_URL=https://wc26.chat bun run og
+
+      - name: Commit if the image changed
+        run: |
+          if git diff --quiet -- app/opengraph-image.png app/twitter-image.png; then
+            echo "Bracket unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/opengraph-image.png app/twitter-image.png
+          git commit -m "chore: refresh OG bracket image"
+          git push
