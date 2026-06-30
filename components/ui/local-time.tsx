@@ -4,7 +4,10 @@ import { cn } from "cnfast";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Popover } from "@/components/ui/popover";
 
-type TimeFormat = "auto" | "relative" | "datetime" | "date" | "time";
+// What kind of phrase to render. The agent picks the one that matches the
+// user's question; every mode produces a complete, self-contained phrase in the
+// reader's language, so the agent never adds a connector of its own.
+type Mode = "datetime" | "relative" | "time" | "date";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -17,19 +20,10 @@ const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
 const DATE: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 const DATE_YEAR: Intl.DateTimeFormatOptions = { year: "numeric", ...DATE };
-
-// Any instant works — the locale's date↔time connector word doesn't depend on
-// the actual value, only on the language.
-const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
-
-// Explicit absolute presets the agent can force via the `format` attribute.
-const FORMATS: Record<
-  Exclude<TimeFormat, "auto" | "relative">,
-  Intl.DateTimeFormatOptions
-> = {
-  datetime: { ...DATE, ...TIME },
-  date: { weekday: "short", ...DATE },
-  time: TIME,
+const WEEKDAY_DATE: Intl.DateTimeFormatOptions = { weekday: "short", ...DATE };
+const WEEKDAY_DATE_YEAR: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  ...WEEKDAY_DATE,
 };
 
 // Breakdown rows show a full date + time + zone so the instant is unambiguous.
@@ -41,13 +35,14 @@ const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
   timeZoneName: "short",
 };
 
-function asFormat(value: unknown): TimeFormat {
-  return value === "relative" ||
-    value === "datetime" ||
-    value === "date" ||
-    value === "time"
+// Any instant works — the locale's date↔time connector word doesn't depend on
+// the actual value, only on the language.
+const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
+
+function asMode(value: unknown): Mode {
+  return value === "relative" || value === "time" || value === "date"
     ? value
-    : "auto";
+    : "datetime";
 }
 
 // The agent can pass a junk locale/zone; validate so a bad value silently falls
@@ -106,13 +101,13 @@ function zonedDayNumber(date: Date, zone?: string): number {
   );
 }
 
-function zonedYear(date: Date, zone?: string): number {
-  return Number(
+function sameZonedYear(a: Date, b: Date, zone?: string): boolean {
+  const year = (d: Date) =>
     new Intl.DateTimeFormat("en-CA", {
       timeZone: zone,
       year: "numeric",
-    }).format(date),
-  );
+    }).format(d);
+  return year(a) === year(b);
 }
 
 function relative(
@@ -126,10 +121,9 @@ function relative(
   );
 }
 
-// A standalone "how long until / ago" phrase in the coarsest fitting unit:
-// "in 38 minutes", "in 3 days", "tomorrow", "2 weeks ago". Zone-independent —
-// it's a pure duration from now.
-function relativeBest(diffMs: number, locale?: string): string {
+// A duration from now in the coarsest fitting unit: "in 38 minutes",
+// "in 3 days", "tomorrow", "2 weeks ago". Zone-independent.
+function relativePhrase(diffMs: number, locale?: string): string {
   const abs = Math.abs(diffMs);
   if (abs < HOUR_MS)
     return relative(Math.round(diffMs / MINUTE_MS) || 1, "minute", locale);
@@ -159,14 +153,29 @@ function connector(locale?: string): string {
   return before?.type === "literal" ? before.value : " ";
 }
 
-// A self-contained, natural time phrase in the reader's (or `locale`'s)
-// language, so the agent drops it in without any connector of its own:
-//   < 1h away  → "in 38 minutes"
-//   today      → "today at 2:00 PM"
-//   ±1 day     → "tomorrow at 2:00 PM" / "yesterday at 2:00 PM"
-//   this week  → "Thursday at 12:30 PM"
-//   otherwise  → "Jul 2 at 2:00 PM" (with year when it differs)
-function autoLabel(
+// "at 1:00 PM" / "a las 13:00" — clock time with the locale's connector, so it
+// drops into a sentence on its own.
+function timePhrase(date: Date, locale?: string, zone?: string): string {
+  return `${connector(locale).trimStart()}${formatIn(date, TIME, locale, zone)}`;
+}
+
+// "Sun, Jul 12" — a date, with the year only when it differs from now.
+function datePhrase(
+  date: Date,
+  now: number,
+  locale?: string,
+  zone?: string,
+): string {
+  const opts = sameZonedYear(date, new Date(now), zone)
+    ? WEEKDAY_DATE
+    : WEEKDAY_DATE_YEAR;
+  return formatIn(date, opts, locale, zone);
+}
+
+// The friendly "when": a relative countdown when it's very soon, otherwise a
+// day word / weekday / date joined to the time — "today at 6:00 PM",
+// "Thursday at 12:30 PM", "Jul 20 at 1:00 PM".
+function datetimePhrase(
   date: Date,
   now: number,
   locale?: string,
@@ -189,8 +198,27 @@ function autoLabel(
   if (dayDiff >= 2 && dayDiff <= 6)
     return `${formatIn(date, WEEKDAY, locale, zone)}${at}${time}`;
 
-  const sameYear = zonedYear(date, zone) === zonedYear(new Date(now), zone);
-  return `${formatIn(date, sameYear ? DATE : DATE_YEAR, locale, zone)}${at}${time}`;
+  const opts = sameZonedYear(date, new Date(now), zone) ? DATE : DATE_YEAR;
+  return `${formatIn(date, opts, locale, zone)}${at}${time}`;
+}
+
+function phraseFor(
+  mode: Mode,
+  date: Date,
+  now: number,
+  locale?: string,
+  zone?: string,
+): string {
+  switch (mode) {
+    case "relative":
+      return relativePhrase(date.getTime() - now, locale);
+    case "time":
+      return timePhrase(date, locale, zone);
+    case "date":
+      return datePhrase(date, now, locale, zone);
+    default:
+      return datetimePhrase(date, now, locale, zone);
+  }
 }
 
 function ZoneRow({
@@ -248,14 +276,17 @@ function ZoneBreakdown({
 }
 
 /**
- * Renders a UTC instant as a concise, locale-aware label. The agent emits
- * `<local-time iso="...Z">fallback</local-time>` with the raw UTC instant it
- * already has, and this component does the conversion and phrasing — so the
- * model never does timezone math or writes a countdown (it got both wrong).
+ * Renders a UTC instant as a localized phrase. The agent emits
+ * `<local-time iso="...Z" mode="..." lang="...">fallback</local-time>` with the
+ * raw UTC instant it already has; this component does the conversion and
+ * phrasing, so the model never does timezone math itself (it got it wrong).
  *
- * Defaults to the reader's language and zone. `tz` overrides the zone (for "what
- * time in Madrid?") and `lang` the language; both validated, falling back to the
- * reader's on junk. A tap reveals the same label plus the full instant per zone.
+ * `mode` selects the phrasing — "datetime" (default, the friendly "when"),
+ * "relative" (a duration like "in 3 days"), "time", or "date". Every mode is a
+ * complete, self-contained phrase, so the agent places the tag as the whole time
+ * expression with no preposition of its own. `tz` and `lang` override the zone
+ * and language (validated, falling back to the reader's). A tap shows the full
+ * instant across zones.
  *
  * Formatting is deferred to a mount effect: the server has no reader time zone,
  * so the UTC fallback renders first (matching SSR, degrading without JS) and the
@@ -263,13 +294,13 @@ function ZoneBreakdown({
  */
 export function LocalTime({
   iso,
-  format,
+  mode,
   tz,
   lang,
   children,
 }: {
   iso?: string;
-  format?: string;
+  mode?: string;
   tz?: string;
   lang?: string;
   children?: ReactNode;
@@ -284,16 +315,9 @@ export function LocalTime({
 
   const [display, setDisplay] = useState<string | null>(null);
   useEffect(() => {
-    if (!date) return;
-    const f = asFormat(format);
-    setDisplay(
-      f === "auto"
-        ? autoLabel(date, Date.now(), locale, zone)
-        : f === "relative"
-          ? relativeBest(date.getTime() - Date.now(), locale)
-          : formatIn(date, FORMATS[f], locale, zone),
-    );
-  }, [date, format, locale, zone]);
+    if (date)
+      setDisplay(phraseFor(asMode(mode), date, Date.now(), locale, zone));
+  }, [date, mode, locale, zone]);
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
