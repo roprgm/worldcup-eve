@@ -4,7 +4,6 @@ import { tournamentDay } from "@/agent/lib/time";
 import { matchSchedule } from "@/lib/tournament";
 
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
-const MINUTE_MS = 60 * 1000;
 
 const matches = matchSchedule
   .map((match) => ({
@@ -13,17 +12,15 @@ const matches = matchSchedule
   }))
   .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime());
 
-function matchLine(match: (typeof matches)[number], now: number): string {
-  const diffMs = match.kickoff.getTime() - now;
-  const minutesUntil = Math.max(1, Math.floor(diffMs / MINUTE_MS));
-  const relativeTime = diffMs > 0 ? `, starts_in_minutes ${minutesUntil}` : "";
-  return `match ${match.number}: ${match.homeId ?? "TBD"} vs ${match.awayId ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}${relativeTime}, ${match.venue}`;
+// No countdown here: the <local-time> component derives "starts in N minutes"
+// from kickoff on the client, so surfacing it would only invite the model to
+// repeat it in prose.
+function matchLine(match: (typeof matches)[number]): string {
+  return `match ${match.number}: ${match.homeId ?? "TBD"} vs ${match.awayId ?? "TBD"}, tournament_day ${tournamentDay(match.kickoff)}, kickoff UTC ${match.kickoff.toISOString()}, ${match.venue}`;
 }
 
-function lines(items: typeof matches, now: number): string {
-  return items.length
-    ? items.map((match) => matchLine(match, now)).join("; ")
-    : "none";
+function lines(items: typeof matches): string {
+  return items.length ? items.map(matchLine).join("; ") : "none";
 }
 
 function sameKickoffAs(
@@ -54,9 +51,9 @@ export default defineDynamic({
       return defineInstructions({
         markdown: [
           "# Match Snapshot",
-          `Last match: ${lines(sameKickoffAs(last), now)}.`,
-          `Current match: ${lines(current, now)}.`,
-          `Next match: ${lines(sameKickoffAs(next), now)}.`,
+          `Last match: ${lines(sameKickoffAs(last))}.`,
+          `Current match: ${lines(current)}.`,
+          `Next match: ${lines(sameKickoffAs(next))}.`,
         ].join("\n"),
       });
     },
