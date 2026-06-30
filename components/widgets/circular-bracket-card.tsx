@@ -466,13 +466,14 @@ function Connectors({ view }: { view?: CircularBracketView }) {
  *  used across the prediction widgets. Rows fade in and their bars sweep out
  *  from the left when the popover opens. */
 function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
-  // The bar reaches max(now, start): a foreground base up to the value both share,
-  // then the move since the day's start — green if the chance rose, red if it fell.
+  // The white bar always spans the initial value. A rise shows as green added
+  // to its right (bar reaches `now`); a fall as red laid over its right edge
+  // (the lost slice between `now` and `start`).
   // With no baseline, start equals now, so there's no move and the bar stays solid.
   const now = c.probability;
   const start = c.baseline ?? now;
-  const base = Math.min(now, start);
   const delta = now - start;
+  const rose = delta > 0;
   const moved = Math.abs(delta) > 0.01; // worth showing (>1pt)
   const pctLabel = moved
     ? `${formatPct(start)} -> ${formatPct(now)}`
@@ -496,24 +497,25 @@ function OddsRow({ c, top }: { c: Candidate; top: boolean }) {
         title={barTitle}
         className="flex h-2 flex-1 overflow-hidden rounded-[1px] bg-muted/50"
       >
-        <span
-          className="animate-bar-grow h-full origin-left bg-foreground"
-          style={{ width: formatPct(base) }}
-        />
-        {moved && (
+        {/* Everything grows together as one stack, so no gap opens mid-animation. */}
+        <span className="animate-bar-grow relative flex h-full w-full origin-left">
           <span
-            className="animate-bar-grow h-full origin-left"
-            style={{ width: formatPct(Math.abs(delta)) }}
-          >
-            {/* Skeleton-style pulse so the live move reads as in-play. */}
+            className="h-full bg-foreground"
+            style={{ width: formatPct(start) }}
+          />
+          {moved && rose && (
+            <span style={{ width: formatPct(delta) }}>
+              {/* Skeleton-style pulse so the live move reads as in-play. */}
+              <span className="block h-full w-full animate-pulse bg-emerald-400" />
+            </span>
+          )}
+          {moved && !rose && (
             <span
-              className={cn(
-                "block h-full w-full animate-pulse",
-                delta > 0 ? "bg-emerald-400" : "bg-red-400",
-              )}
+              className="absolute inset-y-0 animate-pulse bg-red-400"
+              style={{ left: formatPct(now), width: formatPct(-delta) }}
             />
-          </span>
-        )}
+          )}
+        </span>
       </span>
       <span
         className={cn(

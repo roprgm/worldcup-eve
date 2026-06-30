@@ -1,8 +1,10 @@
 // Per-knockout-fixture predictions from Polymarket's per-game markets: the
 // most-likely exact scoreline and the three-way (home/draw/away) regulation
-// odds, plus the two-way advance odds those imply. Unlike the BT model, this is
-// the market's *direct* read of an actual matchup — no inference. Keyed by team
-// pair; the bracket position is resolved by the caller from the live slots.
+// odds. Unlike the BT model, this is the market's *direct* read of an actual
+// matchup — no inference. The two-way "to advance" odds aren't derived here:
+// a knockout can draw in regulation yet still send a team through, so the caller
+// reads those from the reach-the-next-round future instead. Keyed by team pair;
+// the bracket position is resolved by the caller from the live slots.
 
 import { fetchLastTrades, fetchMidpoints } from "./market-api";
 import knockoutCatalogData from "./knockout-markets.json";
@@ -31,9 +33,6 @@ export interface KnockoutMatchMarket {
   /** P(team wins in regulation) per code; with the draw they sum to ~1. */
   win: Record<string, number>;
   draw: number | null;
-  /** P(team advances) = win share renormalised two-way (the draw split in
-   *  proportion to each side's win odds). Sums to 1 across the pair. */
-  advance: Record<string, number>;
   /** Most-likely exact scoreline: goals for teams[0] (`a`) and teams[1] (`b`). */
   score?: { a: number; b: number };
 }
@@ -71,14 +70,6 @@ export async function fetchKnockoutMarkets(): Promise<KnockoutMarketsSnapshot> {
     }
     const draw = m.draw ? (mid.get(m.draw) ?? null) : null;
 
-    const wa = win[a] ?? 0;
-    const wb = win[b] ?? 0;
-    const advance: Record<string, number> = {};
-    if (wa + wb > 0) {
-      advance[a] = wa / (wa + wb);
-      advance[b] = wb / (wa + wb);
-    }
-
     let best: ScoreMarket | null = null;
     let bestPrice = 0;
     for (const s of m.scores) {
@@ -93,7 +84,6 @@ export async function fetchKnockoutMarkets(): Promise<KnockoutMarketsSnapshot> {
       teams: [a, b],
       win,
       draw,
-      advance,
       ...(best ? { score: { a: best.a, b: best.b } } : {}),
     });
   }

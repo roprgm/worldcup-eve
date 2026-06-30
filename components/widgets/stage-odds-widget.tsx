@@ -82,7 +82,12 @@ function stageRows(predictions: Predictions, results: Results): StageOddsRow[] {
       eliminated: facts.eliminated.has(team.code),
     }))
     .filter((row) => row.r32 > 0 || row.r16 > 0 || row.reachedIdx >= 0)
-    .sort((a, b) => b.champion - a.champion || b.final - a.final);
+    .sort(
+      (a, b) =>
+        Number(a.eliminated) - Number(b.eliminated) ||
+        b.champion - a.champion ||
+        b.final - a.final,
+    );
 }
 
 interface StageOddsWidgetProps {

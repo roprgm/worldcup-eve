@@ -15,6 +15,7 @@ import {
 } from "../tournament";
 import type { GroupLetter, KnockoutMatch, SlotRef } from "../tournament";
 import {
+  advanceOdds,
   buildR32Slots,
   groupPlace,
   marketProb,
@@ -93,9 +94,10 @@ export interface BracketOutputs {
   /** Most-likely exact scoreline per decided knockout match with a per-game
    *  market, by FIFA match number (oriented to the bracket's home/away). */
   knockoutScores: Record<number, Scoreline>;
-  /** Direct per-game market read for each decided knockout match: the
-   *  regulation three-way (home/draw/away) and the two-way advance odds it
-   *  implies. The market's own answer — no BT inference. */
+  /** Direct market read for each decided knockout match: the per-game regulation
+   *  three-way (home/draw/away) and the two-way "to advance" odds from each
+   *  side's reach-the-next-round future. The market's own answer — no BT
+   *  inference. */
   knockoutOdds: KnockoutOdds[];
   /** BT win distribution per knockout match (73–104, excl. the third-place
    *  play-off): the teams that could win it, sorted high→low. For a decided
@@ -161,6 +163,7 @@ function decidedTeam(dist?: Dist): string | null {
 function knockoutMarketOverride(
   r32Slots: Map<string, Dist>,
   markets: Awaited<ReturnType<typeof fetchKnockoutMarkets>>,
+  prices: Map<string, number>,
 ): {
   override: WinnerOverride;
   scores: Record<number, Scoreline>;
@@ -175,19 +178,24 @@ function knockoutMarketOverride(
     const home = decidedTeam(r32Slots.get(`${m.number}:home`));
     const away = decidedTeam(r32Slots.get(`${m.number}:away`));
     if (!home || !away) continue;
-    const market = markets.byPair.get(pairKey(home, away));
-    if (!market) continue;
 
-    const homeAdv = market.advance[home];
-    const awayAdv = market.advance[away];
-    if (homeAdv != null && awayAdv != null)
+    // "Team to Advance", not the regulation money line: a knockout match can end
+    // level after 90' (a draw) yet still send one side through, so we read each
+    // side's reach-the-next-round future (R32 → reach R16) instead. This pins the
+    // simulation and must not depend on the per-game market below — that's only
+    // needed for the scoreline/3-way display, and may be absent from the catalog.
+    const advance = advanceOdds(prices, "reach_r16", home, away);
+    if (advance)
       override.set(
         m.number,
         new Map([
-          [home, homeAdv],
-          [away, awayAdv],
+          [home, advance.home],
+          [away, advance.away],
         ]),
       );
+
+    const market = markets.byPair.get(pairKey(home, away));
+    if (!market) continue;
 
     if (market.score) {
       // The catalog stores goals as (teams[0]=`a`, teams[1]=`b`); orient to ours.
@@ -205,8 +213,8 @@ function knockoutMarketOverride(
       homeWin: round4(market.win[home] ?? 0),
       draw: market.draw == null ? null : round4(market.draw),
       awayWin: round4(market.win[away] ?? 0),
-      homeAdvance: round4(homeAdv ?? 0),
-      awayAdvance: round4(awayAdv ?? 0),
+      homeAdvance: round4(advance?.home ?? 0),
+      awayAdvance: round4(advance?.away ?? 0),
     });
   }
   return { override, scores, odds };
@@ -233,7 +241,7 @@ function simulateBracket(
     override: r32Override,
     scores: knockoutScores,
     odds: knockoutOdds,
-  } = knockoutMarketOverride(r32Slots, knockoutMarkets);
+  } = knockoutMarketOverride(r32Slots, knockoutMarkets, prices);
 
   // Warm-start from the epoch; fall back to the cached anchor when there's none.
   if (!base) cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
