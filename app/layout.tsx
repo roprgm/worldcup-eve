@@ -20,16 +20,16 @@ export const metadata: Metadata = {
     url: "https://wc26.chat",
     siteName: "WC26.chat",
     type: "website",
-    // og:image comes from the app/opengraph-image.png file convention, which
-    // emits a content-hashed URL. A manual unversioned URL here would shadow it
+    // og:image comes from app/opengraph-image.tsx, which renders per-day and
+    // emits a date-versioned URL. A manual unversioned URL here would shadow it
     // and keep social crawlers stuck on a stale cached image.
   },
   twitter: {
     card: "summary_large_image",
     title: "WC26.chat",
     description: "Ask an AI agent anything about the World Cup.",
-    // twitter:image comes from the app/twitter-image.png file convention so it
-    // is content-hashed too; X caches images by URL, so the hash busts the cache.
+    // twitter:image comes from app/twitter-image.tsx with a per-day URL; X
+    // caches images by URL, so the daily URL busts the cache on each new scrape.
   },
   appleWebApp: {
     capable: true,
