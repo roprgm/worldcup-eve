@@ -3,10 +3,7 @@
 import type { EveMessage, EveMessagePart } from "eve/react";
 import type { ReactNode } from "react";
 
-import {
-  ChatMatches,
-  type MatchesScope,
-} from "@/components/chat/chat-matches-widget";
+import { ChatMatches } from "@/components/chat/chat-matches-widget";
 import { CircularBracketWidget } from "@/components/widgets/circular-bracket-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
@@ -44,34 +41,62 @@ function groupSpec(letter: GroupLetter): WidgetSpec {
   };
 }
 
-// One tool call → at most one widget, decided from the call's input alone (the
-// widgets self-fetch their data, so they only need an identifier). Every entry
-// is a `show_*` tool — the model's deliberate "draw this widget" calls.
-function specForTool(toolName: string, input: unknown): WidgetSpec | null {
+// `match` can resolve to either a real fixture (card) or a still-undecided
+// knockout slot (candidates) depending on where the bracket stands — the
+// call's input alone can't say (e.g. a team-only query might land on
+// either). The tool result already classifies each entry by `state`, so read
+// that purely to pick which component to mount; the mounted component still
+// re-fetches its own live data, same as every other widget here.
+function matchSpec(output: unknown): WidgetSpec | null {
+  const matches =
+    (asRecord(output).matches as Array<Record<string, unknown>> | undefined) ??
+    [];
+  if (matches.length === 0) return null;
+
+  if (matches.length === 1 && matches[0].state === "undecided") {
+    const id = matches[0].number;
+    const match = typeof id === "number" ? matchByNumber[id] : undefined;
+    return match
+      ? {
+          key: `knockout:${id}`,
+          render: () => <PredictionMatchWidget match={match} />,
+        }
+      : null;
+  }
+
+  const numbers = matches
+    .filter((m) => m.state !== "undecided" && m.state !== "hypothetical")
+    .map((m) => m.number)
+    .filter((n): n is number => typeof n === "number");
+  return numbers.length > 0
+    ? { key: "matches", render: () => <ChatMatches numbers={numbers} /> }
+    : null;
+}
+
+// One tool call → at most one widget. Every entry here is one of the seven
+// World Cup tools — each always shows its widget when the call resolves to
+// something real, so this switch stays exhaustive by construction.
+function specForTool(
+  toolName: string,
+  input: unknown,
+  output: unknown,
+): WidgetSpec | null {
   const args = asRecord(input);
   switch (toolName) {
-    case "show_knockout_match": {
-      const id = args.id;
-      const match = typeof id === "number" ? matchByNumber[id] : undefined;
-      return match
-        ? {
-            key: `knockout:${id}`,
-            render: () => <PredictionMatchWidget match={match} />,
-          }
-        : null;
-    }
-    case "show_group_standings":
+    case "match":
+      return matchSpec(output);
+    case "group":
       return isGroupLetter(args.group) ? groupSpec(args.group) : null;
-    case "show_team_path": {
+    case "team": {
       const code =
         typeof args.team === "string" ? codeFor(args.team) : undefined;
       return code
         ? { key: `path:${code}`, render: () => <TeamPathWidget code={code} /> }
         : null;
     }
-    case "show_thirds_ranking":
+    case "thirds":
       return { key: "thirds", render: () => <ThirdsRankingWidget /> };
-    case "show_stage_odds": {
+    case "contenders": {
       const teams = Array.isArray(args.teams)
         ? args.teams
             .map((t) => (typeof t === "string" ? codeFor(t) : undefined))
@@ -82,28 +107,12 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
         return null;
       const top = typeof args.top === "number" ? args.top : undefined;
       return {
-        key: "stage-odds",
+        key: "contenders",
         render: () => <StageOddsWidget teams={teams} top={top} />,
       };
     }
-    case "show_bracket":
+    case "bracket":
       return { key: "bracket", render: () => <CircularBracketWidget /> };
-    case "show_matches": {
-      const numbers = Array.isArray(args.matches)
-        ? args.matches.filter((n): n is number => typeof n === "number")
-        : [];
-      if (numbers.length >= 1)
-        return {
-          key: "matches",
-          render: () => <ChatMatches numbers={numbers} />,
-        };
-      return args.scope === "today" || args.scope === "live"
-        ? {
-            key: "matches",
-            render: () => <ChatMatches scope={args.scope as MatchesScope} />,
-          }
-        : null;
-    }
     default:
       return null;
   }
@@ -111,7 +120,10 @@ function specForTool(toolName: string, input: unknown): WidgetSpec | null {
 
 function isFinishedTool(
   part: EveMessagePart,
-): part is Extract<EveMessagePart, { type: "dynamic-tool" }> {
+): part is Extract<
+  EveMessagePart,
+  { type: "dynamic-tool"; state: "output-available" }
+> {
   return part.type === "dynamic-tool" && part.state === "output-available";
 }
 
@@ -121,7 +133,7 @@ export function messageWidgets(message: EveMessage): WidgetSpec[] {
   const byKey = new Map<string, WidgetSpec>();
   for (const part of message.parts) {
     if (!isFinishedTool(part)) continue;
-    const spec = specForTool(part.toolName, part.input);
+    const spec = specForTool(part.toolName, part.input, part.output);
     if (!spec) continue;
     byKey.delete(spec.key); // re-add so the latest call keeps the newest slot
     byKey.set(spec.key, spec);

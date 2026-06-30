@@ -5,13 +5,16 @@ import { LocalTime } from "@/components/ui/local-time";
 
 type StreamdownProps = ComponentProps<typeof Streamdown>;
 
-// The agent wraps a date/time in `<local-time iso>`; allowedTags lets it past
-// sanitization and literalTagContent keeps its text out of markdown parsing.
+// The agent wraps a kickoff instant in `<local-time iso tz?/>`; allowedTags
+// lets it past sanitization. The tag is self-computing (see LocalTime) and
+// takes no children, but literalTagContent stays as defense-in-depth in case
+// the model writes some anyway — they're kept out of markdown parsing and
+// simply ignored by the component.
 const COMPONENTS = {
   "local-time": LocalTime,
 } as unknown as StreamdownProps["components"];
 const ALLOWED_TAGS: NonNullable<StreamdownProps["allowedTags"]> = {
-  "local-time": ["iso"],
+  "local-time": ["iso", "tz"],
 };
 const LITERAL_TAG_CONTENT = ["local-time"];
 

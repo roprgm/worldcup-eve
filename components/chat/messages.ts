@@ -45,20 +45,13 @@ export function activeQuestion(
 }
 
 const toolActivityLabels: Record<string, string> = {
-  get_match_detail: "Looking up the match...",
-  get_match_prediction: "Checking the predictions",
-  get_match_results: "Checking the results...",
-  get_group_standings: "Checking the standings...",
-  get_match_forecast: "Checking the predictions...",
-  get_match_schedule: "Checking the schedule...",
-  get_match_venues: "Checking the venues...",
-  get_best_thirds: "Checking the third-place race...",
-  show_thirds_ranking: "Pulling up the third-place table...",
-  show_bracket: "Pulling up the prediction bracket...",
-  show_knockout_match: "Pulling up the match prediction...",
-  show_team_path: "Tracing the road to the final...",
-  show_group_standings: "Pulling up the group table...",
-  show_matches: "Pulling up the matches...",
+  match: "Checking the match...",
+  match_detail: "Looking up the match...",
+  team: "Tracing the road to the final...",
+  group: "Pulling up the group table...",
+  contenders: "Checking the predictions...",
+  bracket: "Pulling up the prediction bracket...",
+  thirds: "Checking the third-place race...",
 };
 
 function getToolActivityLabel(toolName: string): string | undefined {

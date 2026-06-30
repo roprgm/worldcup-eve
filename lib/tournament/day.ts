@@ -1,4 +1,9 @@
-// Tournament days roll over at 07:00 UTC so late Americas kickoffs stay on the intended day.
+// Tournament days roll over at 07:00 UTC (roughly midnight Pacific, the latest
+// mainland host time zone) so a late West Coast night kickoff stays grouped
+// with the evening it was actually played, not the next UTC calendar date.
+// This is the single "what day is it" rule for the whole app — the agent's
+// tools and the chat widgets both read it from here, so a kickoff can never be
+// "today" in one and "yesterday" in the other.
 const DAY_ROLLOVER_UTC_HOUR = 7;
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -36,4 +41,9 @@ export function tournamentTime(date: Date): string {
 
 export function tournamentDateTime(date: Date): string {
   return `${tournamentDay(date)}T${tournamentTime(date)}`;
+}
+
+/** Whether two instants fall on the same tournament day. */
+export function isSameTournamentDay(a: Date, b: Date): boolean {
+  return tournamentDay(a) === tournamentDay(b);
 }
