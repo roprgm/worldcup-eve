@@ -6,15 +6,12 @@ import { Popover } from "@/components/ui/popover";
 
 // What kind of phrase to render. The agent picks the one that matches the
 // user's question; every mode produces a complete, self-contained phrase in the
-// reader's language, so the agent never adds a connector of its own.
-type Mode = "datetime" | "relative" | "time" | "date";
+// reader's language, so the agent never adds a connector of its own. Durations
+// ("how long until") aren't here — they need no timezone conversion, so the
+// agent just says them in prose.
+type Mode = "datetime" | "time" | "date";
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
-const WEEK_MS = 7 * DAY_MS;
-const MONTH_MS = 30 * DAY_MS;
-const YEAR_MS = 365 * DAY_MS;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "long" };
@@ -40,9 +37,7 @@ const DETAIL_FORMAT: Intl.DateTimeFormatOptions = {
 const CONNECTOR_SAMPLE = new Date("2026-01-01T15:00:00Z");
 
 function asMode(value: unknown): Mode {
-  return value === "relative" || value === "time" || value === "date"
-    ? value
-    : "datetime";
+  return value === "time" || value === "date" ? value : "datetime";
 }
 
 // The agent can pass a junk locale/zone; validate so a bad value silently falls
@@ -110,34 +105,6 @@ function sameZonedYear(a: Date, b: Date, zone?: string): boolean {
   return year(a) === year(b);
 }
 
-function relative(
-  value: number,
-  unit: Intl.RelativeTimeFormatUnit,
-  locale?: string,
-): string {
-  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
-    value,
-    unit,
-  );
-}
-
-// A duration from now in the coarsest fitting unit: "in 38 minutes",
-// "in 3 days", "tomorrow", "2 weeks ago". Zone-independent.
-function relativePhrase(diffMs: number, locale?: string): string {
-  const abs = Math.abs(diffMs);
-  if (abs < HOUR_MS)
-    return relative(Math.round(diffMs / MINUTE_MS) || 1, "minute", locale);
-  if (abs < DAY_MS)
-    return relative(Math.round(diffMs / HOUR_MS), "hour", locale);
-  if (abs < WEEK_MS)
-    return relative(Math.round(diffMs / DAY_MS), "day", locale);
-  if (abs < MONTH_MS)
-    return relative(Math.round(diffMs / WEEK_MS), "week", locale);
-  if (abs < YEAR_MS)
-    return relative(Math.round(diffMs / MONTH_MS), "month", locale);
-  return relative(Math.round(diffMs / YEAR_MS), "year", locale);
-}
-
 // The locale's word joining a date to a time (e.g. " at " in English), pulled
 // from a long/short pattern. Falls back to a plain space when the locale joins
 // them without a word.
@@ -202,8 +169,6 @@ function phraseFor(
   zone?: string,
 ): string {
   switch (mode) {
-    case "relative":
-      return relativePhrase(date.getTime() - now, locale);
     case "time":
       return timePhrase(date, locale, zone);
     case "date":
@@ -273,12 +238,13 @@ function ZoneBreakdown({
  * raw UTC instant it already has; this component does the conversion and
  * phrasing, so the model never does timezone math itself (it got it wrong).
  *
- * `mode` selects the phrasing — "datetime" (default, the friendly "when"),
- * "relative" (a duration like "in 3 days"), "time", or "date". Every mode is a
- * complete, self-contained phrase, so the agent places the tag as the whole time
- * expression with no preposition of its own. `tz` and `lang` override the zone
- * and language (validated, falling back to the reader's). A tap shows the full
- * instant across zones.
+ * `mode` selects the phrasing — "datetime" (default, an absolute day + time),
+ * "time", or "date". Every mode is a complete, self-contained phrase, so the
+ * agent places the tag as the whole time expression with no preposition of its
+ * own. `tz` and `lang` override the zone and language (validated, falling back
+ * to the reader's). A tap shows the full instant across zones. (Durations like
+ * "in 3 days" aren't a mode — they need no conversion, so the agent says them in
+ * prose.)
  *
  * Formatting is deferred to a mount effect: the server has no reader time zone,
  * so the UTC fallback renders first (matching SSR, degrading without JS) and the
