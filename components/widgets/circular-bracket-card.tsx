@@ -656,7 +656,8 @@ function UnsettledNode({
           fontSize: `calc(${size} * 0.42)`,
         }}
       >
-        ?
+        {/* Hidden under a live leader's flag so the "?" doesn't show through. */}
+        {live && showFlag ? "" : "?"}
       </span>
       {/* Predicted-flag layer — fades in over the solid base, which keeps the
           connector lines covered and hides the "?" beneath. */}
@@ -665,7 +666,7 @@ function UnsettledNode({
           aria-hidden
           className={cn(
             "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out",
-            showFlag ? (live ? "opacity-50" : "opacity-100") : "opacity-0",
+            showFlag ? (live ? "opacity-30" : "opacity-100") : "opacity-0",
           )}
         >
           <RoundFlag
