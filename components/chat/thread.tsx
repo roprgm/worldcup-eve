@@ -3,7 +3,7 @@
 import { cn } from "cnfast";
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
 import { useState } from "react";
-import { useChat } from "@/components/chat/chat-context";
+import { useChatAgent } from "@/components/chat/chat-context";
 import {
   MessageWidgets,
   messageWidgets,
@@ -21,7 +21,7 @@ import { Bubble, Message, MessageAvatar } from "@/components/ui/message";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
 export function Thread() {
-  const { agent } = useChat();
+  const { agent } = useChatAgent();
   const messages = agent.data.messages;
   const isBusy = agent.status === "submitted" || agent.status === "streaming";
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
@@ -134,7 +134,7 @@ function Activity({ label }: { label: string }) {
 }
 
 function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
-  const { agent } = useChat();
+  const { agent } = useChatAgent();
   const request = part.toolMetadata?.eve?.inputRequest;
   if (!request) return null;
   const response = part.toolMetadata?.eve?.inputResponse;

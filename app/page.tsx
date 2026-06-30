@@ -1,10 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
-import { useChat } from "@/components/chat/chat-context";
-import { ChatView } from "@/components/chat/chat-view";
+import { useChatNav } from "@/components/chat/chat-context";
 import { Composer } from "@/components/composer";
 import { EveAttribution } from "@/components/eve";
 import { HomeBracket } from "@/components/widgets/circular-bracket-widget";
@@ -18,7 +16,7 @@ const SUGGESTIONS = [
 ];
 
 function EmptyState() {
-  const { start } = useChat();
+  const { start } = useChatNav();
   const handleSuggestion = useCallback(
     (suggestion: string) => {
       start(suggestion);
@@ -69,18 +67,13 @@ function EmptyState() {
 }
 
 export default function Page() {
-  const { start } = useChat();
-  const pathname = usePathname();
+  const { start } = useChatNav();
   const [input, setInput] = useState("");
 
   const handleSubmit = useCallback(() => {
     start(input);
     setInput("");
   }, [start, input]);
-
-  // `start()` swaps in a `/chat/<id>` URL with history.pushState (no route
-  // change), so the chat shows here instantly; render it off that URL.
-  if (pathname.startsWith("/chat/")) return <ChatView />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
