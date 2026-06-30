@@ -88,8 +88,8 @@ function sameZonedYear(a: Date, b: Date, zone?: string): boolean {
   return year(a) === year(b);
 }
 
-// The locale's word joining a date to a time (" at " in English, " a las " in
-// Spanish), from a long/short pattern. Falls back to a space.
+// The locale's word joining a date to a time (e.g. " at " in English), from a
+// long/short pattern. Falls back to a space.
 function connector(locale?: string): string {
   const parts = new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
@@ -104,8 +104,9 @@ function connector(locale?: string): string {
 
 // A complete, natural phrase in the reader's zone and language, so the agent
 // drops the tag in and adds nothing: the day word for today/tomorrow/yesterday
-// ("hoy a las 18:00"), a weekday within the week ("martes a las 18:00"), else a
-// date ("5 jul a las 18:00", with year when it differs).
+// ("today at 6:00 PM"), a weekday within the week ("Tuesday at 6:00 PM"), else a
+// date ("Jul 5 at 6:00 PM", with year when it differs). The locale supplies the
+// connectors, so the agent never writes one.
 function phrase(
   date: Date,
   now: number,
@@ -185,9 +186,10 @@ function ZoneBreakdown({
 
 /**
  * Renders a UTC instant as a complete, natural date/time phrase in the reader's
- * own zone and language — "hoy a las 18:00", "martes a las 18:00", "5 jul a las
- * 18:00". The agent emits `<local-time iso="...Z" lang="...">fallback</...>` and
- * drops it in as the whole date/time, adding no day word or connector of its own;
+ * own zone and language — "today at 6:00 PM", "Tuesday at 6:00 PM", "Jul 5 at
+ * 6:00 PM". The agent emits `<local-time iso="...Z" lang="...">fallback</...>`
+ * and drops it in as the whole date/time, adding no day word or connector of its
+ * own;
  * the component does the conversion and phrasing, so the model never does
  * timezone math (it got it wrong). `tz` overrides the zone (venue / a named
  * place) and `lang` the language; both validated, falling back to the reader's.
