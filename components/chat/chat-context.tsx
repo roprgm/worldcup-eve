@@ -46,14 +46,13 @@ function clearChat() {
 // so moving between pages keeps an in-flight conversation alive.
 
 type ChatNavValue = {
-  // Whether a chat exists to show. Drives the nav link and guards `/chat` from
-  // rendering a blank conversation.
+  // Whether a chat exists to return to. Drives the nav link and guards `/chat`
+  // from rendering a blank conversation. Once true it stays true: going home
+  // keeps the chat; only starting another one replaces it.
   active: boolean;
-  // Begin a chat from the home screen: discard any previous one and open the
+  // Begin a chat from the home screen: replace any previous one and open the
   // chat route with the first message queued.
   start: (message: string) => void;
-  // Discard the active chat (new-chat / home button).
-  clear: () => void;
 };
 
 const ChatNavContext = createContext<ChatNavValue | null>(null);
@@ -78,13 +77,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [router],
   );
 
-  const clear = useCallback(() => {
-    clearChat();
-    pending.current = null;
-    setActive(false);
-    setEpoch((e) => e + 1);
-  }, []);
-
   const takePending = useCallback(() => {
     const message = pending.current;
     pending.current = null;
@@ -92,7 +84,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ChatNavContext.Provider value={{ active, start, clear }}>
+    <ChatNavContext.Provider value={{ active, start }}>
       <ChatSession key={epoch} takePending={takePending}>
         {children}
       </ChatSession>
