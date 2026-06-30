@@ -32,7 +32,8 @@ export default defineTool({
       .describe("Only matches at this stadium or city (substring match)."),
   }),
   execute({ team, matches, venue }) {
-    const wanted = matches && new Set(matches);
+    const valid = matches?.filter((n) => n >= 1 && n <= 104);
+    const wanted = valid?.length ? new Set(valid) : undefined;
     const venueQuery = venue && norm(venue);
     const selected = matchSchedule
       .filter(
