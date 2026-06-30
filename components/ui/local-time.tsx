@@ -120,9 +120,9 @@ function relative(
   );
 }
 
-// The locale's word joining a date to a time — " at " (en), " a las " (es),
-// " às " (pt), " à " (fr) — pulled from a long/short pattern. Falls back to a
-// plain space when the locale joins them without a word.
+// The locale's word joining a date to a time (e.g. " at " in English), pulled
+// from a long/short pattern. Falls back to a plain space when the locale joins
+// them without a word.
 function connector(locale?: string): string {
   const parts = new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
