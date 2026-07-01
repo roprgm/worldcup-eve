@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 import { useChatNav } from "@/components/chat/chat-context";
 import { Composer } from "@/components/composer";
@@ -12,7 +13,7 @@ const SUGGESTIONS = [
   "Who is most likely to play in match 100?",
   "How far can Brazil go this World Cup?",
   "What's Argentina's road to the final?",
-  "What's the market's predicted bracket?",
+  "Show me the market's predicted bracket",
 ];
 
 function EmptyState() {
@@ -68,7 +69,16 @@ function EmptyState() {
 
 export default function Page() {
   const { start } = useChatNav();
+  const router = useRouter();
   const [input, setInput] = useState("");
+
+  // Warm the /chat route so the first suggestion tap navigates instantly.
+  // Otherwise the first (cold) navigation is slow enough that the new-chat
+  // epoch bump — which remounts the shared ChatSession subtree — briefly
+  // re-runs this empty state's entrance animations before /chat takes over.
+  useEffect(() => {
+    router.prefetch("/chat");
+  }, [router]);
 
   const handleSubmit = useCallback(() => {
     start(input);
