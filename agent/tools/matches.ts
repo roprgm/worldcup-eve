@@ -117,7 +117,7 @@ export default defineTool({
     if (selected.length === 0) {
       const note =
         team && when === "upcoming"
-          ? `${team} has no scheduled fixture left — its next game is an undecided knockout slot. Show <path team="${team}"> for where it goes next.`
+          ? `${team} has no scheduled fixture left — its next game is an undecided knockout slot. Show <path team="${team}" /> for where it goes next.`
           : "No matching matches.";
       return { matches: [], note };
     }

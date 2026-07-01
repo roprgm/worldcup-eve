@@ -4,11 +4,7 @@ import { cn } from "cnfast";
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
 import { useState } from "react";
 import { useChatAgent } from "@/components/chat/chat-context";
-import {
-  MessageWidgets,
-  messageWidgets,
-  stripWidgetTags,
-} from "@/components/chat/message-widgets";
+import { ChatMarkdown } from "@/components/chat/rich-markdown";
 import {
   assistantActivityLabel,
   isRenderableMessage,
@@ -38,10 +34,7 @@ export function Thread() {
       : null;
 
   const rows = messages.filter(
-    (m) =>
-      isRenderableMessage(m) ||
-      messageWidgets(m).length > 0 ||
-      (isBusy && m === lastAssistant),
+    (m) => isRenderableMessage(m) || (isBusy && m === lastAssistant),
   );
 
   return (
@@ -87,10 +80,7 @@ function AssistantRow({
   activity: string | null;
 }) {
   const question = message ? questionPart(message) : undefined;
-  const widgets = message ? messageWidgets(message) : [];
-  const text = message
-    ? visibleText(messageText(message), widgets.length > 0)
-    : "";
+  const text = message ? messageText(message) : "";
 
   // Decide the entrance animation once, at mount. A row that first appears
   // mid-flight (activity loader or streaming text) settles in place — the avatar
@@ -111,11 +101,8 @@ function AssistantRow({
       <Bubble variant="ghost">
         <div className="flex flex-col gap-3">
           {question && <QuestionPrompt part={question} />}
-          {text && <Markdown>{text}</Markdown>}
+          {text && <ChatMarkdown>{text}</ChatMarkdown>}
           {!text && !question && activity && <Activity label={activity} />}
-          {/* Hold widgets until the reply finishes: while text streams in above
-              them, an already-drawn widget would otherwise get pushed down. */}
-          {!streaming && <MessageWidgets specs={widgets} />}
         </div>
       </Bubble>
     </Message>
@@ -175,16 +162,4 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
       ) : null}
     </div>
   );
-}
-
-// Strip the widget tags the model wrote (they render as cards, not text), then
-// drop a trailing list/table a widget already renders so it isn't shown twice.
-// Keeps the lead-in prose.
-function visibleText(text: string, hasWidgets: boolean): string {
-  const stripped = stripWidgetTags(text).trim();
-  if (!hasWidgets || stripped.length === 0) return stripped;
-  return stripped
-    .split(/\n\s*(?:[-*•]|\d+[.)])\s+/u, 1)[0]
-    .split(/\n\s*\|/u, 1)[0]
-    .trim();
 }
