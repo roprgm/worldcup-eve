@@ -95,7 +95,7 @@ function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
 
 export default defineTool({
   description:
-    "Win odds and a predicted score for ONE matchup. Give two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns a number, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
+    "Win odds and a predicted score for ONE matchup, reported in prose (no widget). Give two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns a number, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
   inputSchema: z.object({
     match: z
       .number()
