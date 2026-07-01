@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { CustomRenderer, CustomRendererProps } from "streamdown";
 
 import {
   ChatMatches,
@@ -20,116 +20,99 @@ import {
   matchByNumber,
 } from "@/lib/tournament";
 
-// The agent shows widgets by writing self-closing tags inline in its reply
-// (e.g. `<match n="50" />`). Streamdown renders each registered tag as the
-// component below; the widgets self-fetch, so a tag only carries an identifier.
+// The agent shows a widget by writing a fenced code block whose LANGUAGE is the
+// widget name and whose body carries its parameter, e.g.
+//   ```chances
+//   Argentina, Colombia
+//   ```
+// Streamdown routes each fence to the renderer below (plugins.renderers) and
+// flags it `isIncomplete` while streaming, so partial blocks never flash. The
+// widgets self-fetch, so a block only needs an identifier — parsed leniently
+// so a stray label ("teams: …"), spacing, or casing still works.
 
-type TagProps = Record<string, unknown>;
-const str = (value: unknown): string | undefined =>
-  typeof value === "string" ? value : undefined;
+const WIDGET_LANGUAGES = [
+  "match",
+  "group",
+  "thirds",
+  "path",
+  "slot",
+  "chances",
+  "bracket",
+];
 
-function numbers(value: unknown): number[] {
-  return (str(value) ?? "")
-    .split(",")
-    .map((n) => Number.parseInt(n.trim(), 10))
-    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 104);
+// Drop a leading "key:"/"key=" label so `team: Argentina` reads as `Argentina`.
+const stripLabel = (s: string) =>
+  s.replace(/^\s*[a-zA-Z]+\s*[:=]\s*/, "").trim();
+
+function numbersIn(body: string): number[] {
+  return (body.match(/\d{1,3}/g) ?? [])
+    .map(Number)
+    .filter((n) => n >= 1 && n <= 104);
 }
 
-function teamCodes(value: unknown): string[] {
-  return (str(value) ?? "")
-    .split(",")
+function teamCodesIn(body: string): string[] {
+  return stripLabel(body)
+    .split(/[,\n]/)
     .map((t) => codeFor(t.trim()))
     .filter((c): c is string => Boolean(c));
 }
 
-function matchScope(props: TagProps): MatchesScope | undefined {
-  const day = str(props.day);
-  const scope = str(props.scope);
-  if (day === "today" || scope === "today") return "today";
-  if (props.live !== undefined || scope === "live") return "live";
+function matchScopeIn(body: string): MatchesScope | undefined {
+  if (/\btoday\b/i.test(body)) return "today";
+  if (/\blive\b/i.test(body)) return "live";
   return undefined;
 }
 
-function MatchTag(props: TagProps) {
-  const nums = numbers(props.n);
-  if (nums.length) return <ChatMatches numbers={nums} />;
-  const scope = matchScope(props);
-  return scope ? <ChatMatches scope={scope} /> : null;
+function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
+  // Hide the block until it's fully streamed, so no partial content flashes.
+  if (isIncomplete) return null;
+  const body = code.trim();
+  switch (language) {
+    case "match": {
+      const scope = matchScopeIn(body);
+      if (scope) return <ChatMatches scope={scope} />;
+      const nums = numbersIn(body);
+      return nums.length ? <ChatMatches numbers={nums} /> : null;
+    }
+    case "group": {
+      const letter = (
+        stripLabel(body).match(/\b([A-La-l])\b/)?.[1] ?? ""
+      ).toUpperCase();
+      return groupLetters.includes(letter as GroupLetter) ? (
+        <PredictionGroupWidget letter={letter as GroupLetter} />
+      ) : null;
+    }
+    case "thirds":
+      return <ThirdsRankingWidget />;
+    case "path": {
+      const code2 = codeFor(stripLabel(body));
+      return code2 ? <TeamPathWidget code={code2} /> : null;
+    }
+    case "slot": {
+      const id = numbersIn(body)[0];
+      const match = id ? matchByNumber[id] : undefined;
+      return match ? <PredictionMatchWidget match={match} /> : null;
+    }
+    case "chances": {
+      const teams = teamCodesIn(body);
+      if (teams.length) return <StageOddsWidget teams={teams} />;
+      const top = numbersIn(body)[0];
+      return <StageOddsWidget top={top && top > 0 ? top : undefined} />;
+    }
+    case "bracket":
+      return <CircularBracketWidget />;
+    default:
+      return null;
+  }
 }
 
-function GroupTag(props: TagProps) {
-  const letter = (str(props.g) ?? "").toUpperCase();
-  return groupLetters.includes(letter as GroupLetter) ? (
-    <PredictionGroupWidget letter={letter as GroupLetter} />
-  ) : null;
-}
+const WIDGET_RENDERERS: CustomRenderer[] = [
+  { language: WIDGET_LANGUAGES, component: WidgetBlock },
+];
 
-function PathTag(props: TagProps) {
-  const code = codeFor(str(props.team));
-  return code ? <TeamPathWidget code={code} /> : null;
-}
-
-function SlotTag(props: TagProps) {
-  const id = numbers(props.n)[0];
-  const match = id ? matchByNumber[id] : undefined;
-  return match ? <PredictionMatchWidget match={match} /> : null;
-}
-
-function ChancesTag(props: TagProps) {
-  const list = "teams" in props ? teamCodes(props.teams) : undefined;
-  // A team list that resolves to nothing: skip rather than show all teams.
-  if (props.teams && !list?.length) return null;
-  const top = Number.parseInt(str(props.top) ?? "", 10);
-  return (
-    <StageOddsWidget
-      teams={list?.length ? list : undefined}
-      top={Number.isInteger(top) ? top : undefined}
-    />
-  );
-}
-
-const ThirdsTag = () => <ThirdsRankingWidget />;
-const BracketTag = () => <CircularBracketWidget />;
-
-const WIDGET_COMPONENTS = {
-  match: MatchTag,
-  group: GroupTag,
-  thirds: ThirdsTag,
-  path: PathTag,
-  slot: SlotTag,
-  chances: ChancesTag,
-  bracket: BracketTag,
-} as unknown as ComponentProps<typeof Markdown>["components"];
-
-// Attributes each tag may carry (Streamdown strips the rest during sanitization).
-const WIDGET_ALLOWED_TAGS = {
-  match: ["n", "day", "live", "scope"],
-  group: ["g"],
-  thirds: [],
-  path: ["team"],
-  slot: ["n"],
-  chances: ["top", "teams"],
-  bracket: [],
-};
-
-// Streamdown renders a self-closing custom tag on its own line as a clean block
-// sibling. Any other form breaks: an open tag `<match ...>` swallows the text
-// after it, and an inline tag lands inside a <p> (invalid around our block
-// cards). So normalize every widget tag — whatever form (`<match ...>`,
-// `<match ...></match>`, `<match .../>`, even a stray `< match ...>`) or place
-// the model wrote it — to a self-closing tag on its own line.
-const WIDGET_TAG_RE =
-  /<\s*(match|group|thirds|path|slot|chances|bracket)((?:\s+[a-zA-Z_][\w-]*(?:="[^"]*")?)*)\s*\/?>(?:\s*<\/\s*\1\s*>)?/g;
-
-function normalizeWidgetTags(text: string): string {
-  return text.replace(WIDGET_TAG_RE, "\n\n<$1$2 />\n\n");
-}
-
-/** Assistant markdown with the agent's widget tags rendered inline as cards. */
+/** Assistant markdown with the agent's widget code-blocks rendered as cards. */
 export function ChatMarkdown({ children }: { children: string }) {
   return (
-    <Markdown components={WIDGET_COMPONENTS} allowedTags={WIDGET_ALLOWED_TAGS}>
-      {normalizeWidgetTags(children)}
-    </Markdown>
+    <Markdown plugins={{ renderers: WIDGET_RENDERERS }}>{children}</Markdown>
   );
 }

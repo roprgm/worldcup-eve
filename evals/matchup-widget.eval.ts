@@ -7,7 +7,7 @@ export default defineEval({
     await t.send("When is Argentina vs Cape Verde played?");
 
     t.completed();
-    // outlook backs the <path> (whole route) and <slot> (slot chances) widgets —
+    // outlook backs the path (whole route) and slot (slot chances) widgets —
     // the wrong tools for a single fixture, which should use the matches tool.
     t.notCalledTool("outlook");
     t.noFailedActions();

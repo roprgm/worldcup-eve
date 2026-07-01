@@ -96,7 +96,7 @@ function teamRoute(snapshot: Predictions, code: string) {
 
 export default defineTool({
   description:
-    'How far World Cup teams go. Pass a team for its chances to advance / reach each round / win the cup plus its projected route (likely opponent and stadium each round); a group for its advancement odds; top:N for the title favorites; or slot:<73-104> for who\'s likely to fill an undecided knockout match. Use odds for a single matchup\'s win chance. To show it, write one <chances teams="…" /> (the chances table — holds several teams at once, the default for any how-far question), and only write <path team="…" /> when the user asks who a team could face.',
+    "How far World Cup teams go. Pass a team for its chances to advance / reach each round / win the cup plus its projected route (likely opponent and stadium each round); a group for its advancement odds; top:N for the title favorites; or slot:<73-104> for who's likely to fill an undecided knockout match. Use odds for a single matchup's win chance. To show it, write a `chances` code block (the chances table — holds several teams at once, the default for any how-far question), and a `path` code block only when the user asks who a team could face.",
   inputSchema: z.object({
     team: z
       .string()

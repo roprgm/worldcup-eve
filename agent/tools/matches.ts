@@ -31,7 +31,7 @@ interface Fixture {
 
 export default defineTool({
   description:
-    "World Cup fixtures, past or future: who plays whom, kickoff time, stadium, status and final score. Use it for a team's schedule, a single fixture, a result, what's on today or live, or — with timeline:true — a match's goals and cards. To put match cards on screen, also write a <match> tag.",
+    "World Cup fixtures, past or future: who plays whom, kickoff time, stadium, status and final score. Use it for a team's schedule, a single fixture, a result, what's on today or live, or — with timeline:true — a match's goals and cards. To put match cards on screen, also write a `match` code block.",
   inputSchema: z.object({
     team: z
       .string()
@@ -117,7 +117,7 @@ export default defineTool({
     if (selected.length === 0) {
       const note =
         team && when === "upcoming"
-          ? `${team} has no scheduled fixture left — its next game is an undecided knockout slot. Show <path team="${team}" /> for where it goes next.`
+          ? `${team} has no scheduled fixture left — its next game is an undecided knockout slot. Show a path code block for it to trace where it goes next.`
           : "No matching matches.";
       return { matches: [], note };
     }

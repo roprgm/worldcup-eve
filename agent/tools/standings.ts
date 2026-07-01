@@ -89,7 +89,7 @@ async function thirdsRace() {
 
 export default defineTool({
   description:
-    "World Cup group tables and the third-place race. Pass a group letter for one group's standings (rank, points, goal difference, who's already through), or thirds:true for the twelve third-placed teams ranked by their chance of reaching the Round of 32. To put a table on screen, also write a <group g=\"C\"> or <thirds> tag.",
+    "World Cup group tables and the third-place race. Pass a group letter for one group's standings (rank, points, goal difference, who's already through), or thirds:true for the twelve third-placed teams ranked by their chance of reaching the Round of 32. To put a table on screen, also write a `group` or `thirds` code block.",
   inputSchema: z.object({
     group: groupLetter.optional().describe("A group letter, A-L."),
     thirds: z

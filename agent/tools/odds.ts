@@ -123,7 +123,7 @@ export default defineTool({
           asOf: snapshot.updatedAt,
           match,
           error:
-            'No head-to-head odds yet — the matchup isn\'t decided (use a <slot n="..." /> for who might play).',
+            "No head-to-head odds yet — the matchup isn't decided (write a slot code block for who might play).",
         }
       );
     }
