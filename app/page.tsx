@@ -9,10 +9,10 @@ import { HomeBracket } from "@/components/widgets/circular-bracket-widget";
 
 const SUGGESTIONS = [
   "Which matches are playing today?",
-  "Who are the best third-placed teams?",
   "Who is most likely to play in match 100?",
-  "Where did Argentina play their last match?",
-  "What is the predicted bracket to the finals?",
+  "How far can Brazil go this World Cup?",
+  "What's Argentina's road to the final?",
+  "What's the market's predicted bracket?",
 ];
 
 function EmptyState() {

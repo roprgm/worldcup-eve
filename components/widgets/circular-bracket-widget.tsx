@@ -178,10 +178,16 @@ function useBracketData(): {
 
 /** Connected circular bracket: merges the shared predictions with real results
  *  and paints them onto the radial skeleton. */
-export function CircularBracketWidget() {
+export function CircularBracketWidget({
+  predict = false,
+}: {
+  /** Seed the market-predictions overlay on (users can still toggle it off). */
+  predict?: boolean;
+}) {
   const { view, teamPaths } = useBracketData();
-  // Market predictions start off; users opt in via the in-card toggle.
-  return <CircularBracketCard view={view} teamPaths={teamPaths} />;
+  return (
+    <CircularBracketCard view={view} teamPaths={teamPaths} predict={predict} />
+  );
 }
 
 /** The bracket ring without the card chrome, for the home hero. The predicted

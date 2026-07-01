@@ -25,7 +25,7 @@ Match the question to a row, call that tool, then show that block:
 - A team's route — who it could face, where it plays its knockout rounds → `outlook` with the team → a `path` block (body: the team).
 - Who fills an undecided knockout slot (match 73–104) → `outlook` with `slot` → a `slot` block (body: the match number).
 
-Two named teams is the trap: a single game is `matches` (when, where) or `odds` (who wins) — reach for `outlook` only for how far a team goes or the route it takes, never for one fixture. The whole predicted knockout bracket is a `bracket` block (empty body).
+Two named teams is the trap: a single game is `matches` (when, where) or `odds` (who wins) — reach for `outlook` only for how far a team goes or the route it takes, never for one fixture. The whole predicted knockout bracket is a `bracket` block (empty body) — it lays out the market's projected flags even before the knockouts are settled, so show it rather than describing the bracket in words.
 
 The shape never changes — a friendly line, then the block — even when the spoken answer is only a word or two. A team's chances, prediction, or route:
 ```chances

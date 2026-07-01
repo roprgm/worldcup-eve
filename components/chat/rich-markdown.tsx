@@ -103,7 +103,9 @@ function renderWidget(language: string, body: string): ReactNode {
       return top ? <StageOddsWidget top={top} /> : null;
     }
     case "bracket":
-      return <CircularBracketWidget />;
+      // In chat the bracket answers prediction questions, so show the market
+      // overlay by default (the card keeps an in-place toggle to hide it).
+      return <CircularBracketWidget predict />;
     default:
       return null;
   }
