@@ -96,8 +96,15 @@ function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
     case "chances": {
       const teams = teamCodesIn(body);
       if (teams.length) return <StageOddsWidget teams={teams} />;
-      const top = numbersIn(body)[0];
-      return <StageOddsWidget top={top && top > 0 ? top : undefined} />;
+      // No teams resolved yet: only show the favorites view when the body
+      // actually asks for it (a number or "top"/"favorites"). Otherwise — an
+      // empty or still-resolving body — render nothing, so the table never
+      // flashes the whole field before the filter lands.
+      const n = numbersIn(body)[0];
+      const wantsFavorites = n != null || /top|favorit/i.test(body);
+      return wantsFavorites ? (
+        <StageOddsWidget top={n && n > 0 ? n : 8} />
+      ) : null;
     }
     case "bracket":
       return <CircularBracketWidget />;
