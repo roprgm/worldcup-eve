@@ -116,10 +116,10 @@ const WIDGET_ALLOWED_TAGS = {
 // sibling. Any other form breaks: an open tag `<match ...>` swallows the text
 // after it, and an inline tag lands inside a <p> (invalid around our block
 // cards). So normalize every widget tag — whatever form (`<match ...>`,
-// `<match ...></match>`, `<match .../>`) or place the model wrote it — to a
-// self-closing tag on its own line.
+// `<match ...></match>`, `<match .../>`, even a stray `< match ...>`) or place
+// the model wrote it — to a self-closing tag on its own line.
 const WIDGET_TAG_RE =
-  /<(match|group|thirds|path|slot|chances|bracket)((?:\s+[a-zA-Z_][\w-]*(?:="[^"]*")?)*)\s*\/?>(?:\s*<\/\1>)?/g;
+  /<\s*(match|group|thirds|path|slot|chances|bracket)((?:\s+[a-zA-Z_][\w-]*(?:="[^"]*")?)*)\s*\/?>(?:\s*<\/\s*\1\s*>)?/g;
 
 function normalizeWidgetTags(text: string): string {
   return text.replace(WIDGET_TAG_RE, "\n\n<$1$2 />\n\n");
