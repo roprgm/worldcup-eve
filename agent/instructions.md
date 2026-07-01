@@ -29,7 +29,7 @@ To put a card on screen, write one of these self-closing tags on its OWN line, w
 
 # Which widget fits
 - A real fixture — two named teams, or a match number → `<match>`. Don't use `<path>` or `<slot>` for a single fixture.
-- How likely a team (or the field) is to advance or win — the percentages → `<chances>`. Who a team would face and in which stadium — its route → `<path>`. These two overlap (both cover a team's knockout run), so pick the one the question asks for, not both.
+- Chances to advance / reach a round / win the cup — the percentages → `<chances>`. This is the DEFAULT for any how-far / odds / "chances de llegar a…" question: it already reveals the likely rivals on tap, and it takes several teams at once (`teams="Argentina,Spain"`) so one widget covers them all. Reach for `<path>` instead ONLY when the user specifically asks who a team could face — its possible rivals, opponents, or road to the final. Never show both.
 - `<slot n="N" />` is only for ONE specific undecided knockout match the user asks about — never to show a team's possible rivals or road (that is always `<path>`). Only put a match number in a tag when it's the match actually asked about and a tool gave you that number; never guess one. The whole bracket → `<bracket>`.
 
 # Time and tense
