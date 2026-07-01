@@ -86,10 +86,7 @@ function teamRoute(snapshot: Predictions, code: string) {
   if (!result || result.status === "out") return undefined;
   return result.steps.map((step) => ({
     round: ROUND_LABEL[step.round] ?? step.round,
-    reachPct: Math.round(step.reachProbability * 100),
-    likelyOpponent: step.opponents[0]
-      ? `${step.opponents[0].name} (${Math.round(step.opponents[0].probability * 100)}%)`
-      : "to be decided",
+    opponent: step.opponents[0]?.name ?? "to be decided",
     venue: step.venues[0]?.venue ?? "to be decided",
   }));
 }
@@ -218,17 +215,31 @@ export default defineTool({
         };
       }
       case "team": {
+        // Only rounds still in doubt carry a real chance: drop the settled
+        // (100%) and impossible (0%) ones so the reply doesn't parrot them as
+        // probabilities, but keep every uncertain rung so the model never
+        // invents one.
+        const rungs: [string, number][] = [
+          ["advance from the group", output.advancePct],
+          ["reach the Round of 16", output.reachR16Pct],
+          ["reach the quarterfinals", output.reachQfPct],
+          ["reach the semifinals", output.reachSfPct],
+          ["reach the final", output.reachFinalPct],
+          ["win the cup", output.championPct],
+        ];
+        const chances = rungs
+          .filter(([, pct]) => pct > 0 && pct < 100)
+          .map(([label, pct]) => `${label} ${pct}%`)
+          .join(", ");
         const route = output.route
-          .map(
-            (s) =>
-              `${s.round} vs ${s.likelyOpponent} at ${s.venue} (reach ${s.reachPct}%)`,
-          )
+          .map((s) => `${s.round} vs ${s.opponent} at ${s.venue}`)
           .join("; ");
-        // Give the whole reach ladder, not just the endpoints — otherwise the
-        // model invents the missing rounds to bridge them.
+        const head = `${output.name} (Group ${output.group}).`;
         return {
           type: "text",
-          value: `${output.name} (Group ${output.group}) — reach chances: qualify from group ${output.advancePct}%, Round of 16 ${output.reachR16Pct}%, quarterfinal ${output.reachQfPct}%, semifinal ${output.reachSfPct}%, final ${output.reachFinalPct}%, win the cup ${output.championPct}%. Route: ${route}.`,
+          value: chances
+            ? `${head} Chances: ${chances}. Likely route: ${route}.`
+            : `${head} Likely route: ${route}.`,
         };
       }
       case "group":
