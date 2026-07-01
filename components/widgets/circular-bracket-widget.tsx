@@ -7,13 +7,18 @@ import {
   CircularBracketCard,
   CircularBracketRing,
   type CircularBracketView,
+  type TeamJourneys,
   type TeamPaths,
 } from "@/components/widgets/circular-bracket-card";
+import type {
+  JourneyLeg,
+  TeamJourney,
+} from "@/components/widgets/cell-path-explain";
 import { usePredictions, useResults } from "@/components/widgets/queries";
 import type { Predictions } from "@/lib/predictions";
 import { cellPath } from "@/lib/predictions/team-path";
-import type { Results } from "@/lib/results";
-import { type Round, teamById } from "@/lib/tournament";
+import type { MatchResult, Results } from "@/lib/results";
+import { matchByNumber, type Round, teamById } from "@/lib/tournament";
 
 const named = (c: { code: string; probability: number }): Candidate => ({
   code: c.code,
@@ -52,6 +57,91 @@ function knockoutProgress(results?: Results) {
     if (loser?.code) eliminated.add(loser.code);
   }
   return { wins, eliminated };
+}
+
+// Round label for any FIFA match number — the group stage (1–72) or a knockout
+// round from the static bracket.
+const KO_LABEL: Record<Round, string> = {
+  R32: "Round of 32",
+  R16: "Round of 16",
+  QF: "Quarter-final",
+  SF: "Semi-final",
+  TP: "Third place",
+  FINAL: "Final",
+};
+const roundLabelOf = (n: number): string =>
+  n <= 72 ? "Group" : (KO_LABEL[matchByNumber[n]?.round] ?? "Knockout");
+
+// A one-line verdict on the team's run: the trophy, still going, or where it went
+// out. The third-place play-off (103) isn't an elimination round, so it's ignored.
+function outcomeLabel(
+  code: string,
+  played: MatchResult[],
+  alive: boolean,
+): string {
+  const final = played.find((m) => m.n === 104 && m.status === "final");
+  if (final) {
+    const mine = final.home.code === code ? final.home : final.away;
+    return mine.winner ? "World Cup winners" : "Runners-up";
+  }
+  if (alive) return "Still in the running";
+  const lostKo = [...played]
+    .reverse()
+    .find(
+      (m) =>
+        m.n >= 73 &&
+        m.n !== 103 &&
+        m.status === "final" &&
+        (m.home.code === code ? m.away.winner : m.home.winner),
+    );
+  if (lostKo)
+    return `Eliminated in the ${roundLabelOf(lostKo.n).toLowerCase()}`;
+  // No knockout loss and the final isn't decided yet: the team is still
+  // advancing — e.g. a finalist awaiting or playing the final, a state the
+  // road-to-the-final map can't represent (so `alive` reads false here). Only a
+  // team that never reached the knockouts is genuinely out at this point.
+  return played.some((m) => m.n >= 73)
+    ? "Still in the running"
+    : "Eliminated in the group stage";
+}
+
+// A team's actual run, oriented to its own side: group stage → final, in match
+// order. Only started matches count; `undefined` for a team yet to kick off.
+function teamJourney(
+  results: Results,
+  code: string,
+  alive: boolean,
+): TeamJourney | undefined {
+  const played = results.matches
+    .filter(
+      (m) =>
+        (m.home.code === code || m.away.code === code) &&
+        m.status !== "scheduled",
+    )
+    .sort((a, b) => a.n - b.n);
+  if (played.length === 0) return undefined;
+
+  const legs: JourneyLeg[] = played.map((m) => {
+    const mine = m.home.code === code ? m.home : m.away;
+    const opp = m.home.code === code ? m.away : m.home;
+    const result: JourneyLeg["result"] =
+      m.status !== "final" ? null : mine.winner ? "W" : opp.winner ? "L" : "D";
+    return {
+      match: m.n,
+      roundLabel: roundLabelOf(m.n),
+      opponent: opp.code,
+      score: `${mine.score ?? 0}\u2013${opp.score ?? 0}`,
+      result,
+      live: m.status === "live",
+    };
+  });
+
+  return {
+    code,
+    name: teamById[code]?.name ?? code,
+    outcomeLabel: outcomeLabel(code, played, alive),
+    legs,
+  };
 }
 
 // Played knockout matches, by match number → the actual winner (probability 1).
@@ -139,11 +229,13 @@ function circularView(
   };
 }
 
-/** Merges the shared predictions with real results into the view and per-team
- *  road-to-the-final paths the bracket paints onto the radial skeleton. */
+/** Merges the shared predictions with real results into the view, the per-team
+ *  road-to-the-final paths, and each team's actual run so far — everything the
+ *  bracket paints onto the radial skeleton. */
 function useBracketData(): {
   view?: CircularBracketView;
   teamPaths?: TeamPaths;
+  teamJourneys?: TeamJourneys;
 } {
   const predictions = usePredictions();
   const results = useResults();
@@ -170,20 +262,50 @@ function useBracketData(): {
     }
     return map;
   }, [predictions, results]);
-  return { view, teamPaths };
+  // Actual run so far per team that has kicked off — winners and losers alike —
+  // so every locked-in flag is tappable. `alive` (has a road to the final) picks
+  // the "still in the running" verdict over an elimination line.
+  const teamJourneys = useMemo(() => {
+    if (!results) return undefined;
+    const codes = new Set<string>();
+    for (const m of results.matches) {
+      if (m.status === "scheduled") continue;
+      if (m.home.code) codes.add(m.home.code);
+      if (m.away.code) codes.add(m.away.code);
+    }
+    const map: TeamJourneys = new Map();
+    for (const code of codes) {
+      const journey = teamJourney(results, code, teamPaths?.has(code) ?? false);
+      if (journey) map.set(code, journey);
+    }
+    return map;
+  }, [results, teamPaths]);
+  return { view, teamPaths, teamJourneys };
 }
 
 /** Connected circular bracket: merges the shared predictions with real results
  *  and paints them onto the radial skeleton. */
 export function CircularBracketWidget() {
-  const { view, teamPaths } = useBracketData();
+  const { view, teamPaths, teamJourneys } = useBracketData();
   // Market predictions start off; users opt in via the in-card toggle.
-  return <CircularBracketCard view={view} teamPaths={teamPaths} />;
+  return (
+    <CircularBracketCard
+      view={view}
+      teamPaths={teamPaths}
+      teamJourneys={teamJourneys}
+    />
+  );
 }
 
 /** The bracket ring without the card chrome, for the home hero. The predicted
  *  flags overlay stays off here — locked-in teams show, undecided nodes stay "?". */
 export function HomeBracket() {
-  const { view, teamPaths } = useBracketData();
-  return <CircularBracketRing view={view} teamPaths={teamPaths} />;
+  const { view, teamPaths, teamJourneys } = useBracketData();
+  return (
+    <CircularBracketRing
+      view={view}
+      teamPaths={teamPaths}
+      teamJourneys={teamJourneys}
+    />
+  );
 }
