@@ -8,8 +8,11 @@
 // muted-foreground, surface-border, surface-divider, pick); the props are
 // documented on the interfaces below.
 
+import type { ReactNode } from "react";
+
 import { Flag } from "@/components/flags";
 import { Card } from "@/components/ui/card";
+import { KickoffTime } from "@/components/widgets/kickoff-time";
 
 import { cn } from "cnfast";
 
@@ -37,7 +40,11 @@ export interface MatchWidgetProps {
   detail?: string;
   /** Show the "Live" badge in the header — pass for a match in progress. */
   live?: boolean;
-  /** Kickoff label ("JUL 22, 12hs") shown in the header when not live. */
+  /** ISO kickoff instant — shown in the reader's own zone, tappable for the
+   *  cross-zone breakdown. */
+  kickoffAt?: string;
+  /** Server-formatted kickoff label ("JUL 22, 12hs"), used as the pre-mount
+   *  fallback for `kickoffAt` and as a standalone label when no instant. */
   kickoff?: string;
   home: MatchTeam;
   away: MatchTeam;
@@ -56,7 +63,7 @@ function Caption({
   children,
 }: {
   className?: string;
-  children: string;
+  children: ReactNode;
 }) {
   return (
     <span
@@ -230,6 +237,7 @@ export function MatchWidget({
   status,
   detail,
   live,
+  kickoffAt,
   kickoff,
   home,
   away,
@@ -244,6 +252,10 @@ export function MatchWidget({
         </span>
         {live ? (
           <LiveBadge />
+        ) : kickoffAt ? (
+          <Caption className="shrink-0 text-xs text-muted-foreground/75">
+            <KickoffTime iso={kickoffAt} fallback={kickoff} />
+          </Caption>
         ) : kickoff ? (
           <Caption className="shrink-0 text-xs text-muted-foreground/75">
             {kickoff}
