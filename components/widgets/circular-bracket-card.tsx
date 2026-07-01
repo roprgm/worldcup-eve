@@ -14,8 +14,9 @@ import {
 } from "react";
 
 import {
-  CellPathExplain,
   PopupHeader,
+  type TeamJourney,
+  TeamPopup,
 } from "@/components/widgets/cell-path-explain";
 import { Flag } from "@/components/flags";
 import { Card } from "@/components/ui/card";
@@ -347,6 +348,10 @@ export interface CircularBracketView {
 /** Road-to-the-final breakdown per team code, for the locked-in teams that still
  *  have a route. A team's flag is tappable only when it has an entry here. */
 export type TeamPaths = Map<string, CellPath>;
+
+/** A team's actual World Cup run so far, per team code — shown for every
+ *  locked-in flag (winners and losers), so all of them are tappable. */
+export type TeamJourneys = Map<string, TeamJourney>;
 
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
 const formatPct = (p: number) => `${(p * 100).toPrecision(4)}%`;
@@ -832,10 +837,21 @@ interface NodeModel {
   liveLeaderCode?: string; // team currently ahead, while the match is live
 }
 
+// A locked-in flag is tappable when we have something to show for it: a road to
+// the final (still alive) or a played-so-far run (any team that has kicked off).
+function explainable(
+  code: string | undefined,
+  teamPaths?: TeamPaths,
+  teamJourneys?: TeamJourneys,
+): boolean {
+  return !!code && (!!teamPaths?.has(code) || !!teamJourneys?.has(code));
+}
+
 function slotModel(
   pos: FlagPos,
   view: CircularBracketView | undefined,
   teamPaths?: TeamPaths,
+  teamJourneys?: TeamJourneys,
 ): NodeModel {
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
@@ -846,7 +862,7 @@ function slotModel(
     y: pos.y,
     flagCode,
     predictedCode: top?.code,
-    explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    explainable: explainable(flagCode, teamPaths, teamJourneys),
     live: view?.live.has(pos.match) ?? false,
     liveLeaderCode: view?.liveLeader.get(pos.match),
   };
@@ -856,6 +872,7 @@ function matchModel(
   node: InnerNode,
   view: CircularBracketView | undefined,
   teamPaths?: TeamPaths,
+  teamJourneys?: TeamJourneys,
 ): NodeModel {
   const flagCode = view?.decided.get(node.match)?.code;
   const top = lead(view?.matchOdds.get(node.match));
@@ -865,7 +882,7 @@ function matchModel(
     y: node.y,
     flagCode,
     predictedCode: top?.code,
-    explainable: !!flagCode && !!teamPaths?.has(flagCode),
+    explainable: explainable(flagCode, teamPaths, teamJourneys),
     live: view?.live.has(node.match) ?? false,
     liveLeaderCode: view?.liveLeader.get(node.match),
   };
@@ -1147,12 +1164,16 @@ export function PredictToggle({
 export function CircularBracketRing({
   view,
   teamPaths,
+  teamJourneys,
   predict = false,
   className,
 }: {
   view?: CircularBracketView;
   /** Road to the final per locked-in team, making those flags tappable. */
   teamPaths?: TeamPaths;
+  /** Actual run so far per locked-in team, so every flag (including knocked-out
+   *  ones) is tappable and its popover opens with what already happened. */
+  teamJourneys?: TeamJourneys;
   /** Show the leading candidate's flag (faded) in unsettled nodes instead of "?". */
   predict?: boolean;
   className?: string;
@@ -1165,10 +1186,13 @@ export function CircularBracketRing({
   const openId = open?.id ?? null;
   const loading = !view;
 
-  // A locked-in flag opens its road to the final; any other node opens chances.
+  // A locked-in flag opens its team popover (run so far + road to the final);
+  // any other node opens the node's chances.
   const teamCode = open && view ? confirmedTeamCode(view, open.id) : undefined;
   const teamPath = teamCode ? teamPaths?.get(teamCode) : undefined;
-  const content = open && view && !teamPath ? openContent(view, open.id) : null;
+  const teamJourney = teamCode ? teamJourneys?.get(teamCode) : undefined;
+  const isTeam = Boolean(teamPath || teamJourney);
+  const content = open && view && !isTeam ? openContent(view, open.id) : null;
 
   const { containerRef, field, onPointerMove, onPointerLeave } =
     useProximityField<NodeMeta>(scaleByProximity);
@@ -1191,7 +1215,7 @@ export function CircularBracketRing({
           {GEOMETRY.nodes.map((node) => (
             <BracketNode
               key={`match:${node.match}`}
-              model={matchModel(node, view, teamPaths)}
+              model={matchModel(node, view, teamPaths, teamJourneys)}
               loading={loading}
               predict={predict}
               openId={openId}
@@ -1201,7 +1225,7 @@ export function CircularBracketRing({
           {GEOMETRY.flags.map((pos) => (
             <BracketNode
               key={`slot:${pos.match}:${pos.side}`}
-              model={slotModel(pos, view, teamPaths)}
+              model={slotModel(pos, view, teamPaths, teamJourneys)}
               loading={loading}
               predict={predict}
               openId={openId}
@@ -1212,13 +1236,13 @@ export function CircularBracketRing({
         </ProximityContext.Provider>
       </div>
       <Popover
-        open={Boolean(open && (teamPath || content))}
+        open={Boolean(open && (isTeam || content))}
         anchor={open?.anchor ?? null}
         onClose={() => setOpen(null)}
         className="w-[min(20rem,calc(100vw-1rem))] p-2.5"
       >
-        {teamPath ? (
-          <CellPathExplain path={teamPath} />
+        {isTeam ? (
+          <TeamPopup journey={teamJourney} path={teamPath} />
         ) : (
           content && (
             <OddsList
@@ -1240,6 +1264,7 @@ export function CircularBracketCard({
   view,
   predict: predictDefault = false,
   teamPaths,
+  teamJourneys,
 }: {
   view?: CircularBracketView;
   /** Initial state of the predictions toggle: show the leading candidate's flag
@@ -1247,6 +1272,8 @@ export function CircularBracketCard({
   predict?: boolean;
   /** Road to the final per locked-in team, making those flags tappable. */
   teamPaths?: TeamPaths;
+  /** Actual run so far per locked-in team, so knocked-out flags are tappable too. */
+  teamJourneys?: TeamJourneys;
 }) {
   const [predict, setPredict] = useState(predictDefault);
   return (
@@ -1271,6 +1298,7 @@ export function CircularBracketCard({
         <CircularBracketRing
           view={view}
           teamPaths={teamPaths}
+          teamJourneys={teamJourneys}
           predict={predict}
           className="max-w-[680px]"
         />
