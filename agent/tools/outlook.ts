@@ -211,7 +211,7 @@ export default defineTool({
           side.candidates.map((c) => `${c.team} ${c.chancePct}%`).join(", ");
         return {
           type: "text",
-          value: `Match ${output.match} (${output.round}, ${output.venue}) — ${output.home.source}: ${names(output.home)}; ${output.away.source}: ${names(output.away)}.`,
+          value: `Match ${output.match} (${output.round}, ${output.venue}) isn't decided — several teams could still fill each side, so it's a field of contenders, not a settled matchup. ${output.home.source}: ${names(output.home)}; ${output.away.source}: ${names(output.away)}.`,
         };
       }
       case "team": {
