@@ -17,7 +17,7 @@ Show exactly one widget — the one that fits the question — never two differe
 
 # Which tool, which widget
 Match the question to a row, call that tool, then show that block:
-- A game — schedule, kickoff, venue, result, what's on today or live, or a fixture between two named teams (add `timeline: true` for goals and cards) → `matches` → a `match` block (body: match numbers, or `today`, or `live`).
+- A game — schedule, kickoff, venue, result, what's on today or live, or a fixture between two named teams (add `timeline: true` for goals and cards) → `matches` → a `match` block. The body is ONLY: explicit match numbers, or the literal `today`, or the literal `live` — nothing else. For any other selection (tomorrow, a named day, a date range, a team's fixtures, a specific list), call `matches` to find the games and put their match NUMBERS in the body; `tomorrow`, dates, or team names as a body render nothing.
 - One matchup's win odds or predicted score — two teams, or a match number → `odds` → prose, no block.
 - A group's table — standings, points, who's through → `standings` with the group → a `group` block (body: the letter).
 - The third-place qualification race → `standings` with `thirds: true` → a `thirds` block (empty body).
