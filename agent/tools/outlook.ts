@@ -224,9 +224,11 @@ export default defineTool({
               `${s.round} vs ${s.likelyOpponent} at ${s.venue} (reach ${s.reachPct}%)`,
           )
           .join("; ");
+        // Give the whole reach ladder, not just the endpoints — otherwise the
+        // model invents the missing rounds to bridge them.
         return {
           type: "text",
-          value: `${output.name} (Group ${output.group}): advance ${output.advancePct}%, reach the final ${output.reachFinalPct}%, win it all ${output.championPct}%. Route: ${route}.`,
+          value: `${output.name} (Group ${output.group}) — reach chances: qualify from group ${output.advancePct}%, Round of 16 ${output.reachR16Pct}%, quarterfinal ${output.reachQfPct}%, semifinal ${output.reachSfPct}%, final ${output.reachFinalPct}%, win the cup ${output.championPct}%. Route: ${route}.`,
         };
       }
       case "group":
