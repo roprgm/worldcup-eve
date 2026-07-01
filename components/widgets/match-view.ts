@@ -122,6 +122,7 @@ function currentMatchView(match: MatchResult, odds: Map<string, MatchOdds>) {
     status: match.status,
     detail: match.detail,
     live: match.status === "live",
+    kickoffAt: match.kickoff,
     kickoff: match.kickoff ? formatKickoff(match.kickoff) : undefined,
     home: currentTeamView(match.home),
     away: currentTeamView(match.away),
