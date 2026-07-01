@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("What's Argentina's road to the final?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.messageIncludes("```path");
     t.noFailedActions();

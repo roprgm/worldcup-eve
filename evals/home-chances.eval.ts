@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("How far can Brazil go this World Cup?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.messageIncludes("```chances");
     t.noFailedActions();

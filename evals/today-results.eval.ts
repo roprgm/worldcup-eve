@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Which matches are playing today?");
 
-    t.completed();
+    t.succeeded();
     t.messageIncludes("```match");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

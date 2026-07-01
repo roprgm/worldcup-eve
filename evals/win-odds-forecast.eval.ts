@@ -5,7 +5,7 @@ export default defineEval({
   async test(t) {
     await t.send("Who's favored, Spain or Uruguay?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("odds");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

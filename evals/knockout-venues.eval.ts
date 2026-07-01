@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("¿Dónde juega Argentina los dieciseisavos y los octavos?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.messageIncludes("```path");
     t.noFailedActions();

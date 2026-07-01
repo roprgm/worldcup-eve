@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Dame la predicción de México para el Mundial");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.messageIncludes("```chances");
     t.noFailedActions();

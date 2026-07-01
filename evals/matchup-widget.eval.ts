@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("When is Argentina vs Cape Verde played?");
 
-    t.completed();
+    t.succeeded();
     // outlook backs the path (whole route) and slot (slot chances) widgets —
     // the wrong tools for a single fixture, which should use the matches tool.
     t.notCalledTool("outlook");

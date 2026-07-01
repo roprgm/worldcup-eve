@@ -5,7 +5,7 @@ export default defineEval({
   async test(t) {
     await t.send("Who is the favorite to win the World Cup?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
