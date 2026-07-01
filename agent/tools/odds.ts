@@ -113,18 +113,20 @@ export default defineTool({
     if (match && match > 72) {
       const home = settledTeam(snapshot, match, "home");
       const away = settledTeam(snapshot, match, "away");
-      const forecast =
-        home && away
-          ? knockoutForecast(snapshot, match, home, away)
-          : undefined;
-      return (
-        forecast ?? {
-          asOf: snapshot.updatedAt,
-          match,
-          error:
-            "No head-to-head odds yet — the matchup isn't decided (write a slot code block for who might play).",
-        }
-      );
+      if (home && away) {
+        // The third-place play-off (103) and any decided match without a live
+        // head-to-head market fall back to a neutral-site strength estimate.
+        const forecast =
+          knockoutForecast(snapshot, match, home, away) ??
+          strengthForecast(snapshot, home, away);
+        if (forecast) return forecast;
+      }
+      return {
+        asOf: snapshot.updatedAt,
+        match,
+        error:
+          "No head-to-head odds yet — the matchup isn't decided (write a slot code block for who might play).",
+      };
     }
 
     const fixtureMatch = match

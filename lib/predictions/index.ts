@@ -372,7 +372,9 @@ export async function buildPredictions(
   );
 
   cache.live ??= {};
-  const base = epoch ? new Map(Object.entries(epoch.teamStrengths)) : undefined;
+  const base = epoch?.teamStrengths
+    ? new Map(Object.entries(epoch.teamStrengths))
+    : undefined;
   const live = simulateBracket(
     r32Slots,
     reachObs,
