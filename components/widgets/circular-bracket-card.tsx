@@ -689,10 +689,11 @@ function UnsettledNode({
   );
 }
 
-/** A locked-in team's flag. Plain when there's no path to explain; otherwise a
- *  button that opens the team's road to the final. Its selected and hover
- *  treatment matches the unsettled nodes so the ring never reads as a different
- *  kind of state — neutral, never the winner's green. */
+/** A locked-in team's flag. Plain when there's nothing to explain; otherwise a
+ *  button that opens the team's popover — its run so far, plus the road to the
+ *  final when still alive. Its selected and hover treatment matches the unsettled
+ *  nodes so the ring never reads as a different kind of state — neutral, never
+ *  the winner's green. */
 function FlagNode({
   id,
   code,
@@ -715,7 +716,7 @@ function FlagNode({
     <button
       type="button"
       onClick={(e) => onToggle(id, e.currentTarget)}
-      aria-label={`Show ${code} road to the final`}
+      aria-label={`Show ${code}'s World Cup run`}
       aria-expanded={open}
       className="group block rounded-full"
     >

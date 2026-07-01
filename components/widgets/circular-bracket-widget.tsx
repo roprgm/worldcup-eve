@@ -96,8 +96,12 @@ function outcomeLabel(
     );
   if (lostKo)
     return `Eliminated in the ${roundLabelOf(lostKo.n).toLowerCase()}`;
+  // No knockout loss and the final isn't decided yet: the team is still
+  // advancing — e.g. a finalist awaiting or playing the final, a state the
+  // road-to-the-final map can't represent (so `alive` reads false here). Only a
+  // team that never reached the knockouts is genuinely out at this point.
   return played.some((m) => m.n >= 73)
-    ? "Out of the tournament"
+    ? "Still in the running"
     : "Eliminated in the group stage";
 }
 
