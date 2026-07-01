@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { CustomRenderer, CustomRendererProps } from "streamdown";
 
 import {
@@ -63,10 +64,7 @@ function matchScopeIn(body: string): MatchesScope | undefined {
   return undefined;
 }
 
-function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
-  // Hide the block until it's fully streamed, so no partial content flashes.
-  if (isIncomplete) return null;
-  const body = code.trim();
+function renderWidget(language: string, body: string): ReactNode {
   switch (language) {
     case "match": {
       const scope = matchScopeIn(body);
@@ -85,8 +83,8 @@ function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
     case "thirds":
       return <ThirdsRankingWidget />;
     case "path": {
-      const code2 = codeFor(stripLabel(body));
-      return code2 ? <TeamPathWidget code={code2} /> : null;
+      const code = codeFor(stripLabel(body));
+      return code ? <TeamPathWidget code={code} /> : null;
     }
     case "slot": {
       const id = numbersIn(body)[0];
@@ -107,6 +105,14 @@ function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
     default:
       return null;
   }
+}
+
+function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
+  // Nothing until the fence is fully streamed, so no partial content flashes.
+  if (isIncomplete) return null;
+  const widget = renderWidget(language, code.trim());
+  // A slight fade-up as it resolves, matching how chat messages enter.
+  return widget ? <div className="animate-fade-up">{widget}</div> : null;
 }
 
 const WIDGET_RENDERERS: CustomRenderer[] = [
