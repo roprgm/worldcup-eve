@@ -1186,6 +1186,18 @@ export function CircularBracketRing({
           className,
         )}
       >
+        {/* A soft glow from the centre that barely lifts the background, fading
+            out by ~1/3 of the ring radius (16.7cqw ≈ R/3). The stops follow an
+            ease-out (~(1−t)²) curve rather than a linear ramp: grey isn't
+            perceived linearly, so a linear falloff would read as a hard ring. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle 16.7cqw at center, oklch(1 0 0 / 0.06) 0%, oklch(1 0 0 / 0.034) 25%, oklch(1 0 0 / 0.014) 50%, oklch(1 0 0 / 0.004) 75%, transparent 100%)",
+          }}
+        />
         <ProximityContext.Provider value={field}>
           <Connectors view={view} />
           {GEOMETRY.nodes.map((node) => (
