@@ -5,6 +5,15 @@ import { LocalTime } from "@/components/ui/local-time";
 
 type StreamdownProps = ComponentProps<typeof Streamdown>;
 
+// Streamdown's remend already strips a partial tag mid-stream (`<match n="5"` →
+// gone), but leaves a lone trailing "<" alone (it's ambiguous with a less-than
+// sign), so it flickers for a frame before a custom tag's name streams in. Drop
+// that too, via remend's own handler extension point — no Streamdown patching.
+const STRIP_TRAILING_TAG_START = {
+  name: "strip-trailing-tag-start",
+  handle: (text: string) => text.replace(/<\s*$/, ""),
+};
+
 /** Streams markdown safely, rendering agent-written custom tags as components.
  *  `<local-time iso>` is built in; callers can register more via `components` /
  *  `allowedTags` and they merge with it. Memoized so unchanged content doesn't
@@ -15,6 +24,7 @@ export const Markdown = memo(
     components,
     allowedTags,
     literalTagContent,
+    remend,
     ...props
   }: StreamdownProps) => (
     <Streamdown
@@ -30,6 +40,10 @@ export const Markdown = memo(
       }
       allowedTags={{ "local-time": ["iso"], ...allowedTags }}
       literalTagContent={["local-time", ...(literalTagContent ?? [])]}
+      remend={{
+        ...remend,
+        handlers: [STRIP_TRAILING_TAG_START, ...(remend?.handlers ?? [])],
+      }}
       controls={false}
       {...props}
     />
