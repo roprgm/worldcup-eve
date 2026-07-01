@@ -6,7 +6,7 @@ export default defineEval({
     await t.send("Show me the Group C standings.");
 
     t.completed();
-    t.calledTool("show_group_standings", { input: { group: "C" } });
+    t.calledTool("group", { input: { group: "C" } });
     t.noFailedActions();
     t.judge.autoevals.closedQA(
       "Does the answer concern the Group C standings or the teams in that group?",

@@ -7,7 +7,7 @@ export default defineEval({
     await t.send("¿Cuándo juega Argentina?");
 
     t.completed();
-    t.calledTool("get_match_schedule");
+    t.calledTool("match");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
       "Does the answer avoid presenting an already-played match as if it were still upcoming? (If Argentina's group stage is over, it should point to the knockout path rather than list finished group games as future fixtures.)",

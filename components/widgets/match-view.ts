@@ -3,6 +3,7 @@ import { format, isValid } from "date-fns";
 import type { MatchOdds } from "@/lib/predictions";
 import type { MatchResult, Side } from "@/lib/results";
 import { matchByNumber, type Round, teamById } from "@/lib/tournament";
+import { isSameTournamentDay } from "@/lib/tournament/day";
 
 // Short header label per knockout round (group matches use "Group X" instead).
 const ROUND_LABEL: Record<Round, string> = {
@@ -57,11 +58,6 @@ function fifaDateTimeParts(date: Date): FifaDateTimeParts | null {
   };
 }
 
-function fifaDayKey(date: Date): string {
-  const parts = fifaDateTimeParts(date);
-  return parts ? `${parts.year}-${parts.month}-${parts.day}` : "";
-}
-
 function fifaDate(parts: FifaDateTimeParts): Date {
   return new Date(
     parts.year,
@@ -72,13 +68,14 @@ function fifaDate(parts: FifaDateTimeParts): Date {
   );
 }
 
-function matchFifaDayKey(match: MatchResult): string {
-  if (!match.kickoff) return "";
-  return fifaDayKey(new Date(match.kickoff));
-}
-
-function isMatchOnFifaDay(match: MatchResult, dayKey: string): boolean {
-  return matchFifaDayKey(match) === dayKey;
+// "Today" is the tournament day (rolls over 07:00 UTC, see lib/tournament/day)
+// — the same rule the agent's `match` tool uses, so the widget and the model's
+// text answer never disagree about which matches are "today's."
+function isMatchToday(match: MatchResult, now: Date): boolean {
+  return (
+    Boolean(match.kickoff) &&
+    isSameTournamentDay(new Date(match.kickoff as string), now)
+  );
 }
 
 // Kickoff shown for upcoming matches, e.g. "Jul 22, 12hs" (US FIFA day time).
@@ -138,14 +135,6 @@ export function buildMatchViews(matches: MatchResult[], odds: MatchOdds[]) {
   return matches.map((m) => currentMatchView(m, oddsByPair));
 }
 
-/** Matches currently in progress, as MatchWidget props. */
-export function liveMatchViews(matches: MatchResult[], odds: MatchOdds[]) {
-  return buildMatchViews(
-    matches.filter((m) => m.status === "live"),
-    odds,
-  );
-}
-
 /** Specific matches by FIFA number as MatchWidget props, in the order asked,
  * skipping any number with no live entry. */
 export function matchViewsByNumber(
@@ -160,13 +149,13 @@ export function matchViewsByNumber(
   return buildMatchViews(ordered, odds);
 }
 
-/** Today's matches (US FIFA day) as MatchWidget props, kickoff-sorted, with
+/** Today's matches (tournament day) as MatchWidget props, kickoff-sorted, with
  * market win odds attached when available. */
 export function todayMatchViews(matches: MatchResult[], odds: MatchOdds[]) {
-  const todayKey = fifaDayKey(new Date());
+  const now = new Date();
   const oddsByPair = new Map(odds.map((o) => [pairKey(o.home, o.away), o]));
   return matches
-    .filter((match) => isMatchOnFifaDay(match, todayKey))
+    .filter((match) => isMatchToday(match, now))
     .sort(
       (a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? "") || a.n - b.n,
     )

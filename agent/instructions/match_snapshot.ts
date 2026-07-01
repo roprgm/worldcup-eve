@@ -1,6 +1,6 @@
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
-import { tournamentDay } from "@/agent/lib/time";
+import { tournamentDay } from "@/lib/tournament/day";
 import { matchSchedule } from "@/lib/tournament";
 
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
