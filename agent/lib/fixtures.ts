@@ -1,5 +1,5 @@
-// Shared fixture helpers: team-name resolution and filling in knockout team
-// names that the static schedule leaves TBD. Used by the `matches` tool.
+// Shared helpers for the agent tools: team-name resolution, filling in knockout
+// team names the static schedule leaves TBD, and probability formatting.
 
 import { getPredictions } from "@/lib/predictions";
 import { getMatchResults } from "@/lib/results";
@@ -12,6 +12,9 @@ import {
 
 // A knockout slot is "decided" once its leading team is all but certain.
 const SETTLED = 0.99;
+
+// A 0–1 probability as a one-decimal percentage (0.1234 → 12.3).
+export const percent = (value: number) => Math.round(value * 1000) / 10;
 
 export const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? code) : "TBD";

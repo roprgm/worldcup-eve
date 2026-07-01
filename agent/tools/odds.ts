@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { percent } from "@/agent/lib/fixtures";
 import { codeFor } from "@/agent/lib/team-aliases";
 import { getPredictions } from "@/lib/predictions";
 import type { Predictions } from "@/lib/predictions";
@@ -10,8 +11,6 @@ import {
   knockoutMatches,
   matchByNumber,
 } from "@/lib/tournament";
-
-const percent = (value: number): number => Math.round(value * 1000) / 10;
 
 // A knockout slot counts as decided once its leading team is all but certain;
 // only then is the matchup a real head-to-head rather than a field of candidates.

@@ -46,7 +46,9 @@ const stripLabel = (s: string) =>
   s.replace(/^\s*[a-zA-Z]+\s*[:=]\s*/, "").trim();
 
 function numbersIn(body: string): number[] {
-  return (body.match(/\d{1,3}/g) ?? [])
+  // Match whole digit runs (not /\d{1,3}/, which would split "2026" into 202 + 6)
+  // and keep only real match numbers.
+  return (body.match(/\d+/g) ?? [])
     .map(Number)
     .filter((n) => n >= 1 && n <= 104);
 }

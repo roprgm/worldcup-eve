@@ -1,7 +1,7 @@
 import { cn } from "cnfast";
 import type { ComponentProps } from "react";
 
-/** Bordered surface for the prediction widgets. Callers add their own layout. */
+/** Bordered surface; callers add their own layout. */
 export function Card({ className, ...props }: ComponentProps<"div">) {
   return (
     <div

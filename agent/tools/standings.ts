@@ -1,15 +1,13 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { percent, teamName } from "@/agent/lib/fixtures";
 import { fetchStandings, type StandingEntry } from "@/lib/results/standings";
 import { getMatchResults } from "@/lib/results";
-import { type GroupLetter, groupLetters, teamById } from "@/lib/tournament";
+import { type GroupLetter, groupLetters } from "@/lib/tournament";
 import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 
 const groupLetter = z.enum(groupLetters as [GroupLetter, ...GroupLetter[]]);
-
-const percent = (p: number) => Math.round(p * 1000) / 10;
-const teamName = (code: string) => teamById[code]?.name ?? code;
 
 const STAT_NAMES = new Set(
   "rank points gamesPlayed wins ties losses pointsFor pointsAgainst pointDifferential".split(

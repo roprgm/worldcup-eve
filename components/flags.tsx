@@ -36,12 +36,25 @@ function loadSprite() {
   });
 }
 
-const spritePromise: Promise<void> = loadSprite();
+// Load the sprite once, lazily, on the first client mount — never at module
+// scope, since this "use client" module is still evaluated during SSR where
+// `Image` is undefined (which would reject an unhandled module-level promise).
+let spritePromise: Promise<void> | undefined;
 
 function useSpriteLoaded() {
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    spritePromise.then(() => setLoaded(true));
+    let active = true;
+    spritePromise ??= loadSprite();
+    // Reveal on success, and also on failure so a missing sprite doesn't leave
+    // every flag stuck invisible (and to handle the rejection).
+    const reveal = () => {
+      if (active) setLoaded(true);
+    };
+    spritePromise.then(reveal, reveal);
+    return () => {
+      active = false;
+    };
   }, []);
   return loaded;
 }

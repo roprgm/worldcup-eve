@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
+import { percent, teamName } from "@/agent/lib/fixtures";
 import { codeFor } from "@/agent/lib/team-aliases";
 import { getPredictions } from "@/lib/predictions";
 import type { Predictions } from "@/lib/predictions";
@@ -10,14 +11,10 @@ import {
   groupLetters,
   matchByNumber,
   type SlotRef,
-  teamById,
   teams,
 } from "@/lib/tournament";
 
 const groupLetter = z.enum(groupLetters as [GroupLetter, ...GroupLetter[]]);
-
-const percent = (v: number) => Math.round(v * 1000) / 10;
-const teamName = (code: string) => teamById[code]?.name ?? code;
 
 const ROUND_LABEL: Record<string, string> = {
   R32: "Round of 32",
