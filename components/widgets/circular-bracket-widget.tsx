@@ -84,14 +84,17 @@ function circularView(
   const decided = decidedWinners(results);
 
   // Start-of-day baseline counterparts, to paint the move since the day's start.
+  // Fall back to the live outputs when a snapshot predates the `baseline` field
+  // (e.g. a stale cross-deploy cache entry), so deltas are simply zero.
+  const baseline = predictions.baseline ?? predictions;
   const baselineSlots = new Map(
-    predictions.baseline.slots.map((s) => [
+    baseline.slots.map((s) => [
       `${s.match}:${s.side}`,
       baselineMap(s.candidates),
     ]),
   );
   const baselineMatch = new Map(
-    Object.entries(predictions.baseline.matchWinOdds).map(([match, cands]) => [
+    Object.entries(baseline.matchWinOdds).map(([match, cands]) => [
       Number(match),
       baselineMap(cands),
     ]),
@@ -134,7 +137,7 @@ function circularView(
     liveLeader,
     championOdds: withBaseline(
       predictions.bracketChampion,
-      baselineMap(predictions.baseline.bracketChampion),
+      baselineMap(baseline.bracketChampion),
     ),
   };
 }
@@ -175,10 +178,16 @@ function useBracketData(): {
 
 /** Connected circular bracket: merges the shared predictions with real results
  *  and paints them onto the radial skeleton. */
-export function CircularBracketWidget() {
+export function CircularBracketWidget({
+  predict = false,
+}: {
+  /** Seed the market-predictions overlay on (users can still toggle it off). */
+  predict?: boolean;
+}) {
   const { view, teamPaths } = useBracketData();
-  // Market predictions start off; users opt in via the in-card toggle.
-  return <CircularBracketCard view={view} teamPaths={teamPaths} />;
+  return (
+    <CircularBracketCard view={view} teamPaths={teamPaths} predict={predict} />
+  );
 }
 
 /** The bracket ring without the card chrome, for the home hero. The predicted

@@ -5,27 +5,45 @@ import { LocalTime } from "@/components/ui/local-time";
 
 type StreamdownProps = ComponentProps<typeof Streamdown>;
 
-// The agent wraps a date/time in `<local-time iso>`; allowedTags lets it past
-// sanitization and literalTagContent keeps its text out of markdown parsing.
-const COMPONENTS = {
-  "local-time": LocalTime,
-} as unknown as StreamdownProps["components"];
-const ALLOWED_TAGS: NonNullable<StreamdownProps["allowedTags"]> = {
-  "local-time": ["iso"],
+// Streamdown's remend already strips a partial tag mid-stream (`<match n="5"` →
+// gone), but leaves a lone trailing "<" alone (it's ambiguous with a less-than
+// sign), so it flickers for a frame before a custom tag's name streams in. Drop
+// that too, via remend's own handler extension point — no Streamdown patching.
+const STRIP_TRAILING_TAG_START = {
+  name: "strip-trailing-tag-start",
+  handle: (text: string) => text.replace(/<\s*$/, ""),
 };
-const LITERAL_TAG_CONTENT = ["local-time"];
 
-/** Streams markdown safely. Memoized so unchanged content doesn't re-parse. */
+/** Streams markdown safely, rendering agent-written custom tags as components.
+ *  `<local-time iso>` is built in; callers can register more via `components` /
+ *  `allowedTags` and they merge with it. Memoized so unchanged content doesn't
+ *  re-parse. */
 export const Markdown = memo(
-  ({ className, ...props }: StreamdownProps) => (
+  ({
+    className,
+    components,
+    allowedTags,
+    literalTagContent,
+    remend,
+    ...props
+  }: StreamdownProps) => (
     <Streamdown
       className={cn(
         "text-base leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
-      components={COMPONENTS}
-      allowedTags={ALLOWED_TAGS}
-      literalTagContent={LITERAL_TAG_CONTENT}
+      components={
+        {
+          "local-time": LocalTime,
+          ...components,
+        } as StreamdownProps["components"]
+      }
+      allowedTags={{ "local-time": ["iso"], ...allowedTags }}
+      literalTagContent={["local-time", ...(literalTagContent ?? [])]}
+      remend={{
+        ...remend,
+        handlers: [STRIP_TRAILING_TAG_START, ...(remend?.handlers ?? [])],
+      }}
       controls={false}
       {...props}
     />

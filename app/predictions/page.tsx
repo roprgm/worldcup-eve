@@ -1,6 +1,5 @@
 import { CardGrid, CardGridFrame } from "@/components/ui/card-grid";
 import { Section } from "@/components/ui/section";
-import { CircularBracketWidget } from "@/components/widgets/circular-bracket-widget";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";

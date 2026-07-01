@@ -3,6 +3,16 @@
 /* Let Tailwind pick up the classes Streamdown renders markdown with. */
 @source "../node_modules/streamdown/dist/index.js";
 
+/* Every fenced block in a reply is a widget invocation (```chances, ```match …)
+   that Streamdown renders as a component via plugins.renderers; the app never
+   shows source code. Hide the default code block Streamdown paints for the
+   instant a fence's language is still streaming, so it doesn't flash before the
+   widget resolves. Widget output and inline code aren't code blocks, so they're
+   untouched. */
+[data-streamdown="code-block"] {
+  display: none;
+}
+
 :root {
   color-scheme: dark;
   --background: oklch(0.12 0 0);
