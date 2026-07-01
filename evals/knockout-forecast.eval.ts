@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Who is most likely to play in match 100?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook", { input: { slot: 100 } });
     t.messageIncludes("```slot");
     t.noFailedActions();

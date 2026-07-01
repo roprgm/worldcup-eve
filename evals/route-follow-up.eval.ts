@@ -7,7 +7,7 @@ export default defineEval({
     await t.send("¿Cuáles son las chances de México de ganar la final?");
     await t.send("¿Cuál es la ruta a la final?");
 
-    t.completed();
+    t.succeeded();
     t.messageIncludes("```path");
     t.noFailedActions();
   },

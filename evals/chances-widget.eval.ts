@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("¿Cuáles son las chances de México de ganar la final?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("outlook");
     t.messageIncludes("```chances");
     t.noFailedActions();

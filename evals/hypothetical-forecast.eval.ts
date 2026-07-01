@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("What are the odds Mexico beats England?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("odds");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

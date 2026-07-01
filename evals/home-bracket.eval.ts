@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Show me the market's predicted bracket");
 
-    t.completed();
+    t.succeeded();
     t.messageIncludes("```bracket");
     t.noFailedActions();
   },

@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("¿Cuándo juega Argentina?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("matches");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

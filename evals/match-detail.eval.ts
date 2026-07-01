@@ -5,7 +5,7 @@ export default defineEval({
   async test(t) {
     await t.send("Who got the red card in Belgium vs Iran?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("matches", { input: { timeline: true } });
     t.noFailedActions();
     t.judge.autoevals.closedQA(

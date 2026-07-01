@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Where did Argentina play their last match?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("matches");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

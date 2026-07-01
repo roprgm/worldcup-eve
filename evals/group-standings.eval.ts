@@ -6,7 +6,7 @@ export default defineEval({
   async test(t) {
     await t.send("Show me the Group C standings.");
 
-    t.completed();
+    t.succeeded();
     t.messageIncludes("```group");
     t.noFailedActions();
     t.judge.autoevals.closedQA(

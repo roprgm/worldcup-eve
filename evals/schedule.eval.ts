@@ -5,7 +5,7 @@ export default defineEval({
   async test(t) {
     await t.send("When does match 50 kick off?");
 
-    t.completed();
+    t.succeeded();
     t.calledTool("matches");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
