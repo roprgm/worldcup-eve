@@ -63,29 +63,22 @@ function codes(value: string | undefined): string[] {
     .filter((c): c is string => Boolean(c));
 }
 
+function scopeFromAttrs(
+  attrs: Record<string, string>,
+): MatchesScope | undefined {
+  if (attrs.day === "today" || attrs.scope === "today") return "today";
+  if ("live" in attrs || attrs.scope === "live") return "live";
+  return undefined;
+}
+
 // One tag → at most one widget, decided from its attributes alone (the widgets
-// self-fetch their data, so they only need an identifier).
+// self-fetch their data, so they only need an identifier). `match` tags are
+// aggregated separately in messageWidgets.
 function specForTag(
   tag: string,
   attrs: Record<string, string>,
 ): WidgetSpec | null {
   switch (tag) {
-    case "match": {
-      const nums = numbers(attrs.n);
-      if (nums.length)
-        return { key: "matches", render: () => <ChatMatches numbers={nums} /> };
-      const scope: MatchesScope | undefined =
-        attrs.day === "today"
-          ? "today"
-          : "live" in attrs || attrs.scope === "live"
-            ? "live"
-            : attrs.scope === "today"
-              ? "today"
-              : undefined;
-      return scope
-        ? { key: "matches", render: () => <ChatMatches scope={scope} /> }
-        : null;
-    }
     case "group":
       return attrs.g && isGroupLetter(attrs.g.toUpperCase())
         ? {
@@ -151,12 +144,40 @@ export function stripWidgetTags(text: string): string {
 export function messageWidgets(message: EveMessage): WidgetSpec[] {
   const text = messageText(message);
   const byKey = new Map<string, WidgetSpec>();
-  for (const match of text.matchAll(TAG_RE)) {
-    const spec = specForTag(match[1], parseAttrs(match[2] ?? ""));
+  const matchNumbers = new Set<number>();
+  let matchScope: MatchesScope | undefined;
+
+  for (const m of text.matchAll(TAG_RE)) {
+    const tag = m[1];
+    const attrs = parseAttrs(m[2] ?? "");
+    if (tag === "match") {
+      for (const n of numbers(attrs.n)) matchNumbers.add(n);
+      matchScope ??= scopeFromAttrs(attrs);
+      continue;
+    }
+    const spec = specForTag(tag, attrs);
     if (!spec) continue;
     byKey.delete(spec.key); // re-add so the latest tag keeps the newest slot
     byKey.set(spec.key, spec);
   }
+
+  // Every <match> tag folds into one card grid (explicit numbers win over a
+  // scope), so several match tags — or one tag with many numbers — render all
+  // their cards instead of collapsing to the last.
+  if (matchNumbers.size) {
+    const nums = [...matchNumbers].sort((a, b) => a - b);
+    byKey.set("matches", {
+      key: "matches",
+      render: () => <ChatMatches numbers={nums} />,
+    });
+  } else if (matchScope) {
+    const scope = matchScope;
+    byKey.set("matches", {
+      key: "matches",
+      render: () => <ChatMatches scope={scope} />,
+    });
+  }
+
   return [...byKey.values()].slice(-MAX_WIDGETS);
 }
 
