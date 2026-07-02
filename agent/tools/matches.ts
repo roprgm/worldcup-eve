@@ -50,9 +50,11 @@ export default defineTool({
       .optional()
       .describe("Only matches in this state."),
     when: z
-      .enum(["today", "upcoming", "past"])
+      .enum(["today", "next", "upcoming", "past"])
       .optional()
-      .describe("Only today's, still-upcoming, or already-played matches."),
+      .describe(
+        "Only today's, the soonest future kickoff (next), still-upcoming, or already-played matches.",
+      ),
     timeline: z
       .boolean()
       .optional()
@@ -77,7 +79,7 @@ export default defineTool({
     const played = (kickoffAt: string) =>
       new Date(kickoffAt).getTime() + MATCH_WINDOW_MS <= nowMs;
 
-    const selected: Fixture[] = matchSchedule
+    const filtered: Fixture[] = matchSchedule
       .map((m) => {
         const result = resultByNumber.get(m.number);
         const resultCode = (side: "home" | "away") =>
@@ -110,13 +112,20 @@ export default defineTool({
         if (!when) return true;
         if (when === "past") return played(m.kickoffAt);
         if (when === "upcoming") return !played(m.kickoffAt);
+        if (when === "next") return new Date(m.kickoffAt).getTime() > nowMs;
         return relativeTournamentDay(new Date(m.kickoffAt), now) === "today";
       })
       .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
 
+    // "next" keeps only the soonest future kickoff, which several matches can share.
+    const selected =
+      when === "next"
+        ? filtered.filter((m) => m.kickoffAt === filtered[0]?.kickoffAt)
+        : filtered;
+
     if (selected.length === 0) {
       const note =
-        team && when === "upcoming"
+        team && (when === "upcoming" || when === "next")
           ? `${team} has no scheduled fixture left — its next game is an undecided knockout slot. Show a path code block for it to trace where it goes next.`
           : "No matching matches.";
       return { matches: [], note };
