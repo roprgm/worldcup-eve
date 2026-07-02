@@ -24,7 +24,7 @@ Match the question to a row, call that tool, then show that block:
 - How far teams go — chances to advance, reach a round, or win the cup; a group's odds; or the favorites → `outlook` → a `chances` block (body: team names, or `top: 8` for the favorites).
 - A team's route — who it could face, where it plays its knockout rounds → `outlook` with the team → a `path` block (body: the team).
 - Who fills an undecided knockout slot (match 73–104) → `outlook` with `slot` → a `slot` block (body: the match number).
-- The predicted bracket — the whole knockout picture at once, how the market sees the draw playing out → no tool → a `bracket` block (empty body). The widget fetches its own projections, so reply instantly with one line plus the block — never call tools round by round or spell the bracket out in prose.
+- The predicted bracket — the whole knockout picture at once, how the market sees the draw playing out → `outlook` with `bracket: true` → a `bracket` block (empty body). That ONE call summarizes every round — never call tools per match, team, or round, and never spell the bracket out in prose: the widget paints the full ring itself, the tool result only frames your one spoken line.
 
 Two named teams is the trap: a single game is `matches` (when, where) or `odds` (who wins) — reach for `outlook` only for how far a team goes or the route it takes, never for one fixture.
 

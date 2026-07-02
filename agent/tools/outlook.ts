@@ -90,7 +90,7 @@ function teamRoute(snapshot: Predictions, code: string) {
 
 export default defineTool({
   description:
-    "How far World Cup teams go over the whole tournament — not a single game. Pass a team for its chances to advance / reach each round / win the cup plus its projected route (likely opponent and stadium each round); a group for its advancement odds; top:N for the title favorites; or slot:<73-104> for who's likely to fill an undecided knockout match. Show a `chances` code block for the odds (it holds several teams at once — the default how-far view), a `path` code block when asked who a team could face or where it plays its knockout rounds, or a `slot` code block for an undecided knockout match. For one matchup's win odds or predicted score, use odds instead.",
+    "How far World Cup teams go over the whole tournament — not a single game. Pass a team for its chances to advance / reach each round / win the cup plus its projected route (likely opponent and stadium each round); a group for its advancement odds; top:N for the title favorites; slot:<73-104> for who's likely to fill an undecided knockout match; or bracket:true for the market's whole projected knockout bracket, summarized in ONE call. Show a `chances` code block for the odds (it holds several teams at once — the default how-far view), a `path` code block when asked who a team could face or where it plays its knockout rounds, a `slot` code block for an undecided knockout match, or a `bracket` code block (empty body) for the whole bracket. For one matchup's win odds or predicted score, use odds instead.",
   inputSchema: z.object({
     team: z
       .string()
@@ -113,9 +113,52 @@ export default defineTool({
       .max(104)
       .optional()
       .describe("A knockout match number, for who's likely to play in it."),
+    bracket: z
+      .boolean()
+      .optional()
+      .describe(
+        "The market's whole projected bracket, summarized — one call covers every round.",
+      ),
   }),
-  async execute({ team, group, top, slot }) {
+  async execute({ team, group, top, slot, bracket }) {
     const snapshot = await getPredictions();
+
+    if (bracket) {
+      const bySide = new Map(
+        snapshot.slots.map((s) => [`${s.match}:${s.side}`, s.candidates]),
+      );
+      const likely = (match: number, side: "home" | "away") => {
+        const best = [...(bySide.get(`${match}:${side}`) ?? [])].sort(
+          (a, b) => b.probability - a.probability,
+        )[0];
+        return best
+          ? { team: teamName(best.code), chancePct: percent(best.probability) }
+          : { team: "to be decided", chancePct: 0 };
+      };
+      const matchup = (match: number) => ({
+        match,
+        venue: matchByNumber[match].venue,
+        home: likely(match, "home"),
+        away: likely(match, "away"),
+      });
+      const numbersFor = (round: string) =>
+        [...new Set(snapshot.slots.map((s) => s.match))]
+          .filter((n) => matchByNumber[n]?.round === round)
+          .sort((a, b) => a - b);
+      return {
+        kind: "bracket" as const,
+        asOf: snapshot.updatedAt,
+        semifinals: numbersFor("SF").map(matchup),
+        final: matchup(numbersFor("FINAL")[0] ?? 104),
+        champion: [...snapshot.bracketChampion]
+          .sort((a, b) => b.probability - a.probability)
+          .slice(0, 5)
+          .map((c) => ({
+            team: teamName(c.code),
+            chancePct: percent(c.probability),
+          })),
+      };
+    }
 
     if (slot) {
       const bracket = matchByNumber[slot];
@@ -203,6 +246,16 @@ export default defineTool({
         };
       case "out":
         return { type: "text", value: output.note };
+      case "bracket": {
+        const side = (s: { team: string; chancePct: number }) =>
+          s.chancePct >= 100 ? s.team : `${s.team} (${s.chancePct}%)`;
+        const vs = (m: (typeof output.semifinals)[number]) =>
+          `${side(m.home)} vs ${side(m.away)} at ${m.venue}`;
+        return {
+          type: "text",
+          value: `Market-projected bracket, most likely team per slot — semifinals: ${output.semifinals.map(vs).join("; ")}. Final: ${vs(output.final)}. Title odds: ${output.champion.map((c) => `${c.team} ${c.chancePct}%`).join(", ")}. The bracket widget shows every round.`,
+        };
+      }
       case "slot": {
         const names = (side: typeof output.home) =>
           side.candidates.map((c) => `${c.team} ${c.chancePct}%`).join(", ");
