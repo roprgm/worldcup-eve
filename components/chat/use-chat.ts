@@ -73,11 +73,15 @@ export function useChat(id: string) {
   }, []);
 
   // A spent session is terminal: the failure lives in the persisted event log,
-  // so this stays true across a refresh even though status/error do not.
-  const limitReached = agent.events.some(
-    (event) =>
-      event.type === "session.failed" && isTokenLimitFailure(event.data),
-  );
+  // so this stays true across a refresh even though status/error do not. Gated
+  // by `hydrated` like `messages`, since the server has no restored events —
+  // reporting it before hydration would mismatch the server-rendered markup.
+  const limitReached =
+    hydrated &&
+    agent.events.some(
+      (event) =>
+        event.type === "session.failed" && isTokenLimitFailure(event.data),
+    );
 
   return {
     messages: hydrated ? agent.data.messages : [],
