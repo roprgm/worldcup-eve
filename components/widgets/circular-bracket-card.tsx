@@ -766,7 +766,7 @@ function NodeSkeleton({
 
 // Every outer/inner node is the same size; only the centre champion differs.
 const NODE_SIZE = "calc(var(--cf) * 0.95)";
-const NODE_FACTOR = 0.85; // node size as a fraction of --cf (matches NODE_SIZE)
+const NODE_FACTOR = 0.95; // node size as a fraction of --cf (matches NODE_SIZE)
 
 // ── Cursor-proximity "magnetism" ───────────────────────────────────────────
 // Nodes near the cursor grow up to MAX_GROW px, falling off with a Gaussian in
