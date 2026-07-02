@@ -6,14 +6,11 @@ the relevant guide before changing agent code.
 
 ## Component organization
 
-- `components/ai-elements/` — vendored primitives from the
-  [AI SDK Elements](https://vercel.com/academy/ai-sdk/ai-elements) library. Treat these as
-  upstream: only put components that come from there here.
 - `components/ui/` — our own generic, shadcn-like primitives with no domain knowledge (e.g.
-  `Notice`, `ActivityStatus`).
-- `components/` — higher level, app-specific components (e.g. `chat.tsx`, `header.tsx`).
+  `Notice`, `Popover`).
+- `components/` — higher level, app-specific components (e.g. `composer.tsx`, `header.tsx`).
 - `components/<domain>/` — group components under a domain folder when one is important enough to
-  warrant it.
+  warrant it (e.g. `chat/`, `widgets/`).
 - Within a file, order top-down by reading flow: constants and small helpers first, then the
   smaller building-block components, with the bigger / exported component(s) last. A reader meets a
   piece before the component that composes it. Extract sub-components freely — even single-use ones —
@@ -32,6 +29,8 @@ the relevant guide before changing agent code.
   invariant, a workaround, an intentional edge case), never to restate _what_ the code does.
 - Keep comments short — a line or two. If a comment needs a paragraph, the naming or structure
   probably needs the work instead.
+- Never nest ternaries. When a branch needs its own branching, use a helper
+  function or an `if` instead.
 - Import local modules through the `@/*` path alias.
 - Merge `className` values with `cn` from [`cnfast`](https://github.com/aidenybai/cnfast) (a fast
   drop-in for `clsx` + `tailwind-merge`). Use it for any conditional or combined class names instead

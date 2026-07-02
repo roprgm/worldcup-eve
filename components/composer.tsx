@@ -8,12 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { isBusy } from "@/components/chat/messages";
 import { EveAttribution } from "@/components/eve";
 import { BallIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-
-const isBusy = (status: UseEveAgentStatus) =>
-  status === "submitted" || status === "streaming";
 
 /** Send / stop control. On send it plays a launch animation: the up-arrow
  *  becomes a soccer ball that kicks up and out of the top of the button. */

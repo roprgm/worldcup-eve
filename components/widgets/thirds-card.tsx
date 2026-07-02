@@ -203,9 +203,7 @@ function RankingRow({
         <span className="text-center text-xs text-muted-foreground">
           {row.group}
         </span>
-        <span className="text-right text-xs font-semibold">
-          {row.points}
-        </span>
+        <span className="text-right text-xs font-semibold">{row.points}</span>
         <span className="text-right text-xs text-muted-foreground">
           {row.goalDiff}
         </span>

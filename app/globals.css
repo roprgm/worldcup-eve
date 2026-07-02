@@ -62,11 +62,11 @@
     var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  --text-xs: 0.70rem; 
+  --text-xs: 0.7rem;
   --text-sm: 0.85rem;
   --text-base: 0.95rem;
-  --text-lg: 1.20rem;
-  --text-xl: 1.50rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.5rem;
   --text-2xl: 1.95rem;
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -271,20 +271,6 @@
   50% {
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 24%, transparent);
   }
-}
-
-/* soft halo behind the empty-state mark */
-.wc-halo {
-  position: absolute;
-  inset: -90%;
-  background: radial-gradient(
-    circle at center,
-    color-mix(in oklab, var(--foreground) 13%, transparent),
-    transparent 68%
-  );
-  filter: blur(6px);
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* submit button — the up-arrow morphs into a soccer ball that kicks up and out
