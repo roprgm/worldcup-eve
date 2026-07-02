@@ -63,6 +63,7 @@ anchor once and caching it on the passed `cache` object.
 | `groupScores`     | most-likely exact scoreline per unplayed group fixture, by id (`"A1"`..) |
 | `matchOdds`       | two-way home/away win chance per group fixture with a priced market    |
 | `knockoutScores`  | most-likely exact scoreline per decided knockout match with a per-game market, by match number |
+| `knockoutScoreChances` | every listed scoreline's chance for those same matches (normalized, most-likely first) — the matrix behind `knockoutScores` |
 | `knockoutOdds`    | the market's direct read of each decided knockout match: per-game regulation three-way (home/draw/away) + the two-way "to advance" odds from each side's reach-the-next-round future |
 | `matchWinOdds`    | win distribution per knockout match (73–104). Decided matchups come straight from the market; the rest are the BT model |
 | `baseline`        | the same bracket outputs (`slots`, `bracketChampion`, `reach`, `knockoutScores`, `knockoutOdds`, `matchWinOdds`, `teamStrengths`) from the start-of-day **epoch** — the before/after counterpart for the bars |

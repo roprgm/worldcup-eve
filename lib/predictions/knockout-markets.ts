@@ -1,5 +1,5 @@
 // Per-knockout-fixture predictions from Polymarket's per-game markets: the
-// most-likely exact scoreline and the three-way (home/draw/away) regulation
+// full exact-score distribution and the three-way (home/draw/away) regulation
 // odds. Unlike the BT model, this is the market's *direct* read of an actual
 // matchup — no inference. The two-way "to advance" odds aren't derived here:
 // a knockout can draw in regulation yet still send a team through, so the caller
@@ -28,13 +28,22 @@ interface Catalog {
 
 const catalog = knockoutCatalogData as unknown as Catalog;
 
+const round4 = (x: number) => Math.round(x * 1e4) / 1e4;
+
+export interface ScoreChance {
+  a: number; // goals for teams[0]
+  b: number; // goals for teams[1]
+  p: number; // chance of this scoreline, normalized over the listed ones
+}
+
 export interface KnockoutMatchMarket {
   teams: [string, string];
   /** P(team wins in regulation) per code; with the draw they sum to ~1. */
   win: Record<string, number>;
   draw: number | null;
-  /** Most-likely exact scoreline: goals for teams[0] (`a`) and teams[1] (`b`). */
-  score?: { a: number; b: number };
+  /** Every listed scoreline's chance, sorted most-likely first; empty while
+   *  the exact-score market has no trades. */
+  scores: ScoreChance[];
 }
 
 /** Order-independent key for a team pair. */
@@ -70,22 +79,22 @@ export async function fetchKnockoutMarkets(): Promise<KnockoutMarketsSnapshot> {
     }
     const draw = m.draw ? (mid.get(m.draw) ?? null) : null;
 
-    let best: ScoreMarket | null = null;
-    let bestPrice = 0;
-    for (const s of m.scores) {
-      const price = lastTrade.get(s.token) ?? 0;
-      if (price > bestPrice) {
-        bestPrice = price;
-        best = s;
-      }
-    }
+    // Last-trade prices carry noise and vig, so normalize into a distribution
+    // over the listed scorelines (there's no "any other score" outcome).
+    const priced = m.scores.map((s) => ({
+      a: s.a,
+      b: s.b,
+      p: lastTrade.get(s.token) ?? 0,
+    }));
+    const total = priced.reduce((sum, s) => sum + s.p, 0);
+    const scores =
+      total > 0
+        ? priced
+            .map((s) => ({ ...s, p: round4(s.p / total) }))
+            .sort((x, y) => y.p - x.p)
+        : [];
 
-    byPair.set(pairKey(a, b), {
-      teams: [a, b],
-      win,
-      draw,
-      ...(best ? { score: { a: best.a, b: best.b } } : {}),
-    });
+    byPair.set(pairKey(a, b), { teams: [a, b], win, draw, scores });
   }
 
   return { byPair };

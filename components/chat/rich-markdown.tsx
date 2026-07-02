@@ -11,6 +11,7 @@ import { Markdown } from "@/components/ui/markdown";
 import { CircularBracketWidget } from "@/components/widgets/circular-bracket-widget";
 import { PredictionGroupWidget } from "@/components/widgets/prediction-group-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
+import { ScoreMatrixWidget } from "@/components/widgets/score-matrix-widget";
 import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
 import { TeamPathWidget } from "@/components/widgets/team-path-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
@@ -38,6 +39,7 @@ const WIDGET_LANGUAGES = [
   "path",
   "slot",
   "chances",
+  "scores",
   "bracket",
 ];
 
@@ -101,6 +103,12 @@ function renderWidget(language: string, body: string): ReactNode {
       // the table never flashes the whole field before its filter lands.
       const top = numbersIn(body)[0];
       return top ? <StageOddsWidget top={top} /> : null;
+    }
+    case "scores": {
+      const match = numbersIn(body).find((n) => n >= 73);
+      if (match) return <ScoreMatrixWidget match={match} />;
+      const teams = teamCodesIn(body);
+      return teams.length >= 2 ? <ScoreMatrixWidget teams={teams} /> : null;
     }
     case "bracket":
       // In chat the bracket answers prediction questions, so show the market

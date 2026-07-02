@@ -74,6 +74,10 @@ export interface TeamReach {
   btChampion: number; // P(win the Final) — BT model
   mktChampion: number; // P(champion) — direct market
 }
+/** A scoreline's chance within a match's exact-score market. */
+export interface ScorelineChance extends Scoreline {
+  p: number; // 0–1, normalized over the market's listed scorelines
+}
 export interface KnockoutOdds {
   match: number; // FIFA match number (73–104)
   home: string; // FIFA code
@@ -118,6 +122,10 @@ export interface Predictions extends BracketOutputs {
   groupScores: Record<string, Scoreline>;
   /** Live two-way (home/away) win chance per group fixture with a market. */
   matchOdds: MatchOdds[];
+  /** Every listed scoreline's chance per decided knockout match with an
+   *  exact-score market, sorted most-likely first — the matrix behind
+   *  `knockoutScores`. Live-only: not part of the persisted epoch. */
+  knockoutScoreChances: Record<number, ScorelineChance[]>;
   /** The bracket outputs from the start-of-day epoch (the persisted snapshot),
    *  the before/after counterpart the bars diff against. Equals the live bracket
    *  until the first epoch is captured. */
@@ -178,10 +186,12 @@ function knockoutMarketOverride(
 ): {
   override: WinnerOverride;
   scores: Record<number, Scoreline>;
+  scoreChances: Record<number, ScorelineChance[]>;
   odds: KnockoutOdds[];
 } {
   const override: WinnerOverride = new Map();
   const scores: Record<number, Scoreline> = {};
+  const scoreChances: Record<number, ScorelineChance[]> = {};
   const odds: KnockoutOdds[] = [];
 
   // Matches the market has already settled, so a played round feeds the next
@@ -232,13 +242,14 @@ function knockoutMarketOverride(
     const market = markets.byPair.get(pairKey(home, away));
     if (!market) continue;
 
-    if (market.score) {
+    if (market.scores.length) {
       // The catalog stores goals as (teams[0]=`a`, teams[1]=`b`); orient to ours.
       const [t0] = market.teams;
-      scores[m.number] =
-        t0 === home
-          ? { h: market.score.a, a: market.score.b }
-          : { h: market.score.b, a: market.score.a };
+      const chances = market.scores.map((s) =>
+        t0 === home ? { h: s.a, a: s.b, p: s.p } : { h: s.b, a: s.a, p: s.p },
+      );
+      scoreChances[m.number] = chances;
+      scores[m.number] = { h: chances[0].h, a: chances[0].a };
     }
 
     odds.push({
@@ -252,7 +263,7 @@ function knockoutMarketOverride(
       awayAdvance: round4(advance?.away ?? 0),
     });
   }
-  return { override, scores, odds };
+  return { override, scores, scoreChances, odds };
 }
 
 // Fit and simulate the whole bracket from the live knockout markets, returning
@@ -267,27 +278,30 @@ function simulateBracket(
   prices: Map<string, number>,
   cache: { anchor?: Strengths },
   base?: Strengths,
-): BracketOutputs {
+): BracketOutputs & {
+  knockoutScoreChances: Record<number, ScorelineChance[]>;
+} {
   // Once a knockout matchup is decided (both sides known), Polymarket prices it
   // directly. Pin those matches to the market's two-way advance odds (instead of
   // inferring them from the fit) and capture the market's scoreline + three-way
   // read. The override also feeds the rest of the bracket, so later rounds start
   // from it.
   const {
-    override: r32Override,
+    override,
     scores: knockoutScores,
+    scoreChances: knockoutScoreChances,
     odds: knockoutOdds,
   } = knockoutMarketOverride(r32Slots, knockoutMarkets, prices);
 
   // Warm-start from the epoch; fall back to the cached anchor when there's none.
-  if (!base) cache.anchor ??= anchorStrengths(r32Slots, reachObs, r32Override);
+  if (!base) cache.anchor ??= anchorStrengths(r32Slots, reachObs, override);
   const strengths = fitStrengths(
     r32Slots,
     reachObs,
     base ?? cache.anchor,
-    r32Override,
+    override,
   );
-  const winners = simulate(r32Slots, strengths, r32Override);
+  const winners = simulate(r32Slots, strengths, override);
 
   // Third-place play-off: simulate() skips it, so derive its two slots here as
   // the beaten semi-finalists (teams reaching a semi, minus its winners).
@@ -364,6 +378,7 @@ function simulateBracket(
     bracketChampion,
     reach,
     knockoutScores,
+    knockoutScoreChances,
     knockoutOdds,
     matchWinOdds,
     teamStrengths: Object.fromEntries(
