@@ -62,7 +62,9 @@ function getToolActivityLabel(toolName: string): string | undefined {
   return toolActivityLabels[toolName];
 }
 
-export function assistantActivityLabel(message: EveMessage): string {
+export function assistantActivityLabel(message?: EveMessage): string {
+  if (!message) return "Thinking...";
+
   const latestTool = message.parts
     .filter((part) => part.type === "dynamic-tool")
     .at(-1);

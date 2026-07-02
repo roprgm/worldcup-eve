@@ -29,6 +29,8 @@ the relevant guide before changing agent code.
   invariant, a workaround, an intentional edge case), never to restate _what_ the code does.
 - Keep comments short — a line or two. If a comment needs a paragraph, the naming or structure
   probably needs the work instead.
+- Never nest ternaries. When a branch needs its own branching, use a helper
+  function or an `if` instead.
 - Import local modules through the `@/*` path alias.
 - Merge `className` values with `cn` from [`cnfast`](https://github.com/aidenybai/cnfast) (a fast
   drop-in for `clsx` + `tailwind-merge`). Use it for any conditional or combined class names instead

@@ -23,15 +23,11 @@ export function Thread({ chat }: { chat: ChatView }) {
   const busy = isBusy(status);
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
 
-  // The reply is "in flight" until its text starts streaming. Until then the
-  // assistant bubble shows the activity loader, which morphs into the answer in
-  // place — so only one indicator can ever show and there's no layout shift.
-  const activity =
-    busy && (!lastAssistant || messageText(lastAssistant).trim().length === 0)
-      ? lastAssistant
-        ? assistantActivityLabel(lastAssistant)
-        : "Thinking..."
-      : null;
+  // Until the reply's text starts streaming, its bubble shows the activity
+  // loader, which morphs into the answer in place — no layout shift.
+  const awaitingReply =
+    busy && (!lastAssistant || !messageText(lastAssistant).trim());
+  const activity = awaitingReply ? assistantActivityLabel(lastAssistant) : null;
 
   const rows = messages.filter(
     (m) => isRenderableMessage(m) || (busy && m === lastAssistant),

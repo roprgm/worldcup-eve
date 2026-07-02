@@ -6,13 +6,10 @@ import { Info, Trophy } from "lucide-react";
 import {
   type CSSProperties,
   createContext,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefCallback,
   useCallback,
   useContext,
-  useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -23,6 +20,11 @@ import {
 import { Flag } from "@/components/flags";
 import { Card } from "@/components/ui/card";
 import { Popover } from "@/components/ui/popover";
+import {
+  type Cursor,
+  type ProximityField,
+  useProximityField,
+} from "@/hooks/use-proximity-field";
 import type { CellPath } from "@/lib/predictions/team-path";
 import { type KnockoutMatch, matchByNumber } from "@/lib/tournament";
 
@@ -754,83 +756,42 @@ const NODE_SIZE = "calc(var(--cf) * 0.85)";
 const NODE_FACTOR = 0.85; // node size as a fraction of --cf (matches NODE_SIZE)
 
 // ── Cursor-proximity "magnetism" ───────────────────────────────────────────
-// Nodes grow a touch as the cursor nears their centre — not only the hovered
-// one: the growth is capped at MAX_GROW px and falls off with a Gaussian in the
-// 1000×1000 viewBox space, so it tapers smoothly across the neighbours. Each
-// node's scale is a pure function of the cursor position, so every pointermove
-// (browsers already coalesce these to one per frame) writes the transforms
-// directly — no animation loop and no React renders.
-const MAX_GROW = 8; // px a node gains at the cursor's exact centre
-const PROXIMITY_SIGMA = 120; // Gaussian falloff radius, in viewBox units
+// Nodes near the cursor grow up to MAX_GROW px, falling off with a Gaussian in
+// viewBox space so the effect tapers smoothly across neighbours.
+const MAX_GROW = 8;
+const PROXIMITY_SIGMA = 120; // falloff radius, in viewBox units
 
-/** A node registered with the field: its centre in viewBox coordinates, its
- *  base size as a fraction of --cf (a flag fills the node, an unsettled "?" is
- *  smaller — needed to size the +MAX_GROW growth exactly), and its element. */
-interface ProximityNode {
+/** A ring node: centre in viewBox coordinates, base size as a fraction of
+ *  --cf (a flag fills the node, an unsettled "?" is smaller). */
+interface RingNode {
   x: number;
   y: number;
   factor: number;
   el: HTMLElement;
 }
 
-interface ProximityField {
-  register: (id: string, node: ProximityNode) => void;
-  unregister: (id: string) => void;
-}
+const ProximityContext = createContext<ProximityField<RingNode> | null>(null);
 
-const ProximityContext = createContext<ProximityField | null>(null);
-
-/** The current --cf value (px) derived from the container width, matching the
- *  `clamp(20px, 7.2cqw, 44px)` set in CSS — lets us size the +MAX_GROW growth
- *  exactly without reading each node's box. */
+/** The --cf value (px) for a container width — mirrors the CSS
+ *  `clamp(20px, 7.2cqw, 44px)`, so growth can be sized without reading boxes. */
 function cfPx(width: number): number {
   return Math.max(20, Math.min((7.2 * width) / 100, 44));
 }
 
-/** Tracks the pointer over the ring and scales every registered node by its
- *  distance to the cursor; a leave resets them all to their base size. */
-function useProximityField() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const nodes = useRef(new Map<string, ProximityNode>());
-
-  const field = useMemo<ProximityField>(
-    () => ({
-      register: (id, node) => nodes.current.set(id, node),
-      unregister: (id) => nodes.current.delete(id),
-    }),
-    [],
-  );
-
-  const apply = (cursor: { x: number; y: number } | null) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const cf = cfPx(rect.width);
-    // The cursor in viewBox coordinates, or null once the pointer left.
-    const at = cursor && {
-      x: ((cursor.x - rect.left) / rect.width) * SIZE,
-      y: ((cursor.y - rect.top) / rect.height) * SIZE,
-    };
-    for (const node of nodes.current.values()) {
-      let scale = 1;
-      if (at) {
-        const d = Math.hypot(at.x - node.x, at.y - node.y);
-        const f = Math.exp(-(d * d) / (2 * PROXIMITY_SIGMA * PROXIMITY_SIGMA));
-        const base = cf * node.factor;
-        if (f > 0.01) scale = (base + MAX_GROW * f) / base;
-      }
-      node.el.style.transform = `scale(${round2(scale)})`;
-    }
-  };
-
-  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) =>
-    apply({ x: e.clientX, y: e.clientY });
-  const onPointerLeave = () => apply(null);
-
-  return { containerRef, field, onPointerMove, onPointerLeave };
+function scaleByProximity(node: RingNode, cursor: Cursor, rect: DOMRect) {
+  let scale = 1;
+  if (cursor) {
+    const x = (cursor.x / rect.width) * SIZE;
+    const y = (cursor.y / rect.height) * SIZE;
+    const d = Math.hypot(x - node.x, y - node.y);
+    const f = Math.exp(-(d * d) / (2 * PROXIMITY_SIGMA * PROXIMITY_SIGMA));
+    const base = cfPx(rect.width) * node.factor;
+    if (f > 0.01) scale = (base + MAX_GROW * f) / base;
+  }
+  node.el.style.transform = `scale(${round2(scale)})`;
 }
 
-/** Registers a node's positioned wrapper with the proximity field and returns a
- *  ref callback for it, so the field can scale it as the cursor approaches. */
+/** Ref callback that registers a node's positioned wrapper with the field. */
 function useProximityRef(
   id: string,
   x: number,
@@ -1200,7 +1161,7 @@ export function CircularBracketRing({
   const content = open && view && !teamPath ? openContent(view, open.id) : null;
 
   const { containerRef, field, onPointerMove, onPointerLeave } =
-    useProximityField();
+    useProximityField(scaleByProximity);
 
   return (
     <>

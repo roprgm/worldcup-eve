@@ -8,8 +8,7 @@ import { useChat } from "@/components/chat/use-chat";
 import { Composer } from "@/components/composer";
 import { MessageScroller } from "@/components/ui/message-scroller";
 
-/** One conversation, addressed as /chat/<id>. Owns its eve session via
- *  useChat; pages key it by id so each conversation mounts fresh. */
+/** One conversation, addressed as /chat/<id>. */
 export function Chat({ id }: { id: string }) {
   const chat = useChat(id);
   const [input, setInput] = useState("");

@@ -11,10 +11,8 @@ type ChatAgent = UseEveAgentHelpers<EveMessageData>;
 /** Everything the UI needs from a conversation. */
 export type ChatView = ReturnType<typeof useChat>;
 
-/** A conversation saved on this device: just the pending first message before
- *  the server has seen it, then — reconciled as events arrive — the eve
- *  session cursor and the event log that rebuilds the UI. A refresh at any
- *  point resumes from whichever shape is there. */
+/** A conversation on this device: the pending first message, then — as events
+ *  arrive — the eve session cursor and the event log that rebuilds the UI. */
 type SavedChat = {
   session?: ChatAgent["session"];
   events?: ChatAgent["events"];
@@ -22,9 +20,8 @@ type SavedChat = {
   savedAt: number;
 };
 
-// React's own "past hydration?" signal: false on the server and during the
-// hydration render (so the markup matches), true from the very first render
-// of a client-side navigation — nothing is deferred there.
+// False on the server and during hydration (so the markup matches); true from
+// the first render of a client-side navigation.
 const never = () => () => {};
 const useHydrated = () =>
   useSyncExternalStore(
@@ -33,9 +30,8 @@ const useHydrated = () =>
     () => false,
   );
 
-/** The conversation for `id`. Pages key their <Chat> by it, so each mount owns
- *  one eve session, restored from this device. Storage doesn't exist on the
- *  server, so restored messages only show once hydrated. */
+/** The conversation for `id`, restored from this device. Pages key their
+ *  <Chat> by it, so each mount owns one eve session. */
 export function useChat(id: string) {
   const [initial] = useState(() => restoreChat(id));
   const hydrated = useHydrated();
@@ -51,11 +47,9 @@ export function useChat(id: string) {
     }),
   });
 
-  // Persist every event so a refresh resumes anywhere, even mid-stream. Two
-  // cursor quirks to compensate: the session's streamIndex lags mid-turn (pin
-  // it to the log), and an aborted stream (reload, stop) resets the cursor —
-  // remember the last state that addressed the session and never save a blank
-  // one over it.
+  // Persist every event so a refresh resumes anywhere. eve's cursor lags
+  // mid-turn and resets when a stream aborts (reload, stop): pin streamIndex
+  // to the log and never save a blank cursor over a good one.
   const cursor = useRef(initial?.session);
   useEffect(() => {
     if (agent.session.sessionId) cursor.current = agent.session;
@@ -66,8 +60,7 @@ export function useChat(id: string) {
           streamIndex: agent.events.length,
         },
         events: agent.events,
-        // The first message stays on the record until the session is
-        // resumable — a cut before that can only restart from it.
+        // Kept until the session is resumable — a cut before that restarts it.
         pendingMessage: cursor.current ? undefined : initial?.pendingMessage,
       });
   }, [id, agent.session, agent.events]);
@@ -83,8 +76,8 @@ export function useChat(id: string) {
     messages: hydrated ? agent.data.messages : [],
     status: agent.status,
     error: agent.error,
-    /** Send a message, answering any parked question. A send while a turn is
-     *  running is rejected by the session and dropped. */
+    /** Send a message, answering any parked question. Sends during a running
+     *  turn are rejected by the session and dropped. */
     send: (text: string) => {
       const message = text.trim();
       if (!message) return;
@@ -103,10 +96,9 @@ export function useChat(id: string) {
   };
 }
 
-/** Start a new conversation: persist the first message — before any server
- *  contact — and claim its URL. The pushState is Next's shallow routing: the
- *  chat renders with no server round trip (see app/page.tsx), while a refresh
- *  of that URL server-renders and restores from the record. */
+/** Start a new conversation: persist its first message, then claim its URL
+ *  with pushState (shallow routing — nothing waits on the server); a refresh
+ *  of that URL restores from the record. */
 export function startNewChat(message: string): void {
   if (!message.trim()) return;
   const id = Math.random().toString(36).slice(2, 10);
@@ -129,8 +121,7 @@ function loadChat(id: string): SavedChat | null {
   }
 }
 
-/** Write the whole record — a later save with server state replaces the
- *  pending shape. Best-effort: private mode just loses resumability. */
+// Best-effort: private mode just loses resumability.
 function saveChat(id: string, chat: Omit<SavedChat, "savedAt">): void {
   try {
     localStorage.setItem(
@@ -141,8 +132,7 @@ function saveChat(id: string, chat: Omit<SavedChat, "savedAt">): void {
   } catch {}
 }
 
-/** Cap stored conversations, dropping the oldest — the count only grows when
- *  a chat starts, so this runs there rather than on every save. */
+// Drop the oldest beyond MAX_CHATS; the count only grows in startNewChat.
 function pruneChats(): void {
   try {
     Object.keys(localStorage)
@@ -169,11 +159,9 @@ const SETTLED = new Set([
   "session.failed",
 ]);
 
-/** The saved record, ready to mount. One special case: a reload doesn't stop
- *  a turn, and a log cut mid-turn before eve minted a resumable cursor (that
- *  happens at the first turn boundary) can only restart — go back to the
- *  still-pending first message. A cut log WITH a cursor mounts as-is: the
- *  next send reconnects the stream and backfills the missing tail. */
+/** The saved record, ready to mount. A log cut mid-turn without a cursor (eve
+ *  mints one at the first turn boundary) can only restart from the pending
+ *  message; with a cursor it mounts as-is — the next send backfills the tail. */
 function restoreChat(id: string): SavedChat | null {
   const saved = loadChat(id);
   const last = saved?.events?.at(-1);

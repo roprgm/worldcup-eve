@@ -16,9 +16,8 @@ const SUGGESTIONS = [
   "Show me the market's predicted bracket",
 ];
 
-/** The empty state: the hero bracket, starter suggestions, and a composer.
- *  Sending hands off to startNewChat, which persists the message and claims
- *  the /chat/<id> URL in place. */
+/** The empty state: hero bracket, starter suggestions, and a composer whose
+ *  send starts a new conversation. */
 export function Home() {
   const [input, setInput] = useState("");
 
