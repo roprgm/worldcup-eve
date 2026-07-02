@@ -8,7 +8,7 @@ const MAX_TIMELINES = 4;
 
 export default defineTool({
   description:
-    "A match's incident timeline — goals, cards, and substitutions — for one or more played or live matches. Give the FIFA match numbers (1-104); look them up with the matches tool first if you only have team names. Use this for incident questions (who scored, when, cards); for the fixture list, schedule, or score, use matches.",
+    "Goals, cards, and substitutions for one or more played or live matches, by FIFA match number (look numbers up with matches first if you only have team names). Answered in prose, no widget. For the schedule or score itself, use matches.",
   inputSchema: z.object({
     matches: z
       .array(z.number().int().min(1).max(104))

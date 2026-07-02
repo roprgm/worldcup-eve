@@ -185,7 +185,7 @@ function forecastMatchup(
 
 export default defineTool({
   description:
-    "Win odds and a predicted score for one or more matchups — the only tool answered in prose, with NO widget. Pass a list of matchups; each gives two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns numbers, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
+    "Win odds and a predicted score for one or more matchups — answered in prose, NO widget. Each matchup is two team names/codes, or a match number. Real fixtures use their market; any other pairing falls back to a neutral-site estimate (estimate: true), so every pairing returns numbers — never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
   inputSchema: z.object({
     matchups: z
       .array(matchupSchema)

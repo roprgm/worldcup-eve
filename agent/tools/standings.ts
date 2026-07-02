@@ -87,7 +87,7 @@ async function thirdsRace() {
 
 export default defineTool({
   description:
-    "World Cup group tables and the third-place race. Pass group letters for those groups' standings (rank, points, goal difference, who's already through) — one call covers as many groups as you need, or all twelve when omitted — or thirds:true for the twelve third-placed teams ranked by their chance of reaching the Round of 32. After calling it, ALWAYS show the widget: a `group` code block (body: the letter) for a group's table, or a `thirds` code block (body ignored — write `show`, never leave it blank) for the third-place race.",
+    "World Cup group tables and the third-place race. Pass group letters for those standings (one call covers several; omit for all twelve), or thirds:true for the twelve third-placed teams ranked by Round-of-32 chance. ALWAYS follow with the widget block: `group` (body: the letter) or `thirds` (body: `show`, never blank).",
   inputSchema: z.object({
     groups: z
       .array(groupLetter)

@@ -28,7 +28,7 @@ interface Fixture {
 
 export default defineTool({
   description:
-    "World Cup fixtures and results: who plays whom, kickoff time, stadium, status and final score. Use it for any schedule, fixture, result, venue, today/live, or date-range (from/to, YYYY-MM-DD) question — including a game between two named teams (when or where it's played). For a match's goals and cards, use the timeline tool instead. After calling it, ALWAYS show a `match` code block. Its body is ONLY explicit match numbers, or the literal `today`, or the literal `live` — nothing else renders; for any other selection (tomorrow, a date, a team's fixtures), list the match numbers from this result in the body, all in ONE block.",
+    "World Cup fixtures and results: who plays whom, kickoff, stadium, status, final score. Any schedule, fixture, result, venue, today/live, or date-range question — including a game between two named teams. For goals and cards use timeline instead. ALWAYS follow with ONE `match` block; its body is ONLY match numbers, `today`, or `live` — for anything else, list this result's match numbers.",
   inputSchema: z.object({
     team: z
       .string()
