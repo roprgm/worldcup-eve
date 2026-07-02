@@ -66,13 +66,16 @@ export function useChat(id: string) {
           streamIndex: agent.events.length,
         },
         events: agent.events,
+        // The first message stays on the record until the session is
+        // resumable — a cut before that can only restart from it.
+        pendingMessage: cursor.current ? undefined : initial?.pendingMessage,
       });
   }, [id, agent.session, agent.events]);
 
   // Deliver the pending first message. Effects can double-fire in dev; the
   // second send rejects (a turn is already running) and is dropped.
   useEffect(() => {
-    if (initial?.pendingMessage && !initial.session)
+    if (initial?.pendingMessage)
       void agent.send({ message: initial.pendingMessage }).catch(() => {});
   }, []);
 
@@ -108,6 +111,7 @@ export function startNewChat(message: string): void {
   if (!message.trim()) return;
   const id = Math.random().toString(36).slice(2, 10);
   saveChat(id, { pendingMessage: message });
+  pruneChats();
   window.history.pushState(null, "", `/chat/${id}`);
 }
 
@@ -134,7 +138,13 @@ function saveChat(id: string, chat: Omit<SavedChat, "savedAt">): void {
       JSON.stringify({ ...chat, savedAt: Date.now() }),
     );
     localStorage.setItem(LAST_KEY, id);
-    // Cap stored conversations, dropping the oldest.
+  } catch {}
+}
+
+/** Cap stored conversations, dropping the oldest — the count only grows when
+ *  a chat starts, so this runs there rather than on every save. */
+function pruneChats(): void {
+  try {
     Object.keys(localStorage)
       .filter((key) => key.startsWith(PREFIX))
       .map((key) => ({ key, at: loadChat(key.slice(PREFIX.length))?.savedAt }))
@@ -161,18 +171,13 @@ const SETTLED = new Set([
 
 /** The saved record, ready to mount. One special case: a reload doesn't stop
  *  a turn, and a log cut mid-turn before eve minted a resumable cursor (that
- *  happens at the first turn boundary) can only restart — fall back to
- *  re-sending its message. A cut log WITH a cursor mounts as-is: the next
- *  send reconnects the stream and backfills the missing tail. */
+ *  happens at the first turn boundary) can only restart — go back to the
+ *  still-pending first message. A cut log WITH a cursor mounts as-is: the
+ *  next send reconnects the stream and backfills the missing tail. */
 function restoreChat(id: string): SavedChat | null {
   const saved = loadChat(id);
   const last = saved?.events?.at(-1);
   if (!saved || !last || SETTLED.has(last.type) || saved.session?.sessionId)
     return saved;
-
-  const received = saved.events?.find((e) => e.type === "message.received");
-  const message = received && (received.data as { message?: unknown }).message;
-  return typeof message === "string"
-    ? { pendingMessage: message, savedAt: saved.savedAt }
-    : saved;
+  return { pendingMessage: saved.pendingMessage, savedAt: saved.savedAt };
 }

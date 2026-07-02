@@ -2,7 +2,13 @@ import type {
   EveDynamicToolPart,
   EveMessage,
   EveMessageInputRequest,
+  UseEveAgentStatus,
 } from "eve/react";
+
+/** Whether a turn is in flight — the composer and thread key off this. */
+export function isBusy(status: UseEveAgentStatus): boolean {
+  return status === "submitted" || status === "streaming";
+}
 
 /** Concatenate the renderable text parts of an Eve message. */
 export function messageText(message: EveMessage): string {

@@ -9,7 +9,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefCallback,
-  type RefObject,
   useCallback,
   useContext,
   useMemo,
@@ -790,12 +789,7 @@ function cfPx(width: number): number {
 
 /** Tracks the pointer over the ring and scales every registered node by its
  *  distance to the cursor; a leave resets them all to their base size. */
-function useProximityField(): {
-  containerRef: RefObject<HTMLDivElement | null>;
-  field: ProximityField;
-  onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
-  onPointerLeave: () => void;
-} {
+function useProximityField() {
   const containerRef = useRef<HTMLDivElement>(null);
   const nodes = useRef(new Map<string, ProximityNode>());
 
@@ -807,30 +801,30 @@ function useProximityField(): {
     [],
   );
 
-  const apply = useCallback((cursor: { x: number; y: number } | null) => {
+  const apply = (cursor: { x: number; y: number } | null) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const cf = cfPx(rect.width);
+    // The cursor in viewBox coordinates, or null once the pointer left.
+    const at = cursor && {
+      x: ((cursor.x - rect.left) / rect.width) * SIZE,
+      y: ((cursor.y - rect.top) / rect.height) * SIZE,
+    };
     for (const node of nodes.current.values()) {
       let scale = 1;
-      if (cursor) {
-        const px = ((cursor.x - rect.left) / rect.width) * SIZE;
-        const py = ((cursor.y - rect.top) / rect.height) * SIZE;
-        const d = Math.hypot(px - node.x, py - node.y);
+      if (at) {
+        const d = Math.hypot(at.x - node.x, at.y - node.y);
         const f = Math.exp(-(d * d) / (2 * PROXIMITY_SIGMA * PROXIMITY_SIGMA));
         const base = cf * node.factor;
         if (f > 0.01) scale = (base + MAX_GROW * f) / base;
       }
       node.el.style.transform = `scale(${round2(scale)})`;
     }
-  }, []);
+  };
 
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) =>
-      apply({ x: e.clientX, y: e.clientY }),
-    [apply],
-  );
-  const onPointerLeave = useCallback(() => apply(null), [apply]);
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) =>
+    apply({ x: e.clientX, y: e.clientY });
+  const onPointerLeave = () => apply(null);
 
   return { containerRef, field, onPointerMove, onPointerLeave };
 }

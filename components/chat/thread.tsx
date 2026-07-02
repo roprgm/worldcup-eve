@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ChatMarkdown } from "@/components/chat/rich-markdown";
 import {
   assistantActivityLabel,
+  isBusy,
   isRenderableMessage,
   messageKey,
   messageText,
@@ -19,21 +20,21 @@ import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
 export function Thread({ chat }: { chat: ChatView }) {
   const { messages, status } = chat;
-  const isBusy = status === "submitted" || status === "streaming";
+  const busy = isBusy(status);
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
 
   // The reply is "in flight" until its text starts streaming. Until then the
   // assistant bubble shows the activity loader, which morphs into the answer in
   // place — so only one indicator can ever show and there's no layout shift.
   const activity =
-    isBusy && (!lastAssistant || messageText(lastAssistant).trim().length === 0)
+    busy && (!lastAssistant || messageText(lastAssistant).trim().length === 0)
       ? lastAssistant
         ? assistantActivityLabel(lastAssistant)
         : "Thinking..."
       : null;
 
   const rows = messages.filter(
-    (m) => isRenderableMessage(m) || (isBusy && m === lastAssistant),
+    (m) => isRenderableMessage(m) || (busy && m === lastAssistant),
   );
 
   return (
@@ -51,10 +52,10 @@ export function Thread({ chat }: { chat: ChatView }) {
         ) : (
           <AssistantRow
             key={message.id}
-            chat={chat}
+            respond={chat.respond}
             message={message}
             index={index}
-            streaming={isBusy && message.metadata?.status === "streaming"}
+            streaming={busy && message.metadata?.status === "streaming"}
             activity={message === lastAssistant ? activity : null}
           />
         ),
@@ -63,7 +64,7 @@ export function Thread({ chat }: { chat: ChatView }) {
       {/* The turn is submitted but no assistant message exists yet. */}
       {activity && !lastAssistant && (
         <AssistantRow
-          chat={chat}
+          respond={chat.respond}
           streaming
           activity={activity}
           index={rows.length}
@@ -74,13 +75,13 @@ export function Thread({ chat }: { chat: ChatView }) {
 }
 
 function AssistantRow({
-  chat,
+  respond,
   message,
   index,
   streaming,
   activity,
 }: {
-  chat: ChatView;
+  respond: ChatView["respond"];
   message?: EveMessage;
   index: number;
   streaming: boolean;
@@ -107,7 +108,7 @@ function AssistantRow({
       </MessageAvatar>
       <Bubble variant="ghost">
         <div className="flex flex-col gap-3">
-          {question && <QuestionPrompt chat={chat} part={question} />}
+          {question && <QuestionPrompt respond={respond} part={question} />}
           {text && <ChatMarkdown>{text}</ChatMarkdown>}
           {!text && !question && activity && <Activity label={activity} />}
         </div>
@@ -129,10 +130,10 @@ function Activity({ label }: { label: string }) {
 }
 
 function QuestionPrompt({
-  chat,
+  respond,
   part,
 }: {
-  chat: ChatView;
+  respond: ChatView["respond"];
   part: EveDynamicToolPart;
 }) {
   const request = part.toolMetadata?.eve?.inputRequest;
@@ -157,7 +158,7 @@ function QuestionPrompt({
             <Suggestion
               key={option.id}
               suggestion={option.label}
-              onSelect={() => chat.respond(request.requestId, option.id)}
+              onSelect={() => respond(request.requestId, option.id)}
             />
           ))}
         </Suggestions>

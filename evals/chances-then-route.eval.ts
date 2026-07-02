@@ -5,13 +5,16 @@ export default defineEval({
     "A team's title chances show the chances widget; a follow-up route question " +
     "shows the path widget instead of narrating the route.",
   async test(t) {
-    await t.send("¿Cuáles son las chances de México de ganar la final?");
-    await t.send("¿Cuál es la ruta a la final?");
+    const chances = await t.send(
+      "¿Cuáles son las chances de México de ganar la final?",
+    );
+    chances.calledTool("outlook");
+    chances.messageIncludes("```chances");
+
+    const route = await t.send("¿Cuál es la ruta a la final?");
+    route.messageIncludes("```path");
 
     t.succeeded();
-    t.calledTool("outlook");
-    t.messageIncludes("```chances");
-    t.messageIncludes("```path");
     t.noFailedActions();
   },
 });
