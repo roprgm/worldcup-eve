@@ -87,20 +87,24 @@ async function thirdsRace() {
 
 export default defineTool({
   description:
-    "World Cup group tables and the third-place race. Pass a group letter for one group's standings (rank, points, goal difference, who's already through), or thirds:true for the twelve third-placed teams ranked by their chance of reaching the Round of 32. Show the result as a `group` code block (body: the letter) for a group's table, or a `thirds` code block (empty body) for the third-place race.",
+    "World Cup group tables and the third-place race. Pass group letters for those groups' standings (rank, points, goal difference, who's already through) — one call covers as many groups as you need, or all twelve when omitted — or thirds:true for the twelve third-placed teams ranked by their chance of reaching the Round of 32. Show the result as a `group` code block (body: the letter) for a group's table, or a `thirds` code block (empty body) for the third-place race.",
   inputSchema: z.object({
-    group: groupLetter.optional().describe("A group letter, A-L."),
+    groups: z
+      .array(groupLetter)
+      .optional()
+      .describe("Group letters, A-L. Omit for all twelve groups."),
     thirds: z
       .boolean()
       .optional()
       .describe("Set true for the third-place qualification race."),
   }),
-  async execute({ group, thirds }) {
+  async execute({ groups: letters, thirds }) {
     if (thirds) return thirdsRace();
 
+    const wanted = new Set(letters?.map((letter) => `Group ${letter}`));
     const standings = await fetchStandings();
     const groups = (standings.children ?? [])
-      .filter((item) => !group || item.name === `Group ${group}`)
+      .filter((item) => wanted.size === 0 || wanted.has(item.name ?? ""))
       .map((item) => ({
         group: item.name,
         teams: (item.standings?.entries ?? []).map(compactEntry),
