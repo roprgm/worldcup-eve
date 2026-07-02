@@ -27,7 +27,17 @@ export function Chat({ id }: { id: string }) {
         }}
         onStop={chat.stop}
         status={chat.status}
-        notice={<ChatNotice status={chat.status} error={chat.error} />}
+        disabled={chat.limitReached}
+        placeholder={
+          chat.limitReached ? "Start a new chat to keep going" : undefined
+        }
+        notice={
+          <ChatNotice
+            status={chat.status}
+            error={chat.error}
+            limitReached={chat.limitReached}
+          />
+        }
       />
     </div>
   );

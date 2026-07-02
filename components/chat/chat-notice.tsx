@@ -3,27 +3,21 @@ import { Clock, Sparkles, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { Notice } from "@/components/ui/notice";
 
-/** Picks the right notice for the current turn state, or nothing. */
+/** Picks the right notice for the current turn state, or nothing. The
+ *  demo-limit notice is driven by `limitReached` (persisted in the event log)
+ *  so it survives a refresh, unlike the transient `status`/`error`. */
 export function ChatNotice({
   status,
   error,
+  limitReached,
 }: {
   status: UseEveAgentHelpers<EveMessageData>["status"];
   error: Error | undefined;
+  limitReached: boolean;
 }) {
+  if (limitReached) return <DemoLimitNotice />;
   if (status !== "error") return null;
-  if (isDemoLimitReached(error)) return <DemoLimitNotice />;
   return isRateLimited(error) ? <RateLimitNotice /> : <UnreachableNotice />;
-}
-
-// eve ends a session that exhausts its per-session token budget with a
-// `session.failed` carrying this code, surfaced as the error's name.
-function isDemoLimitReached(error: Error | undefined): boolean {
-  if (!error) return false;
-  return (
-    error.name === "SESSION_TOKEN_LIMIT_REACHED" ||
-    /token limit/i.test(error.message)
-  );
 }
 
 function isRateLimited(error: Error | undefined): boolean {

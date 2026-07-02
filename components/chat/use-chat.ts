@@ -72,13 +72,22 @@ export function useChat(id: string) {
       void agent.send({ message: initial.pendingMessage }).catch(() => {});
   }, []);
 
+  // A spent session is terminal: the failure lives in the persisted event log,
+  // so this stays true across a refresh even though status/error do not.
+  const limitReached = agent.events.some(
+    (event) =>
+      event.type === "session.failed" && isTokenLimitFailure(event.data),
+  );
+
   return {
     messages: hydrated ? agent.data.messages : [],
     status: agent.status,
     error: agent.error,
+    limitReached,
     /** Send a message, answering any parked question. Sends during a running
      *  turn are rejected by the session and dropped. */
     send: (text: string) => {
+      if (limitReached) return;
       const message = text.trim();
       if (!message) return;
       const question = activeQuestion(agent.data.messages);
@@ -88,12 +97,26 @@ export function useChat(id: string) {
       void agent.send(payload).catch(() => {});
     },
     /** Answer a parked question by option id. */
-    respond: (requestId: string, optionId: string) =>
+    respond: (requestId: string, optionId: string) => {
+      if (limitReached) return;
       void agent
         .send({ inputResponses: [{ requestId, optionId }] })
-        .catch(() => {}),
+        .catch(() => {});
+    },
     stop: agent.stop,
   };
+}
+
+// eve ends a session that exhausts its per-session token budget with a
+// `session.failed` carrying this code (message as a fallback).
+function isTokenLimitFailure(data: {
+  code?: string;
+  message?: string;
+}): boolean {
+  return (
+    data.code === "SESSION_TOKEN_LIMIT_REACHED" ||
+    /token limit/i.test(data.message ?? "")
+  );
 }
 
 /** Start a new conversation: persist its first message, then claim its URL

@@ -69,6 +69,7 @@ export function Composer({
   status,
   notice,
   autoFocus = true,
+  disabled = false,
   placeholder = "Ask about the 2026 World Cup…",
 }: {
   value: string;
@@ -78,12 +79,13 @@ export function Composer({
   status: UseEveAgentStatus;
   notice?: ReactNode;
   autoFocus?: boolean;
+  disabled?: boolean;
   placeholder?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const launchTimer = useRef<number | null>(null);
   const [launching, setLaunching] = useState(false);
-  const canSend = value.trim().length > 0 && !isBusy(status);
+  const canSend = value.trim().length > 0 && !isBusy(status) && !disabled;
 
   useEffect(
     () => () => {
@@ -102,12 +104,12 @@ export function Composer({
 
   // Send the message and fire the submit-button launch animation (click or Enter).
   const submit = useCallback(() => {
-    if (isBusy(status) || !value.trim()) return;
+    if (disabled || isBusy(status) || !value.trim()) return;
     if (launchTimer.current) window.clearTimeout(launchTimer.current);
     setLaunching(true);
     launchTimer.current = window.setTimeout(() => setLaunching(false), 500);
     onSubmit();
-  }, [status, value, onSubmit]);
+  }, [disabled, status, value, onSubmit]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (
@@ -140,7 +142,8 @@ export function Composer({
             placeholder={placeholder}
             aria-label="Message WC26.chat"
             enterKeyHint="send"
-            className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-base leading-6 text-foreground field-sizing-content placeholder:text-subtle-foreground focus:outline-none"
+            disabled={disabled}
+            className="max-h-[168px] min-h-[28px] flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent py-1.5 text-base leading-6 text-foreground field-sizing-content placeholder:text-subtle-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <SubmitButton
             status={status}
