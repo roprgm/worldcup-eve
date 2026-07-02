@@ -386,6 +386,10 @@ function RoundFlag({
           faded && "opacity-40",
         )}
       />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-px rounded-full ring-1 ring-foreground/10"
+      />
     </span>
   );
 }
@@ -644,7 +648,7 @@ function UnsettledNode({
       <span
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-colors duration-300 ease-out",
+          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-2 font-semibold transition-[color,border-color,opacity] duration-300 ease-out",
           open
             ? "border-foreground/65 text-foreground"
             : "border-surface-border text-muted-foreground group-hover:text-foreground",
@@ -653,6 +657,9 @@ function UnsettledNode({
           width: `calc(${size} * 0.82)`,
           height: `calc(${size} * 0.82)`,
           fontSize: `calc(${size} * 0.42)`,
+          // As the cursor nears (--prox → 1) the "?" fades out so the predicted
+          // flag reads clean underneath the cursor. Ignored when predicting.
+          opacity: showFlag ? undefined : "calc(1 - var(--prox, 0))",
         }}
       >
         {/* Hidden under a live leader's flag so the "?" doesn't show through. */}
@@ -663,9 +670,15 @@ function UnsettledNode({
       {code && (
         <span
           aria-hidden
+          // When the toggle is off, proximity (--prox) fades the flag in as the
+          // cursor nears — up to 0.5 so it stays a hint, not a result; when on,
+          // it's fully shown regardless of the cursor.
+          style={
+            showFlag ? undefined : { opacity: "calc(var(--prox, 0) * 0.5)" }
+          }
           className={cn(
             "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out",
-            showFlag ? (live ? "opacity-30" : "opacity-100") : "opacity-0",
+            showFlag && (live ? "opacity-30" : "opacity-100"),
           )}
         >
           <RoundFlag
@@ -685,13 +698,13 @@ function UnsettledNode({
 
 /** A locked-in team's flag. Plain when there's no path to explain; otherwise a
  *  button that opens the team's road to the final. Its selected and hover
- *  treatment matches the unsettled nodes so the ring never reads as a different
- *  kind of state — neutral, never the winner's green. */
+ *  treatment marks only teams with a decided outgoing path in green. */
 function FlagNode({
   id,
   code,
   size,
   explainable,
+  advanced,
   openId,
   onToggle,
 }: NodeProps & {
@@ -699,11 +712,11 @@ function FlagNode({
   code: string;
   size: string;
   explainable: boolean;
+  advanced: boolean;
 }) {
+  const ringClass = advanced ? "ring-pick" : "ring-surface-divider";
   if (!explainable)
-    return (
-      <RoundFlag code={code} size={size} className="ring-surface-divider" />
-    );
+    return <RoundFlag code={code} size={size} className={ringClass} />;
   const open = openId === id;
   return (
     <button
@@ -718,7 +731,7 @@ function FlagNode({
         size={size}
         className={cn(
           "transition-[filter] group-hover:brightness-110",
-          open ? "ring-foreground/65" : "ring-surface-divider",
+          open ? "ring-foreground/65" : ringClass,
         )}
       />
     </button>
@@ -752,13 +765,13 @@ function NodeSkeleton({
 }
 
 // Every outer/inner node is the same size; only the centre champion differs.
-const NODE_SIZE = "calc(var(--cf) * 0.85)";
+const NODE_SIZE = "calc(var(--cf) * 0.95)";
 const NODE_FACTOR = 0.85; // node size as a fraction of --cf (matches NODE_SIZE)
 
 // ── Cursor-proximity "magnetism" ───────────────────────────────────────────
 // Nodes near the cursor grow up to MAX_GROW px, falling off with a Gaussian in
 // viewBox space so the effect tapers smoothly across neighbours.
-const MAX_GROW = 8;
+const MAX_GROW = 6;
 const PROXIMITY_SIGMA = 120; // falloff radius, in viewBox units
 
 /** A ring node: centre in viewBox coordinates, base size as a fraction of
@@ -780,15 +793,21 @@ function cfPx(width: number): number {
 
 function scaleByProximity(node: RingNode, cursor: Cursor, rect: DOMRect) {
   let scale = 1;
+  // 0..1 nearness, exposed as --prox so an unsettled node can fade in its
+  // predicted (favourite) flag as the cursor approaches — the same flag the
+  // market-predictions toggle reveals, but keyed to proximity instead.
+  let prox = 0;
   if (cursor) {
     const x = (cursor.x / rect.width) * SIZE;
     const y = (cursor.y / rect.height) * SIZE;
     const d = Math.hypot(x - node.x, y - node.y);
     const f = Math.exp(-(d * d) / (2 * PROXIMITY_SIGMA * PROXIMITY_SIGMA));
+    prox = f;
     const base = cfPx(rect.width) * node.factor;
     if (f > 0.01) scale = (base + MAX_GROW * f) / base;
   }
   node.el.style.transform = `scale(${round2(scale)})`;
+  node.el.style.setProperty("--prox", String(round2(prox)));
 }
 
 /** Ref callback that registers a node's positioned wrapper with the field. */
@@ -817,6 +836,7 @@ interface NodeModel {
   y: number;
   flagCode?: string;
   predictedCode?: string;
+  advanced: boolean;
   explainable: boolean; // the locked-in flag opens a road-to-the-final breakdown
   live: boolean; // the node's match is in progress
   liveLeaderCode?: string; // team currently ahead, while the match is live
@@ -830,12 +850,14 @@ function slotModel(
   const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
   const top = lead(odds);
   const flagCode = confirmed(odds) ? top?.code : undefined;
+  const winner = view?.decided.get(pos.match)?.code;
   return {
     id: `slot:${pos.match}:${pos.side}`,
     x: pos.x,
     y: pos.y,
     flagCode,
     predictedCode: top?.code,
+    advanced: !!flagCode && winner === flagCode,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
     live: view?.live.has(pos.match) ?? false,
     liveLeaderCode: view?.liveLeader.get(pos.match),
@@ -855,6 +877,7 @@ function matchModel(
     y: node.y,
     flagCode,
     predictedCode: top?.code,
+    advanced: !!flagCode,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
     live: view?.live.has(node.match) ?? false,
     liveLeaderCode: view?.liveLeader.get(node.match),
@@ -921,6 +944,7 @@ function BracketNode({
                   code={model.flagCode}
                   size={NODE_SIZE}
                   explainable={model.explainable}
+                  advanced={model.advanced}
                   openId={openId}
                   onToggle={onToggle}
                 />
@@ -1185,7 +1209,7 @@ export function CircularBracketRing({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(circle 16.7cqw at center, oklch(1 0 0 / 0.06) 0%, oklch(1 0 0 / 0.034) 25%, oklch(1 0 0 / 0.014) 50%, oklch(1 0 0 / 0.004) 75%, transparent 100%)",
+              "radial-gradient(circle 30cqw at center, oklch(1 0 0 / 0.12) 0%, oklch(1 0 0 / 0.06) 25%, oklch(1 0 0 / 0.04) 50%, oklch(1 0 0 / 0.02) 75%, transparent 100%)",
           }}
         />
         <ProximityContext.Provider value={field}>
