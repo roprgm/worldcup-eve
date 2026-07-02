@@ -64,7 +64,7 @@ anchor once and caching it on the passed `cache` object.
 | `matchOdds`       | two-way home/away win chance per group fixture with a priced market    |
 | `knockoutScores`  | most-likely exact scoreline per decided knockout match with a per-game market, by match number |
 | `knockoutOdds`    | the market's direct read of each decided knockout match: per-game regulation three-way (home/draw/away) + the two-way "to advance" odds from each side's reach-the-next-round future |
-| `matchWinOdds`    | win distribution per knockout match (73–104). R32 comes straight from the per-game market; deeper rounds are the BT model |
+| `matchWinOdds`    | win distribution per knockout match (73–104). Decided matchups come straight from the market; the rest are the BT model |
 | `baseline`        | the same bracket outputs (`slots`, `bracketChampion`, `reach`, `knockoutScores`, `knockoutOdds`, `matchWinOdds`, `teamStrengths`) from the start-of-day **epoch** — the before/after counterpart for the bars |
 
 The `baseline` block is the persisted start-of-day epoch (`epoch.ts`), not a
@@ -95,17 +95,20 @@ model's `bracketChampion`. The third-place play-off (match 103) is filled from
 the simulation's beaten semi-finalists. Group fixtures get their predictions
 straight from the per-match markets (`group-markets.ts`).
 
-**Decided knockout matches aren't inferred.** Once a Round-of-32 slot is
-settled, Polymarket prices that exact matchup directly (a per-game three-way
-plus an exact-score market). For those matches we skip the BT pairwise estimate
-and pin the winner to the market's two-way **"team to advance"** odds. Those come
-from each side's *reach-the-next-round* future (R32 → reach R16), not the
-regulation money line: a knockout can end level after 90' (a draw) yet still send
-one team through, so the money line would read the wrong thing while the future
-keeps pricing who actually goes on. That override feeds the rest of the bracket
-too, so the R16 → Final inference starts from the market's real R32 result
-instead of the fit's guess. As deeper rounds get decided and priced, the same
-path covers them.
+**Decided knockout matches aren't inferred.** Once both sides of a knockout
+matchup are known — an R32 slot settled by the groups, or a later-round game fed
+by settled results — Polymarket prices that exact matchup directly (a per-game
+three-way plus an exact-score market). For those matches we skip the BT pairwise
+estimate and pin the winner to the market's two-way **"team to advance"** odds.
+Those come from each side's *reach-the-next-round* future (R32 → reach R16,
+R16 → reach QF, …, and the champion market for the Final), not the regulation
+money line: a knockout can end level after 90' (a draw) yet still send one team
+through, so the money line would read the wrong thing while the future keeps
+pricing who actually goes on. That override feeds the rest of the bracket too,
+so each later round's inference starts from the market's real results instead of
+the fit's guess. A settled future also decides the match itself, so decided
+matchups cascade round by round. The third-place play-off has no future market;
+it gets the scoreline and three-way only.
 
 ## Files
 

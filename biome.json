@@ -9,7 +9,8 @@
     "includes": [
       "**",
       "!lib/predictions/markets.json",
-      "!lib/predictions/group-markets.json"
+      "!lib/predictions/group-markets.json",
+      "!lib/predictions/knockout-markets.json"
     ]
   },
   "formatter": {

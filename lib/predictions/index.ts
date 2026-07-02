@@ -13,7 +13,7 @@ import {
   knockoutMatches,
   teamCodes,
 } from "../tournament";
-import type { GroupLetter, KnockoutMatch, SlotRef } from "../tournament";
+import type { GroupLetter, KnockoutMatch, Round, SlotRef } from "../tournament";
 import {
   advanceOdds,
   buildR32Slots,
@@ -156,6 +156,17 @@ function decidedTeam(dist?: Dist): string | null {
   return best != null && bestP >= 0.99 ? best : null;
 }
 
+// Each round's "reach the next round" future — the two-way advance signal for a
+// decided matchup. The Final has no reach future, so the champion market plays
+// that role; the third-place play-off has no future at all (scores/3-way only).
+const ADVANCE_KIND: Partial<Record<Round, string>> = {
+  R32: "reach_r16",
+  R16: "reach_qf",
+  QF: "reach_sf",
+  SF: "reach_final",
+  FINAL: "champion",
+};
+
 // For every knockout match whose two sides are decided and that Polymarket
 // prices as a per-game market, read that market directly: the winner override
 // for the simulation (two-way advance), the most-likely scoreline, and the raw
@@ -173,19 +184,33 @@ function knockoutMarketOverride(
   const scores: Record<number, Scoreline> = {};
   const odds: KnockoutOdds[] = [];
 
+  // Matches the market has already settled, so a played round feeds the next
+  // one's slots. knockoutMatches is bracket-ordered: feeders resolve first.
+  const winnerOf = new Map<number, string>();
+  const loserOf = new Map<number, string>();
+  const decidedSide = (
+    m: KnockoutMatch,
+    side: "home" | "away",
+  ): string | null => {
+    const ref = m[side];
+    if (ref.kind === "match") return winnerOf.get(ref.match) ?? null;
+    if (ref.kind === "loser") return loserOf.get(ref.match) ?? null;
+    return decidedTeam(r32Slots.get(`${m.number}:${side}`));
+  };
+
   for (const m of knockoutMatches) {
-    if (m.round !== "R32") continue; // only R32 games are decided & priced for now
-    const home = decidedTeam(r32Slots.get(`${m.number}:home`));
-    const away = decidedTeam(r32Slots.get(`${m.number}:away`));
+    const home = decidedSide(m, "home");
+    const away = decidedSide(m, "away");
     if (!home || !away) continue;
 
     // "Team to Advance", not the regulation money line: a knockout match can end
     // level after 90' (a draw) yet still send one side through, so we read each
-    // side's reach-the-next-round future (R32 → reach R16) instead. This pins the
+    // side's reach-the-next-round future (ADVANCE_KIND) instead. This pins the
     // simulation and must not depend on the per-game market below — that's only
     // needed for the scoreline/3-way display, and may be absent from the catalog.
-    const advance = advanceOdds(prices, "reach_r16", home, away);
-    if (advance)
+    const kind = ADVANCE_KIND[m.round];
+    const advance = kind ? advanceOdds(prices, kind, home, away) : null;
+    if (advance) {
       override.set(
         m.number,
         new Map([
@@ -193,6 +218,16 @@ function knockoutMarketOverride(
           [away, advance.away],
         ]),
       );
+      // A settled future means the match itself is decided — record the winner
+      // so the next round's slots resolve from it.
+      if (advance.home >= 0.99) {
+        winnerOf.set(m.number, home);
+        loserOf.set(m.number, away);
+      } else if (advance.away >= 0.99) {
+        winnerOf.set(m.number, away);
+        loserOf.set(m.number, home);
+      }
+    }
 
     const market = markets.byPair.get(pairKey(home, away));
     if (!market) continue;
@@ -233,10 +268,11 @@ function simulateBracket(
   cache: { anchor?: Strengths },
   base?: Strengths,
 ): BracketOutputs {
-  // Once an R32 slot is decided, Polymarket prices that exact matchup directly.
-  // Pin those matches to the market's two-way advance odds (instead of inferring
-  // them from the fit) and capture the market's scoreline + three-way read. The
-  // override also feeds the rest of the bracket, so R16→Final start from it.
+  // Once a knockout matchup is decided (both sides known), Polymarket prices it
+  // directly. Pin those matches to the market's two-way advance odds (instead of
+  // inferring them from the fit) and capture the market's scoreline + three-way
+  // read. The override also feeds the rest of the bracket, so later rounds start
+  // from it.
   const {
     override: r32Override,
     scores: knockoutScores,
