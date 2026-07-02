@@ -388,7 +388,7 @@ function RoundFlag({
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-px rounded-full ring-1 ring-foreground/10"
+        className="pointer-events-none absolute inset-px rounded-full"
       />
     </span>
   );
@@ -687,7 +687,7 @@ function UnsettledNode({
             faded
             className={cn(
               "transition-[filter] group-hover:brightness-110",
-              open ? "ring-foreground/65" : "ring-surface-divider",
+              open ? "ring-foreground/80" : "ring-surface-divider",
             )}
           />
         </span>
@@ -731,7 +731,7 @@ function FlagNode({
         size={size}
         className={cn(
           "transition-[filter] group-hover:brightness-110",
-          open ? "ring-foreground/65" : ringClass,
+          open ? "ring-foreground/80" : ringClass,
         )}
       />
     </button>
