@@ -4,13 +4,30 @@ import { useState } from "react";
 
 import { ChatNotice } from "@/components/chat/chat-notice";
 import { Thread } from "@/components/chat/thread";
-import { useChat } from "@/components/chat/use-chat";
+import {
+  type SavedChat,
+  useChat,
+  useChatInitial,
+} from "@/components/chat/use-chat";
 import { Composer } from "@/components/composer";
 import { MessageScroller } from "@/components/ui/message-scroller";
 
-/** One conversation, addressed as /chat/<id>. */
+/** One conversation, addressed as /chat/<id>. Resolve its saved record first,
+ *  then mount the session so the eve agent starts from the restored state. */
 export function Chat({ id }: { id: string }) {
-  const chat = useChat(id);
+  const { initial, ready } = useChatInitial(id);
+  if (!ready) return <ChatShell />;
+  return <ChatSession id={id} initial={initial} />;
+}
+
+function ChatSession({
+  id,
+  initial,
+}: {
+  id: string;
+  initial: SavedChat | null;
+}) {
+  const chat = useChat(id, initial);
   const [input, setInput] = useState("");
 
   return (
@@ -38,6 +55,23 @@ export function Chat({ id }: { id: string }) {
             limitReached={chat.limitReached}
           />
         }
+      />
+    </div>
+  );
+}
+
+// The composer is disabled while the conversation loads from the server.
+function ChatShell() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <MessageScroller>{null}</MessageScroller>
+      <Composer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        onStop={() => {}}
+        status="ready"
+        disabled
       />
     </div>
   );
