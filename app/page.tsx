@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import Chat from "@/components/chat/chat";
+import { Chat } from "@/components/chat/chat";
 import { Home } from "@/components/home";
 
 // Starting a chat claims its /chat/<id> URL with history.pushState — Next's

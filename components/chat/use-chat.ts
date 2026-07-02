@@ -2,7 +2,7 @@
 
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { activeQuestion } from "@/components/chat/messages";
 
@@ -22,11 +22,23 @@ type SavedChat = {
   savedAt: number;
 };
 
+// React's own "past hydration?" signal: false on the server and during the
+// hydration render (so the markup matches), true from the very first render
+// of a client-side navigation — nothing is deferred there.
+const never = () => () => {};
+const useHydrated = () =>
+  useSyncExternalStore(
+    never,
+    () => true,
+    () => false,
+  );
+
 /** The conversation for `id`. Pages key their <Chat> by it, so each mount owns
- *  one eve session, restored from this device. Rendered client-side only
- *  (storage seeds the session), hence the ssr:false on the chat page. */
+ *  one eve session, restored from this device. Storage doesn't exist on the
+ *  server, so restored messages only show once hydrated. */
 export function useChat(id: string) {
   const [initial] = useState(() => restoreChat(id));
+  const hydrated = useHydrated();
 
   const agent = useEveAgent({
     initialSession: initial?.session,
@@ -65,7 +77,7 @@ export function useChat(id: string) {
   }, []);
 
   return {
-    messages: agent.data.messages,
+    messages: hydrated ? agent.data.messages : [],
     status: agent.status,
     error: agent.error,
     /** Send a message, answering any parked question. A send while a turn is
