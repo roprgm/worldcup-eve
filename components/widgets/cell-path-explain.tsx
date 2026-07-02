@@ -27,9 +27,7 @@ export function PopupHeader({
       <p className="text-xs font-medium tracking-wide text-foreground/80">
         {title}
       </p>
-      {subtitle && (
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
-      )}
+      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
     </div>
   );
 }

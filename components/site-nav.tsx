@@ -4,7 +4,7 @@ import { cn } from "cnfast";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useChatNav } from "@/components/chat/chat-context";
+import { lastChatId } from "@/components/chat/use-chat";
 
 const baseClass =
   "rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors";
@@ -17,19 +17,21 @@ const linkClass = (active: boolean) =>
   );
 
 /** Cross-page nav shared by every page — minimalist inline links. The Chat link
- *  is disabled (not removed) when there's no chat to return to, so it never
- *  lands on a blank conversation and the nav keeps its width. Enabled after
- *  mount to keep the server-rendered markup stable. */
+ *  returns to the most recent conversation saved on this device; it's disabled
+ *  (not removed) until one exists, so the nav keeps its width. localStorage is
+ *  client-only, so the link resolves after mount. */
 export function SiteNav() {
   const pathname = usePathname();
-  const { active } = useChatNav();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [lastChat, setLastChat] = useState<string | null>(null);
+  useEffect(() => setLastChat(lastChatId()), [pathname]);
+
+  const onChat = pathname.startsWith("/chat");
+  const chatHref = onChat ? pathname : lastChat && `/chat/${lastChat}`;
 
   return (
     <nav className="flex items-center gap-0.5">
-      {mounted && active ? (
-        <Link href="/chat" className={linkClass(pathname.startsWith("/chat"))}>
+      {chatHref ? (
+        <Link href={chatHref} className={linkClass(onChat)}>
           Chat
         </Link>
       ) : (

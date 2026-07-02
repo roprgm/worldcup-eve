@@ -5,7 +5,6 @@ import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Providers } from "@/app/providers";
-import { ChatProvider } from "@/components/chat/chat-context";
 import { Header } from "@/components/header";
 
 import "./globals.css";
@@ -56,12 +55,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     >
       <body>
         <Providers>
-          <ChatProvider>
-            <div className="flex h-dvh flex-col overflow-hidden">
-              <Header />
-              {children}
-            </div>
-          </ChatProvider>
+          <div className="flex h-dvh flex-col overflow-hidden">
+            <Header />
+            {children}
+          </div>
         </Providers>
         <Analytics />
       </body>

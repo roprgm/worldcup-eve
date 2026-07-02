@@ -3,7 +3,6 @@
 import { cn } from "cnfast";
 import type { EveDynamicToolPart, EveMessage } from "eve/react";
 import { useState } from "react";
-import { useChatAgent } from "@/components/chat/chat-context";
 import { ChatMarkdown } from "@/components/chat/rich-markdown";
 import {
   assistantActivityLabel,
@@ -12,15 +11,15 @@ import {
   messageText,
   questionPart,
 } from "@/components/chat/messages";
+import type { ChatView } from "@/components/chat/use-chat";
 import { BallIcon } from "@/components/icons";
 import { Markdown } from "@/components/ui/markdown";
 import { Bubble, Message, MessageAvatar } from "@/components/ui/message";
 import { Suggestion, Suggestions } from "@/components/ui/suggestion";
 
-export function Thread() {
-  const { agent } = useChatAgent();
-  const messages = agent.data.messages;
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
+export function Thread({ chat }: { chat: ChatView }) {
+  const { messages, status } = chat;
+  const isBusy = status === "submitted" || status === "streaming";
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
 
   // The reply is "in flight" until its text starts streaming. Until then the
@@ -52,6 +51,7 @@ export function Thread() {
         ) : (
           <AssistantRow
             key={message.id}
+            chat={chat}
             message={message}
             index={index}
             streaming={isBusy && message.metadata?.status === "streaming"}
@@ -62,18 +62,25 @@ export function Thread() {
 
       {/* The turn is submitted but no assistant message exists yet. */}
       {activity && !lastAssistant && (
-        <AssistantRow streaming activity={activity} index={rows.length} />
+        <AssistantRow
+          chat={chat}
+          streaming
+          activity={activity}
+          index={rows.length}
+        />
       )}
     </div>
   );
 }
 
 function AssistantRow({
+  chat,
   message,
   index,
   streaming,
   activity,
 }: {
+  chat: ChatView;
   message?: EveMessage;
   index: number;
   streaming: boolean;
@@ -100,7 +107,7 @@ function AssistantRow({
       </MessageAvatar>
       <Bubble variant="ghost">
         <div className="flex flex-col gap-3">
-          {question && <QuestionPrompt part={question} />}
+          {question && <QuestionPrompt chat={chat} part={question} />}
           {text && <ChatMarkdown>{text}</ChatMarkdown>}
           {!text && !question && activity && <Activity label={activity} />}
         </div>
@@ -121,8 +128,13 @@ function Activity({ label }: { label: string }) {
   );
 }
 
-function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
-  const { agent } = useChatAgent();
+function QuestionPrompt({
+  chat,
+  part,
+}: {
+  chat: ChatView;
+  part: EveDynamicToolPart;
+}) {
   const request = part.toolMetadata?.eve?.inputRequest;
   if (!request) return null;
   const response = part.toolMetadata?.eve?.inputResponse;
@@ -131,7 +143,6 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
     ? (options.find((o) => o.id === response.optionId)?.label ??
       response.optionId)
     : response?.text;
-  const busy = agent.status === "submitted" || agent.status === "streaming";
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -146,16 +157,7 @@ function QuestionPrompt({ part }: { part: EveDynamicToolPart }) {
             <Suggestion
               key={option.id}
               suggestion={option.label}
-              onSelect={() => {
-                if (busy) return;
-                void agent
-                  .send({
-                    inputResponses: [
-                      { requestId: request.requestId, optionId: option.id },
-                    ],
-                  })
-                  .catch(() => {});
-              }}
+              onSelect={() => chat.respond(request.requestId, option.id)}
             />
           ))}
         </Suggestions>

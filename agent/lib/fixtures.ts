@@ -28,7 +28,7 @@ export const involvesTeam = (code: string | null, query: string) => {
 };
 
 type Side = "home" | "away";
-export type ResolvedSides = { home: string | null; away: string | null };
+type ResolvedSides = { home: string | null; away: string | null };
 
 // Knockout fixtures are TBD in the static schedule. Resolve them from the real
 // results first (settled group order + assigned third slots), then fall back to

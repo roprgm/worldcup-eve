@@ -6,14 +6,11 @@ the relevant guide before changing agent code.
 
 ## Component organization
 
-- `components/ai-elements/` — vendored primitives from the
-  [AI SDK Elements](https://vercel.com/academy/ai-sdk/ai-elements) library. Treat these as
-  upstream: only put components that come from there here.
 - `components/ui/` — our own generic, shadcn-like primitives with no domain knowledge (e.g.
-  `Notice`, `ActivityStatus`).
-- `components/` — higher level, app-specific components (e.g. `chat.tsx`, `header.tsx`).
+  `Notice`, `Popover`).
+- `components/` — higher level, app-specific components (e.g. `composer.tsx`, `header.tsx`).
 - `components/<domain>/` — group components under a domain folder when one is important enough to
-  warrant it.
+  warrant it (e.g. `chat/`, `widgets/`).
 - Within a file, order top-down by reading flow: constants and small helpers first, then the
   smaller building-block components, with the bigger / exported component(s) last. A reader meets a
   piece before the component that composes it. Extract sub-components freely — even single-use ones —

@@ -29,11 +29,3 @@ export function relativeTournamentDay(kickoff: Date, now: Date): string {
   if (diff === -1) return "yesterday";
   return tournamentDay(kickoff);
 }
-
-export function tournamentTime(date: Date): string {
-  return tournamentClock(date).slice(11, 16);
-}
-
-export function tournamentDateTime(date: Date): string {
-  return `${tournamentDay(date)}T${tournamentTime(date)}`;
-}
