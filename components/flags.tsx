@@ -94,7 +94,7 @@ function flagMetrics(size: number | string) {
 export function Flag({ code, size = 18, className }: FlagProps) {
   const { width, height, bgSize, pos } = flagMetrics(size);
   const loaded = useSpriteLoaded();
-  const base = "inline-block shrink-0 rounded-[2px] ring-1 ring-white/15";
+  const base = "inline-block shrink-0 rounded-[2px]";
 
   const index = code ? cellByCode.get(code.toLowerCase()) : undefined;
   if (index === undefined) {
