@@ -92,92 +92,108 @@ function knockoutBetween(snapshot: Predictions, codeA: string, codeB: string) {
   return undefined;
 }
 
-export default defineTool({
-  description:
-    "Win odds and a predicted score for ONE matchup — the only tool answered in prose, with NO widget. Give two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns numbers, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
-  inputSchema: z.object({
-    match: z
-      .number()
-      .int()
-      .min(1)
-      .max(104)
-      .optional()
-      .describe("FIFA match number, 1-104."),
-    teamA: z.string().optional().describe("First team name or code."),
-    teamB: z.string().optional().describe("Second team name or code."),
-  }),
-  async execute({ match, teamA, teamB }) {
-    const snapshot = await getPredictions();
+const matchupSchema = z.object({
+  match: z
+    .number()
+    .int()
+    .min(1)
+    .max(104)
+    .optional()
+    .describe("FIFA match number, 1-104."),
+  teamA: z.string().optional().describe("First team name or code."),
+  teamB: z.string().optional().describe("Second team name or code."),
+});
 
-    // Knockout match by number: read the decided sides from the bracket slots.
-    if (match && match > 72) {
-      const home = settledTeam(snapshot, match, "home");
-      const away = settledTeam(snapshot, match, "away");
-      if (home && away) {
-        // The third-place play-off (103) and any decided match without a live
-        // head-to-head market fall back to a neutral-site strength estimate.
-        const forecast =
-          knockoutForecast(snapshot, match, home, away) ??
-          strengthForecast(snapshot, home, away);
-        if (forecast) return forecast;
-      }
-      return {
-        asOf: snapshot.updatedAt,
-        match,
-        error:
-          "No head-to-head odds yet — the matchup isn't decided (write a slot code block for who might play).",
-      };
+type Matchup = z.infer<typeof matchupSchema>;
+
+// Win odds and predicted score for one matchup, resolved against a snapshot.
+function forecastMatchup(
+  snapshot: Predictions,
+  { match, teamA, teamB }: Matchup,
+) {
+  // Knockout match by number: read the decided sides from the bracket slots.
+  if (match && match > 72) {
+    const home = settledTeam(snapshot, match, "home");
+    const away = settledTeam(snapshot, match, "away");
+    if (home && away) {
+      // The third-place play-off (103) and any decided match without a live
+      // head-to-head market fall back to a neutral-site strength estimate.
+      const forecast =
+        knockoutForecast(snapshot, match, home, away) ??
+        strengthForecast(snapshot, home, away);
+      if (forecast) return forecast;
     }
+    return {
+      asOf: snapshot.updatedAt,
+      match,
+      error:
+        "No head-to-head odds yet — the matchup isn't decided (write a slot code block for who might play).",
+    };
+  }
 
-    const fixtureMatch = match
-      ? groupMatches.find((m) => m.number === match)
-      : undefined;
-    if (match && !fixtureMatch) {
-      return { error: "Match not found.", requested: { match } };
-    }
+  const fixtureMatch = match
+    ? groupMatches.find((m) => m.number === match)
+    : undefined;
+  if (match && !fixtureMatch) {
+    return { error: "Match not found.", requested: { match } };
+  }
 
-    const codeA = codeFor(fixtureMatch?.homeId ?? teamA);
-    const codeB = codeFor(fixtureMatch?.awayId ?? teamB);
-    if (!codeA || !codeB) {
-      return {
-        error: "Could not resolve both teams.",
-        requested: { match, teamA, teamB },
-      };
-    }
+  const codeA = codeFor(fixtureMatch?.homeId ?? teamA);
+  const codeB = codeFor(fixtureMatch?.awayId ?? teamB);
+  if (!codeA || !codeB) {
+    return {
+      error: "Could not resolve both teams.",
+      requested: { match, teamA, teamB },
+    };
+  }
 
-    const fixture = groupFixture(codeA, codeB);
-    if (!fixture) {
-      // Not a group pairing — try a decided knockout matchup, then fall back to
-      // a neutral-site estimate from the model's team strengths.
-      const knockout = knockoutBetween(snapshot, codeA, codeB);
-      if (knockout) return knockout;
-      const estimate = strengthForecast(snapshot, codeA, codeB);
-      if (estimate) return estimate;
-      return {
-        error: "No forecast available — couldn't resolve both teams.",
-        requested: { teamA: codeA, teamB: codeB },
-      };
-    }
+  const fixture = groupFixture(codeA, codeB);
+  if (!fixture) {
+    // Not a group pairing — try a decided knockout matchup, then fall back to
+    // a neutral-site estimate from the model's team strengths.
+    const knockout = knockoutBetween(snapshot, codeA, codeB);
+    if (knockout) return knockout;
+    const estimate = strengthForecast(snapshot, codeA, codeB);
+    if (estimate) return estimate;
+    return {
+      error: "No forecast available — couldn't resolve both teams.",
+      requested: { teamA: codeA, teamB: codeB },
+    };
+  }
 
-    const score = snapshot.groupScores[fixture.id];
-    const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
-    if (!score && !odds) {
-      return {
-        asOf: snapshot.updatedAt,
-        match: fixture.number,
-        error:
-          "No forecast available (the match may be played or has no market).",
-      };
-    }
-
+  const score = snapshot.groupScores[fixture.id];
+  const odds = snapshot.matchOdds.find((o) => o.matchId === fixture.id);
+  if (!score && !odds) {
     return {
       asOf: snapshot.updatedAt,
       match: fixture.number,
-      home: fixture.homeId,
-      away: fixture.awayId,
-      predictedScore: score ? { home: score.h, away: score.a } : undefined,
-      homeWinPct: odds ? percent(odds.homeWin) : undefined,
-      awayWinPct: odds ? percent(odds.awayWin) : undefined,
+      error:
+        "No forecast available (the match may be played or has no market).",
     };
+  }
+
+  return {
+    asOf: snapshot.updatedAt,
+    match: fixture.number,
+    home: fixture.homeId,
+    away: fixture.awayId,
+    predictedScore: score ? { home: score.h, away: score.a } : undefined,
+    homeWinPct: odds ? percent(odds.homeWin) : undefined,
+    awayWinPct: odds ? percent(odds.awayWin) : undefined,
+  };
+}
+
+export default defineTool({
+  description:
+    "Win odds and a predicted score for one or more matchups — the only tool answered in prose, with NO widget. Pass a list of matchups; each gives two team names/codes, or a match number. A real fixture uses its market (group match 1-72, or a decided knockout 73-104); any other pairing falls back to a neutral-site estimate (estimate: true). Every pairing returns numbers, so never say a matchup can't be forecast. For how far a team goes overall, use outlook.",
+  inputSchema: z.object({
+    matchups: z
+      .array(matchupSchema)
+      .min(1)
+      .describe("The matchups to forecast."),
+  }),
+  async execute({ matchups }) {
+    const snapshot = await getPredictions();
+    return { forecasts: matchups.map((m) => forecastMatchup(snapshot, m)) };
   },
 });

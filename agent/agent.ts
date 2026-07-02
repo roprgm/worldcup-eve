@@ -1,5 +1,17 @@
 import { defineAgent } from "eve";
 
 export default defineAgent({
-  model: "xai/grok-4.20-non-reasoning",
+  model: "anthropic/claude-sonnet-5",
+  reasoning: "low",
+  modelOptions: {
+    providerOptions: {
+      anthropic: {
+        thinkingBudget: 0.0001,
+      },
+    },
+  },
+  limits: {
+    maxInputTokensPerSession: 100_000,
+    maxOutputTokensPerSession: 20_000,
+  },
 });
