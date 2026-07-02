@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   liveMatchViews,
   matchViewsByNumber,
@@ -7,6 +9,7 @@ import {
 } from "@/components/widgets/match-view";
 import { MatchWidget } from "@/components/widgets/match-widget";
 import { usePredictions, useResults } from "@/components/widgets/queries";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type MatchesScope = "today" | "live";
 
@@ -22,7 +25,11 @@ export function ChatMatches({
 }) {
   const results = useResults();
   const predictions = usePredictions();
-  if (!results) return null;
+
+  // The reply's fenced block is hidden until this resolves (globals.css), so a
+  // cold or slow feed would leave a bare sentence with no card — show a
+  // skeleton until the results land.
+  if (!results) return <MatchesGrid>{loadingCards(numbers)}</MatchesGrid>;
 
   const odds = predictions?.matchOdds ?? [];
   const views = numbers?.length
@@ -36,10 +43,21 @@ export function ChatMatches({
   if (views.length === 0) return null;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <MatchesGrid>
       {views.map((view) => (
         <MatchWidget key={view.number} {...view} />
       ))}
-    </div>
+    </MatchesGrid>
   );
+}
+
+function MatchesGrid({ children }: { children: ReactNode }) {
+  return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
+}
+
+function loadingCards(numbers?: number[]) {
+  const count = numbers?.length || 2;
+  return Array.from({ length: count }, (_, i) => (
+    <Skeleton key={i} className="h-[132px] w-full" />
+  ));
 }
