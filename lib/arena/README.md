@@ -27,17 +27,19 @@ provider's native reasoning tokens, when returned), stored with the pick.
 - `score.ts` — `scoreRun(picks, results)`: a correct pick is worth its round's
   weight, doubling each round (R32 = 1 … final = 16). Only decided matches count.
   `rankRuns` orders the whole field (shared by the leaderboard and the pager).
-- `storage.ts` / `types.ts` — one Vercel Blob per run plus a small index blob;
-  each run stores its picks, reasoning, timing/token metadata and the full
-  conversation. `modelSlug` gives the readable run id (`openai/gpt-5` → `gpt-5`),
-  so re-running a model updates its run in place.
+- `db.ts` / `storage.ts` / `types.ts` — one Neon (Postgres) table, `arena_runs`,
+  with the whole run in a `jsonb` column; the list is a query (the summary each
+  row needs is projected in SQL, so the conversation is never fetched). The table
+  is created on demand — no migration step. `modelSlug` gives the readable run id
+  (`openai/gpt-5` → `gpt-5`), and `saveRun` upserts, so re-running a model updates
+  its row in place.
 - `run.ts` — the bench script (`bun run arena`).
 
 ## Running the bench
 
 Runs locally to populate `/arena`; it is never triggered automatically. Needs
-`AI_GATEWAY_API_KEY` (models route through the Vercel AI Gateway) and a blob
-store (`BLOB_READ_WRITE_TOKEN`, or a linked `BLOB_STORE_ID`).
+`AI_GATEWAY_API_KEY` (models route through the Vercel AI Gateway) and `DATABASE_URL`
+(the Neon connection string) — `vercel env pull` provides both.
 
 ```bash
 bun run arena                                    # the default line-up
@@ -46,4 +48,4 @@ bun run arena anthropic/claude-sonnet-5 openai/gpt-5
 
 Each model gets a fresh conversation: a system prompt, then one question per
 knockout match. The predicted bracket, execution time, token usage and the
-whole transcript are written to blob storage, and the run shows up on `/arena`.
+whole transcript are written to Neon, and the run shows up on `/arena`.

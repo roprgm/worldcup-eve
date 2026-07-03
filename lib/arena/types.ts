@@ -11,7 +11,7 @@ export interface RunUsage {
 }
 
 /** One WorldCup Arena run: a model's predicted bracket plus the metadata and
- *  full transcript captured while producing it. Stored as its own blob. */
+ *  full transcript captured while producing it. Stored as one row in Neon. */
 export interface ArenaRun {
   id: string;
   model: string; // AI Gateway model id, e.g. "anthropic/claude-sonnet-5"
@@ -32,10 +32,11 @@ export interface ArenaRun {
   error?: string;
 }
 
-/** The per-run entry kept in the arena index, so the list page can rank and
- *  score every run without fetching each full run blob. Carries the picks (a
- *  handful of match → team entries) since scoring is recomputed live against the
- *  latest results, but omits the heavy conversation. */
+/** The per-run entry the list page needs to rank and score every run without
+ *  fetching each full run: projected out of the stored run in SQL (see
+ *  storage.ts). Carries the picks (a handful of match → team entries) since
+ *  scoring is recomputed live against the latest results, but omits the heavy
+ *  conversation. */
 export interface ArenaRunSummary {
   id: string;
   model: string;
@@ -47,19 +48,4 @@ export interface ArenaRunSummary {
   champion?: TeamCode;
   questionCount: number;
   error?: string;
-}
-
-export function toSummary(run: ArenaRun): ArenaRunSummary {
-  return {
-    id: run.id,
-    model: run.model,
-    label: run.label,
-    createdAt: run.createdAt,
-    durationMs: run.durationMs,
-    usage: run.usage,
-    picks: run.picks,
-    champion: run.champion,
-    questionCount: run.questions.length,
-    error: run.error,
-  };
 }

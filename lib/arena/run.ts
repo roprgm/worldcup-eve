@@ -1,15 +1,16 @@
 // The WorldCup Arena bench. Asks each model to fill in the knockout bracket as a
 // sequence of single-match "A or B" questions — Round of 32 inward to the final,
 // each question resolved from the picks already made — then stores the predicted
-// bracket, timing/token metadata and the full conversation to Vercel Blob.
+// bracket, timing/token metadata and the full conversation to Neon.
 //
 // Run it locally (never imported), passing model ids or using the defaults:
 //
 //   bun run arena                                   # the default line-up
 //   bun run arena anthropic/claude-sonnet-5 openai/gpt-5
 //
-// Needs AI_GATEWAY_API_KEY (models route through the Vercel AI Gateway) and a
-// blob store (BLOB_READ_WRITE_TOKEN or a linked BLOB_STORE_ID) to persist runs.
+// Needs AI_GATEWAY_API_KEY (models route through the Vercel AI Gateway) and
+// DATABASE_URL (the Neon connection string) to persist runs — `vercel env pull`
+// provides both.
 
 import { generateText, type ModelMessage } from "ai";
 
@@ -175,7 +176,7 @@ async function runModel(model: string, board: Board): Promise<void> {
   const saved = await saveRun(run);
   const champ = run.champion ? teamLabel(run.champion) : "—";
   console.log(
-    `  ${saved ? "saved" : "NOT saved (blob storage unavailable)"} · ` +
+    `  ${saved ? "saved" : "NOT saved (DATABASE_URL not set)"} · ` +
       `${questions.length} picks · champion ${champ} · ` +
       `${usage.totalTokens.toLocaleString()} tokens · ${(run.durationMs / 1000).toFixed(1)}s`,
   );
