@@ -19,9 +19,8 @@ function Intro() {
         WorldCup Arena
       </h1>
       <p className="mt-2 max-w-md text-sm text-balance text-muted-foreground">
-        Which AI knows football best? Each model calls the entire knockout
-        bracket, and we score every pick against what really happens on the
-        pitch — the further a team is backed, the bigger the payoff.
+        AI models compete to predict the World Cup knockout bracket. Correct
+        picks earn points, and the biggest rounds decide the leaderboard.
       </p>
     </header>
   );
