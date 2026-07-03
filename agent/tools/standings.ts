@@ -1,93 +1,14 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { percent, teamName } from "@/agent/lib/fixtures";
-import { fetchStandings, type StandingEntry } from "@/lib/results/standings";
-import { getMatchResults } from "@/lib/results";
+import { groupTables, thirdsRace } from "@/agent/lib/standings";
 import { type GroupLetter, groupLetters } from "@/lib/tournament";
-import { thirdPlaceSlots } from "@/lib/tournament/third-place";
 
 const groupLetter = z.enum(groupLetters as [GroupLetter, ...GroupLetter[]]);
 
-const STAT_NAMES = new Set(
-  "rank points gamesPlayed wins ties losses pointsFor pointsAgainst pointDifferential".split(
-    " ",
-  ),
-);
-
-const stat = (entry: StandingEntry, name: string) =>
-  entry.stats?.find((s) => s.name === name);
-
-function compactEntry(entry: StandingEntry) {
-  return {
-    team: entry.team.displayName,
-    qualified: (stat(entry, "advanced")?.value ?? 0) > 0,
-    stats: Object.fromEntries(
-      (entry.stats ?? []).flatMap(({ name, displayValue }) =>
-        name && STAT_NAMES.has(name) ? [[name, displayValue]] : [],
-      ),
-    ),
-  };
-}
-
-// The third-place race, from real results: the twelve thirds ranked by their
-// chance of taking one of the eight Round-of-32 slots, plus which R32 match each
-// likely third heads to and how settled the picture is.
-async function thirdsRace() {
-  const results = await getMatchResults();
-  const teamByGroup = new Map<string, string>(
-    results.bestThirds.map((t) => [t.group, t.teamId]),
-  );
-
-  const chanceByGroup = new Map<string, number>();
-  for (const odds of Object.values(results.thirdOdds))
-    for (const [group, prob] of Object.entries(odds))
-      chanceByGroup.set(group, (chanceByGroup.get(group) ?? 0) + (prob ?? 0));
-
-  const ranking = results.bestThirds
-    .map((t) => ({
-      team: teamName(t.teamId),
-      group: t.group,
-      points: t.points,
-      goalDifference: t.goalDiff,
-      qualifyingChancePercent: percent(chanceByGroup.get(t.group) ?? 0),
-      qualifies: t.qualifies,
-    }))
-    .sort((a, b) => b.qualifyingChancePercent - a.qualifyingChancePercent);
-
-  const roundOf32 = [...thirdPlaceSlots]
-    .sort((a, b) => a.match - b.match)
-    .map((slot) => {
-      const candidates = Object.entries(results.thirdOdds[slot.match] ?? {})
-        .map(([group, p]) => ({
-          group,
-          team: teamName(teamByGroup.get(group) ?? group),
-          chancePercent: percent(p ?? 0),
-        }))
-        .filter((c) => c.chancePercent > 0)
-        .sort((a, b) => b.chancePercent - a.chancePercent);
-      return {
-        match: slot.match,
-        host: `winner of Group ${slot.winner}`,
-        mostLikelyThird: candidates[0] ?? null,
-        otherPossibleThirds: candidates.slice(1),
-      };
-    });
-
-  return {
-    kind: "thirds" as const,
-    asOf: results.updatedAt,
-    scenariosStillPossible: results.thirdCombosPossible,
-    outOf: 495,
-    note: "Provisional until every group finishes — the best eight thirds (qualifies = true) take the eight third-place slots.",
-    ranking,
-    roundOf32,
-  };
-}
-
 export default defineTool({
   description:
-    "World Cup group tables and the third-place race. Pass group letters for those standings (one call covers several; omit for all twelve), or thirds:true for the twelve third-placed teams ranked by Round-of-32 chance. ALWAYS follow with the widget block: `group` (body: the letter) or `thirds` (body: `show`, never blank).",
+    "World Cup group tables and the third-place race. Pass group letters for those standings (one call covers several; omit for all twelve), or thirds:true for the twelve third-placed teams ranked by Round-of-32 chance. To DISPLAY either, prefer the matching `show_group` / `show_thirds` widget tool, which returns the same gist. Use this when you only need the numbers in prose.",
   inputSchema: z.object({
     groups: z
       .array(groupLetter)
@@ -100,21 +21,6 @@ export default defineTool({
   }),
   async execute({ groups: letters, thirds }) {
     if (thirds) return thirdsRace();
-
-    const wanted = new Set(letters?.map((letter) => `Group ${letter}`));
-    const standings = await fetchStandings();
-    const groups = (standings.children ?? [])
-      .filter((item) => wanted.size === 0 || wanted.has(item.name ?? ""))
-      .map((item) => ({
-        group: item.name,
-        teams: (item.standings?.entries ?? []).map(compactEntry),
-      }));
-    const qualified = groups.flatMap(({ group, teams }) =>
-      teams
-        .filter((team) => team.qualified)
-        .map(({ team }) => ({ group, team })),
-    );
-
-    return { kind: "groups" as const, groups, qualified };
+    return groupTables(letters);
   },
 });

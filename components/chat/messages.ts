@@ -5,6 +5,8 @@ import type {
   UseEveAgentStatus,
 } from "eve/react";
 
+import { isWidgetToolPart } from "@/components/chat/tool-widget";
+
 /** Whether a turn is in flight — the composer and thread key off this. */
 export function isBusy(status: UseEveAgentStatus): boolean {
   return status === "submitted" || status === "streaming";
@@ -17,6 +19,37 @@ export function messageText(message: EveMessage): string {
     if (part.type === "text") text += part.text;
   }
   return text;
+}
+
+/** A prose run or a widget, in the order the agent produced them. */
+export type MessageBlock =
+  | { kind: "text"; text: string }
+  | { kind: "widget"; part: EveDynamicToolPart };
+
+/** Split an assistant message into ordered blocks so a `show_*` widget renders
+ *  inline where the agent called it — with prose free to come before or after.
+ *  Consecutive text parts merge into one markdown run. */
+export function messageBlocks(message: EveMessage): MessageBlock[] {
+  const blocks: MessageBlock[] = [];
+  let text = "";
+  const flush = () => {
+    if (text) blocks.push({ kind: "text", text });
+    text = "";
+  };
+  for (const part of message.parts) {
+    if (part.type === "text") {
+      text += part.text;
+    } else if (isWidgetToolPart(part)) {
+      flush();
+      blocks.push({ kind: "widget", part });
+    }
+  }
+  flush();
+  return blocks;
+}
+
+function hasWidget(message: EveMessage): boolean {
+  return message.parts.some(isWidgetToolPart);
 }
 
 export function messageKey(message: EveMessage, index: number): string {
@@ -35,7 +68,11 @@ export function questionPart(
 }
 
 export function isRenderableMessage(message: EveMessage): boolean {
-  return messageText(message).length > 0 || questionPart(message) !== undefined;
+  return (
+    messageText(message).length > 0 ||
+    hasWidget(message) ||
+    questionPart(message) !== undefined
+  );
 }
 
 export function activeQuestion(

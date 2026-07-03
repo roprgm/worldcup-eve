@@ -26,9 +26,9 @@ export function ChatMatches({
   const results = useResults();
   const predictions = usePredictions();
 
-  // The reply's fenced block is hidden until this resolves (globals.css), so a
-  // cold or slow feed would leave a bare sentence with no card — show a
-  // skeleton until the results land.
+  // The widget renders as soon as the show_match call's args land, before the
+  // feed does — so show a skeleton until the results arrive rather than a bare
+  // gap next to the sentence.
   if (!results) return <MatchesGrid>{loadingCards(numbers)}</MatchesGrid>;
 
   const odds = predictions?.matchOdds ?? [];
