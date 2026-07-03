@@ -2,8 +2,11 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { RunDetail } from "@/components/arena/run-detail";
-import { type PagerNeighbor, RunPager } from "@/components/arena/run-pager";
+import {
+  type CarouselNeighbor,
+  RunCarousel,
+} from "@/components/arena/run-carousel";
+import { RunMeta, RunPicks } from "@/components/arena/run-detail";
 import { SharedBracket } from "@/components/bracket-builder";
 import { rankRuns, scoreRun } from "@/lib/arena/score";
 import { readIndex, readRun } from "@/lib/arena/storage";
@@ -24,12 +27,12 @@ export async function generateMetadata({
 const neighbor = (r?: {
   id: string;
   label: string;
-}): PagerNeighbor | undefined =>
+}): CarouselNeighbor | undefined =>
   r ? { slug: r.id, label: r.label } : undefined;
 
-/** One arena run: the model's predicted bracket laid over the live results, with
- *  its metadata and per-pick scoring. Prev/next steps through the other runs in
- *  leaderboard order, keeping the bracket in place. */
+/** One arena run: the headline card, then the predicted bracket laid over the
+ *  live results as a carousel slide (side arrows step to the prev/next run in
+ *  leaderboard order, bracket in place), then the per-pick breakdown. */
 export default async function ArenaRunPage({
   params,
 }: {
@@ -43,14 +46,15 @@ export default async function ArenaRunPage({
   ]);
   if (!run) notFound();
 
-  // The pager walks the same order as the leaderboard; the run's own score comes
-  // from that ranking when it's in the index, else computed directly.
+  // The carousel walks the same order as the leaderboard; the run's own score
+  // comes from that ranking when it's in the index, else computed directly.
   const ranked = rankRuns(index, results);
   const pos = ranked.findIndex((r) => r.run.id === run.id);
   const score = pos >= 0 ? ranked[pos].score : scoreRun(run.picks, results);
   const prev = pos > 0 ? ranked[pos - 1].run : undefined;
   const next =
     pos >= 0 && pos < ranked.length - 1 ? ranked[pos + 1].run : undefined;
+  const paged = ranked.length > 1 && pos >= 0;
 
   return (
     <>
@@ -61,19 +65,17 @@ export default async function ArenaRunPage({
         <ArrowLeft className="size-4" />
         Arena
       </Link>
-      {ranked.length > 1 && pos >= 0 && (
-        <div className="mb-4">
-          <RunPager
-            prev={neighbor(prev)}
-            next={neighbor(next)}
-            position={`${pos + 1} of ${ranked.length}`}
-          />
-        </div>
-      )}
-      <div className="mx-auto w-full max-w-lg">
-        <SharedBracket results={results} picks={run.picks} />
+      <div className="space-y-6">
+        <RunMeta run={run} score={score} />
+        <RunCarousel
+          prev={paged ? neighbor(prev) : undefined}
+          next={paged ? neighbor(next) : undefined}
+          position={paged ? `${pos + 1} of ${ranked.length}` : ""}
+        >
+          <SharedBracket results={results} picks={run.picks} />
+        </RunCarousel>
+        <RunPicks run={run} results={results} />
       </div>
-      <RunDetail run={run} score={score} results={results} />
     </>
   );
 }

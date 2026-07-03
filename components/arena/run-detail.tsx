@@ -138,67 +138,64 @@ function PicksByRound({
   );
 }
 
-/** The metadata and per-pick breakdown shown under a run's bracket. The
- *  conversation, reasoning and thinking live on a separate debug view, not here. */
-export function RunDetail({
+/** The run's headline card: which model, and how it did. Sits above the bracket.
+ *  The conversation, reasoning and thinking live on a separate debug view. */
+export function RunMeta({ run, score }: { run: ArenaRun; score: Score }) {
+  return (
+    <div className="rounded-lg border border-surface-border bg-card p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="text-lg font-semibold text-foreground">{run.label}</h2>
+        <code className="text-xs text-muted-foreground">{run.model}</code>
+      </div>
+      {run.error && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          {run.error}
+        </p>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <MetaStat label="points" value={String(score.points)} />
+        <MetaStat label="correct" value={`${score.correct}/${score.decided}`} />
+        <MetaStat label="picks" value={String(run.questions.length)} />
+        <MetaStat label="champion" value={run.champion ?? "—"} />
+        <MetaStat
+          label="tokens"
+          value={run.usage.totalTokens.toLocaleString()}
+        />
+        <MetaStat
+          label="in / out"
+          value={`${run.usage.inputTokens.toLocaleString()} / ${run.usage.outputTokens.toLocaleString()}`}
+        />
+        <MetaStat label="duration" value={formatDuration(run.durationMs)} />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            run at
+          </span>
+          <span className="text-sm text-foreground">
+            <LocalTime iso={run.createdAt}>
+              {formatDateTime(run.createdAt)}
+            </LocalTime>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The per-pick breakdown, shown below the bracket. */
+export function RunPicks({
   run,
-  score,
   results,
 }: {
   run: ArenaRun;
-  score: Score;
   results: Results;
 }) {
+  if (run.questions.length === 0) return null;
   return (
-    <div className="mt-8 space-y-6">
-      <div className="rounded-lg border border-surface-border bg-card p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="text-lg font-semibold text-foreground">{run.label}</h2>
-          <code className="text-xs text-muted-foreground">{run.model}</code>
-        </div>
-        {run.error && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            {run.error}
-          </p>
-        )}
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <MetaStat label="points" value={String(score.points)} />
-          <MetaStat
-            label="correct"
-            value={`${score.correct}/${score.decided}`}
-          />
-          <MetaStat label="picks" value={String(run.questions.length)} />
-          <MetaStat label="champion" value={run.champion ?? "—"} />
-          <MetaStat
-            label="tokens"
-            value={run.usage.totalTokens.toLocaleString()}
-          />
-          <MetaStat
-            label="in / out"
-            value={`${run.usage.inputTokens.toLocaleString()} / ${run.usage.outputTokens.toLocaleString()}`}
-          />
-          <MetaStat label="duration" value={formatDuration(run.durationMs)} />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              run at
-            </span>
-            <span className="text-sm text-foreground">
-              <LocalTime iso={run.createdAt}>
-                {formatDateTime(run.createdAt)}
-              </LocalTime>
-            </span>
-          </div>
-        </div>
+    <Section title="Picks">
+      <div className="pt-1">
+        <PicksByRound questions={run.questions} results={results} />
       </div>
-
-      {run.questions.length > 0 && (
-        <Section title="Picks">
-          <div className="pt-1">
-            <PicksByRound questions={run.questions} results={results} />
-          </div>
-        </Section>
-      )}
-    </div>
+    </Section>
   );
 }
