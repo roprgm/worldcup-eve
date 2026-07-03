@@ -171,10 +171,13 @@ function pruneChats(): void {
   } catch {}
 }
 
-/** The most recently used chat id — where the nav "Chat" link returns to. */
-export function lastChatId(): string | null {
+/** The most recently used chat id, but only if it was used within `maxAgeMs`. */
+export function recentChatId(maxAgeMs: number): string | null {
   try {
-    return localStorage.getItem(LAST_KEY);
+    const id = localStorage.getItem(LAST_KEY);
+    if (!id) return null;
+    const savedAt = loadChat(id)?.savedAt ?? 0;
+    return Date.now() - savedAt < maxAgeMs ? id : null;
   } catch {
     return null;
   }
