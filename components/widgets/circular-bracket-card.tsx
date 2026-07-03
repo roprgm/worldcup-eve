@@ -99,7 +99,9 @@ const LEFT = { root: 101, start: 180 + GAP, end: 360 - GAP };
 const RIGHT = { root: 102, start: GAP, end: 180 - GAP };
 
 // A team this likely is treated as locked in — shown as a flag, not a chevron.
-const CONFIRMED = 0.99;
+// Exported so the market widget can decide which R32 slots are settled enough to
+// pin into a concrete bracket.
+export const CONFIRMED = 0.99;
 
 type Side = "home" | "away";
 
@@ -331,13 +333,25 @@ export interface Candidate {
   baseline?: number;
 }
 
-/** Everything the card paints onto the skeleton: the candidates for each R32
- *  slot, the teams that could reach each match, the real winner of any finished
- *  match, and the title odds. */
-export interface CircularBracketView {
+/** A concrete, fully-serializable bracket forecast: the team in each Round-of-32
+ *  slot and the winner of each knockout match. Enough to determine the whole
+ *  bracket — the champion is simply the winner of match 104. Undecided entries
+ *  are omitted, so a partial forecast renders too (its gaps stay "?"). This is
+ *  the object an AI (or, later, the user) fills in, and the widget's core input. */
+export interface BracketPredictions {
+  /** Round-of-32 entrant per slot, keyed "match:side" (e.g. "73:home"). */
+  slots: Record<string, string>;
+  /** Predicted winner (FIFA code) per knockout match number (73–104). */
+  winners: Record<number, string>;
+}
+
+/** Optional market overlay layered on the concrete bracket: the ranked odds the
+ *  popovers list, the baselines the bars diff against, and live state. Absent for
+ *  a plain forecast (an AI's picks show as flags, no popovers); present for the
+ *  market widget so its popovers, moving bars and live pulsing keep working. */
+export interface BracketOdds {
   slotOdds: Map<string, Candidate[]>; // "match:side" → R32 occupant candidates
   matchOdds: Map<number, Candidate[]>; // match → each contender's chance to win
-  decided: Map<number, Candidate>; // match → real winner, once played
   live: Set<number>; // match numbers currently in progress
   liveLeader: Map<number, string>; // live match → team code currently ahead
   championOdds: Candidate[];
@@ -350,8 +364,6 @@ export type TeamPaths = Map<string, CellPath>;
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
 const formatPct = (p: number) => `${(p * 100).toPrecision(4)}%`;
 const lead = (odds?: Candidate[]) => odds?.[0];
-const confirmed = (odds?: Candidate[]) =>
-  (lead(odds)?.probability ?? 0) >= CONFIRMED;
 
 /** A flag cropped to a circle (the app's flag sprite is 4:3) — closer to the
  *  source artwork and cleaner at the sizes this widget uses. `size` is any CSS
@@ -394,33 +406,35 @@ function RoundFlag({
   );
 }
 
-function Connectors({ view }: { view?: CircularBracketView }) {
+function Connectors({ predictions }: { predictions?: BracketPredictions }) {
+  const winnerOf = (n: number) => predictions?.winners[n];
+  const slotOf = (key: string) => predictions?.slots[key];
   // Solid only traces the path a winner actually travelled: the leg's outer
-  // match must be played AND the team that advanced inward must be the one on
-  // this leg. So a freshly-qualified (but not-yet-played) team's spoke stays
-  // dashed — it only turns solid once it wins and moves on.
+  // match must have a winner AND the team that advanced inward must be the one on
+  // this leg. So a merely-qualified team's spoke stays dashed — it only turns
+  // solid once it wins and moves on.
   const isSolid = (s: SolidWhen): boolean => {
     switch (s.kind) {
       case "never":
         return false;
       case "r32leg": {
-        const win = view?.decided.get(s.match);
-        const team = lead(view?.slotOdds.get(`${s.match}:${s.side}`));
-        return !!win && !!team && win.code === team.code;
+        const win = winnerOf(s.match);
+        const team = slotOf(`${s.match}:${s.side}`);
+        return !!win && !!team && win === team;
       }
       case "innerleg": {
-        const win = view?.decided.get(s.parent);
-        const child = view?.decided.get(s.child);
-        return !!win && !!child && win.code === child.code;
+        const win = winnerOf(s.parent);
+        const child = winnerOf(s.child);
+        return !!win && !!child && win === child;
       }
       case "finalleg": {
-        const win = view?.decided.get(104);
-        const finalist = view?.decided.get(s.sf);
-        return !!win && !!finalist && win.code === finalist.code;
+        const win = winnerOf(104);
+        const finalist = winnerOf(s.sf);
+        return !!win && !!finalist && win === finalist;
       }
       case "trunk":
         // The trunk lights once a winner has arrived at the node.
-        return !!view?.decided.get(s.match);
+        return !!winnerOf(s.match);
     }
   };
 
@@ -837,8 +851,9 @@ function useProximityRef(
   );
 }
 
-/** What a node should paint, read off the view. `flagCode` means the team is
- *  locked in; otherwise `predictedCode` feeds the unsettled overlay. */
+/** What a node should paint, read off the bracket (and its optional odds).
+ *  `flagCode` means the team is set for this node; otherwise `predictedCode`
+ *  feeds the unsettled overlay. */
 interface NodeModel {
   id: string;
   x: number;
@@ -854,49 +869,52 @@ interface NodeModel {
 
 function slotModel(
   pos: FlagPos,
-  view: CircularBracketView | undefined,
+  predictions: BracketPredictions | undefined,
+  odds?: BracketOdds,
   teamPaths?: TeamPaths,
 ): NodeModel {
-  const odds = view?.slotOdds.get(`${pos.match}:${pos.side}`);
-  const top = lead(odds);
-  const flagCode = confirmed(odds) ? top?.code : undefined;
-  const winner = view?.decided.get(pos.match)?.code;
+  const flagCode = predictions?.slots[`${pos.match}:${pos.side}`];
+  const predictedCode = lead(
+    odds?.slotOdds.get(`${pos.match}:${pos.side}`),
+  )?.code;
+  const winner = predictions?.winners[pos.match];
   const eliminated = !!flagCode && !!winner && winner !== flagCode;
   return {
     id: `slot:${pos.match}:${pos.side}`,
     x: pos.x,
     y: pos.y,
     flagCode,
-    predictedCode: top?.code,
+    predictedCode,
     advanced: !!flagCode && winner === flagCode,
     eliminated,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
-    live: view?.live.has(pos.match) ?? false,
-    liveLeaderCode: view?.liveLeader.get(pos.match),
+    live: odds?.live.has(pos.match) ?? false,
+    liveLeaderCode: odds?.liveLeader.get(pos.match),
   };
 }
 
 function matchModel(
   node: InnerNode,
-  view: CircularBracketView | undefined,
+  predictions: BracketPredictions | undefined,
+  odds?: BracketOdds,
   teamPaths?: TeamPaths,
 ): NodeModel {
-  const flagCode = view?.decided.get(node.match)?.code;
-  const top = lead(view?.matchOdds.get(node.match));
+  const flagCode = predictions?.winners[node.match];
+  const predictedCode = lead(odds?.matchOdds.get(node.match))?.code;
   const nextMatch = matchByNumber[node.match].feedsInto;
-  const nextWinner = nextMatch ? view?.decided.get(nextMatch)?.code : undefined;
+  const nextWinner = nextMatch ? predictions?.winners[nextMatch] : undefined;
   const eliminated = !!flagCode && !!nextWinner && nextWinner !== flagCode;
   return {
     id: `match:${node.match}`,
     x: node.x,
     y: node.y,
     flagCode,
-    predictedCode: top?.code,
+    predictedCode,
     advanced: !!flagCode,
     eliminated,
     explainable: !!flagCode && !!teamPaths?.has(flagCode),
-    live: view?.live.has(node.match) ?? false,
-    liveLeaderCode: view?.liveLeader.get(node.match),
+    live: odds?.live.has(node.match) ?? false,
+    liveLeaderCode: odds?.liveLeader.get(node.match),
   };
 }
 
@@ -984,14 +1002,36 @@ function BracketNode({
   );
 }
 
+/** The trophy, or the champion's flag once the winner of match 104 is set. */
+function ChampionInner({ code, isOpen }: { code?: string; isOpen: boolean }) {
+  if (code)
+    return (
+      <span className="block rounded-full ring-2 ring-pick">
+        <RoundFlag code={code} size="var(--cf)" />
+      </span>
+    );
+  return (
+    <span
+      className={cn(
+        "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
+        isOpen ? "border-pick text-pick" : "border-pick/50 text-pick/80",
+      )}
+    >
+      <Trophy style={{ width: "55%", height: "55%" }} />
+    </span>
+  );
+}
+
 /** The centre: a same-size circle holding the trophy (or the champion's flag
- *  once the final is played), opening the title odds on tap. */
+ *  once the final is decided). Opens the title odds on tap when they're supplied;
+ *  a plain (non-tappable) badge for a bare forecast with no odds to show. */
 function ChampionNode({
-  view,
+  predictions,
+  openable,
   openId,
   onToggle,
-}: NodeProps & { view?: CircularBracketView }) {
-  const win = view?.decided.get(104);
+}: NodeProps & { predictions?: BracketPredictions; openable: boolean }) {
+  const winCode = predictions?.winners[104];
   const isOpen = openId === "champion";
   const proximityRef = useProximityRef("champion", C, C, 1);
   return (
@@ -1004,30 +1044,18 @@ function ChampionNode({
           ref={proximityRef}
           className="transition-transform duration-150 ease-out [will-change:transform]"
         >
-          {win ? (
-            <button
-              type="button"
-              onClick={(e) => onToggle("champion", e.currentTarget)}
-              aria-label="Show title odds"
-              className="block rounded-full ring-2 ring-pick"
-            >
-              <RoundFlag code={win.code} size="var(--cf)" />
-            </button>
-          ) : (
+          {openable ? (
             <button
               type="button"
               onClick={(e) => onToggle("champion", e.currentTarget)}
               aria-label="Show title odds"
               aria-expanded={isOpen}
-              className={cn(
-                "flex size-[var(--cf)] items-center justify-center rounded-full border bg-card transition-colors",
-                isOpen
-                  ? "border-pick text-pick"
-                  : "border-pick/50 text-pick/80",
-              )}
+              className="block rounded-full"
             >
-              <Trophy style={{ width: "55%", height: "55%" }} />
+              <ChampionInner code={winCode} isOpen={isOpen} />
             </button>
+          ) : (
+            <ChampionInner code={winCode} isOpen={false} />
           )}
         </div>
       </NodeReveal>
@@ -1041,9 +1069,10 @@ function matchSubtitle(num: number): string {
   return `${ROUND_NAME[m.round]} · #${num} · ${matchDateLabel(m.kickoffAt)}`;
 }
 
-/** The header, sub-header and team list for the currently open node. */
+/** The header, sub-header and team list for the currently open node, read off
+ *  the market odds. Only reachable when odds are supplied. */
 function openContent(
-  view: CircularBracketView,
+  odds: BracketOdds,
   id: string,
 ): {
   title: string;
@@ -1055,46 +1084,44 @@ function openContent(
     return {
       title: "Chances to win the title",
       subtitle: matchSubtitle(104),
-      odds: view.championOdds,
-      live: view.live.has(104),
+      odds: odds.championOdds,
+      live: odds.live.has(104),
     };
   if (id.startsWith("slot:")) {
     const sideKey = id.slice("slot:".length);
-    const odds = view.slotOdds.get(sideKey);
-    if (!odds) return null;
+    const list = odds.slotOdds.get(sideKey);
+    if (!list) return null;
     const num = Number(sideKey.split(":")[0]);
     return {
       title: "Chances to reach this match",
       subtitle: matchSubtitle(num),
-      odds,
-      live: view.live.has(num),
+      odds: list,
+      live: odds.live.has(num),
     };
   }
   const num = Number(id.slice("match:".length));
-  const odds = view.matchOdds.get(num);
-  if (!odds) return null;
+  const list = odds.matchOdds.get(num);
+  if (!list) return null;
   const round = matchByNumber[num].round as RoundKey;
   return {
     title: `Chances to reach the ${NEXT_LABEL[round]}`,
     subtitle: matchSubtitle(num),
-    odds,
-    live: view.live.has(num),
+    odds: list,
+    live: odds.live.has(num),
   };
 }
 
-/** The locked-in team behind an open node, if any: a confirmed R32 slot's
- *  occupant or a played match's winner. Such a node opens its road to the final
- *  instead of the chances list. */
-function confirmedTeamCode(
-  view: CircularBracketView,
+/** The locked-in team behind an open node, if any: a settled R32 slot's occupant
+ *  or a decided match's winner. Such a node opens its road to the final instead
+ *  of the chances list. */
+function pinnedTeamCode(
+  predictions: BracketPredictions,
   id: string,
 ): string | undefined {
-  if (id.startsWith("slot:")) {
-    const odds = view.slotOdds.get(id.slice("slot:".length));
-    return confirmed(odds) ? lead(odds)?.code : undefined;
-  }
+  if (id.startsWith("slot:"))
+    return predictions.slots[id.slice("slot:".length)];
   if (id.startsWith("match:"))
-    return view.decided.get(Number(id.slice("match:".length)))?.code;
+    return predictions.winners[Number(id.slice("match:".length))];
   return undefined;
 }
 
@@ -1176,12 +1203,17 @@ export function PredictToggle({
  *  whatever width its parent gives it; pass `className` to cap or pad it. Used
  *  bare on the home and wrapped in a card on the predictions page. */
 export function CircularBracketRing({
-  view,
+  predictions,
+  odds,
   teamPaths,
   predict = false,
   className,
 }: {
-  view?: CircularBracketView;
+  /** The concrete bracket to paint: R32 entrants and each match's winner. */
+  predictions?: BracketPredictions;
+  /** Market overlay for the popovers, baseline bars and live pulsing. Omit for a
+   *  bare forecast — nodes then just show the predicted flags. */
+  odds?: BracketOdds;
   /** Road to the final per locked-in team, making those flags tappable. */
   teamPaths?: TeamPaths;
   /** Show the leading candidate's flag (faded) in unsettled nodes instead of "?". */
@@ -1194,12 +1226,14 @@ export function CircularBracketRing({
   const onToggle = (id: string, anchor: HTMLElement) =>
     setOpen((cur) => (cur?.id === id ? null : { id, anchor }));
   const openId = open?.id ?? null;
-  const loading = !view;
+  const loading = !predictions;
 
-  // A locked-in flag opens its road to the final; any other node opens chances.
-  const teamCode = open && view ? confirmedTeamCode(view, open.id) : undefined;
+  // A locked-in flag opens its road to the final; any other node opens chances
+  // (only when the market odds are supplied).
+  const teamCode =
+    open && predictions ? pinnedTeamCode(predictions, open.id) : undefined;
   const teamPath = teamCode ? teamPaths?.get(teamCode) : undefined;
-  const content = open && view && !teamPath ? openContent(view, open.id) : null;
+  const content = open && odds && !teamPath ? openContent(odds, open.id) : null;
 
   const { containerRef, field, onPointerMove, onPointerLeave } =
     useProximityField(scaleByProximity);
@@ -1230,11 +1264,11 @@ export function CircularBracketRing({
           }}
         />
         <ProximityContext.Provider value={field}>
-          <Connectors view={view} />
+          <Connectors predictions={predictions} />
           {GEOMETRY.nodes.map((node) => (
             <BracketNode
               key={`match:${node.match}`}
-              model={matchModel(node, view, teamPaths)}
+              model={matchModel(node, predictions, odds, teamPaths)}
               loading={loading}
               predict={predict}
               openId={openId}
@@ -1244,14 +1278,19 @@ export function CircularBracketRing({
           {GEOMETRY.flags.map((pos) => (
             <BracketNode
               key={`slot:${pos.match}:${pos.side}`}
-              model={slotModel(pos, view, teamPaths)}
+              model={slotModel(pos, predictions, odds, teamPaths)}
               loading={loading}
               predict={predict}
               openId={openId}
               onToggle={onToggle}
             />
           ))}
-          <ChampionNode view={view} openId={openId} onToggle={onToggle} />
+          <ChampionNode
+            predictions={predictions}
+            openable={!!odds}
+            openId={openId}
+            onToggle={onToggle}
+          />
         </ProximityContext.Provider>
       </div>
       <Popover
@@ -1280,11 +1319,15 @@ export function CircularBracketRing({
 /** The knockout bracket as a ring of flags and chevrons. Structure renders
  *  immediately; flags lock in and chances open as the market resolves. */
 export function CircularBracketCard({
-  view,
+  predictions,
+  odds,
   predict: predictDefault = false,
   teamPaths,
 }: {
-  view?: CircularBracketView;
+  /** The concrete bracket to paint: R32 entrants and each match's winner. */
+  predictions?: BracketPredictions;
+  /** Market overlay for the popovers, baseline bars and live pulsing. */
+  odds?: BracketOdds;
   /** Initial state of the predictions toggle: show the leading candidate's flag
    *  (faded) in unsettled nodes instead of a "?". Users can flip it in-card. */
   predict?: boolean;
@@ -1312,7 +1355,8 @@ export function CircularBracketCard({
           <PredictToggle on={predict} onChange={setPredict} />
         </div>
         <CircularBracketRing
-          view={view}
+          predictions={predictions}
+          odds={odds}
           teamPaths={teamPaths}
           predict={predict}
           className="max-w-[680px]"
