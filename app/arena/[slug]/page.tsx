@@ -61,7 +61,7 @@ export default async function ArenaRunPage({
       <div className="mx-auto w-full max-w-lg">
         <SharedBracket results={results} picks={run.picks} />
       </div>
-      <RunPicks run={run} results={results} />
+      <RunPicks questions={run.questions} results={results} />
       <RunMeta run={run} score={score} />
     </div>
   );

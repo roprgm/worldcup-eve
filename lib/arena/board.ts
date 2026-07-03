@@ -1,6 +1,6 @@
 // The live board a bracket prediction is laid over: which teams occupy the
 // Round-of-32 slots, and which knockout matches already have a real winner.
-// Derived from the results feed and shared by the /bracket builder, the arena
+// Derived from the results feed and shared by the bracket builder, the arena
 // prediction script, and the /arena pages.
 
 import type { Results } from "@/lib/results";

@@ -11,8 +11,10 @@ export const sql = url ? neon(url) : null;
 
 let schemaReady: Promise<void> | null = null;
 
-/** Create the runs table once per process (idempotent), so the store is
- *  self-provisioning — no separate migration step to run. */
+/** Create the tables once per process (idempotent), so the store is
+ *  self-provisioning — no separate migration step to run. `arena_runs` holds the
+ *  model benchmark runs; `arena_brackets` holds human-made shared predictions
+ *  (just the picks — no model, tokens or reasoning). */
 export function ensureSchema(): Promise<void> {
   if (!sql) return Promise.resolve();
   schemaReady ??= (async () => {
@@ -22,6 +24,13 @@ export function ensureSchema(): Promise<void> {
         model      text not null,
         created_at timestamptz not null default now(),
         data       jsonb not null
+      )
+    `;
+    await sql`
+      create table if not exists arena_brackets (
+        id         text primary key,
+        created_at timestamptz not null default now(),
+        picks      jsonb not null
       )
     `;
   })();

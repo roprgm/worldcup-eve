@@ -56,6 +56,29 @@ function sides(
   return { home: teamOf("home"), away: teamOf("away") };
 }
 
+/** The round-by-round matchups a set of picks defines, reconstructed from the
+ *  board and the picks alone (no model, no reasoning). Used to show a human
+ *  bracket's picks the same way a model run's are. */
+export function matchupsFromPicks(
+  board: Board,
+  picks: Record<number, TeamCode>,
+): AskedQuestion[] {
+  const questions: AskedQuestion[] = [];
+  for (const match of bracketMatches) {
+    const { home, away } = sides(match, board, picks);
+    const pick = picks[match.number];
+    if (home && away && pick)
+      questions.push({
+        match: match.number,
+        round: match.round,
+        home,
+        away,
+        pick,
+      });
+  }
+  return questions;
+}
+
 /** Decide one match — the answer to a single "A or B" question. */
 export type Decider = (m: Matchup) => Promise<{
   pick: TeamCode;

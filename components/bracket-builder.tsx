@@ -3,7 +3,7 @@
 import { Check, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { shareBracket } from "@/app/bracket/actions";
+import { shareBracket } from "@/app/arena/actions";
 import {
   type BracketNodeRef,
   CircularBracket,
@@ -59,7 +59,7 @@ function ShareButton({ picks }: { picks: Picks }) {
     try {
       const id = await shareBracket(picks);
       if (!id) throw new Error("picks rejected or storage unavailable");
-      await navigator.clipboard.writeText(`${location.origin}/bracket/${id}`);
+      await navigator.clipboard.writeText(`${location.origin}/arena/b/${id}`);
       const copied = { picks, status: "copied" as const };
       setLast(copied);
       // Back to shareable after the confirmation; only if nothing changed since.
@@ -115,7 +115,7 @@ export function SharedBracket({
 
 /** The bracket as a build-your-own-prediction board: tap any team to advance
  *  it into the next round, all the way to the title. Sharing stores the picks
- *  and hands out a read-only /bracket/<id> link. */
+ *  and hands out a read-only /arena/b/<id> link. */
 export function BracketBuilder({ results }: { results: Results }) {
   const { slots, winners } = useBoard(results);
   const [picks, setPicks] = useState<Picks>({});

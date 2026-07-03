@@ -25,12 +25,6 @@ export function SiteNav() {
       >
         Predictions
       </Link>
-      <Link
-        href="/bracket"
-        className={linkClass(pathname.startsWith("/bracket"))}
-      >
-        Bracket
-      </Link>
       <Link href="/arena" className={linkClass(pathname.startsWith("/arena"))}>
         Arena
       </Link>

@@ -1,3 +1,4 @@
+import { CreateBracketCard } from "@/components/arena/create-bracket-card";
 import { RunList } from "@/components/arena/run-list";
 import { readIndex } from "@/lib/arena/storage";
 import { getMatchResults } from "@/lib/results";
@@ -27,7 +28,10 @@ export default async function ArenaPage() {
           pitch — the further a team is backed, the bigger the payoff.
         </p>
       </header>
-      <RunList runs={runs} results={results} />
+      <div className="flex flex-col gap-2">
+        <CreateBracketCard />
+        <RunList runs={runs} results={results} />
+      </div>
     </>
   );
 }

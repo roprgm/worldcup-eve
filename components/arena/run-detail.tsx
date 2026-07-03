@@ -162,19 +162,21 @@ export function RunMeta({ run, score }: { run: ArenaRun; score: Score }) {
   );
 }
 
-/** The per-pick breakdown, shown below the bracket. */
+/** The per-pick breakdown, shown below the bracket. Reasoning only appears for
+ *  the questions that carry it (model runs), so a human bracket just lists the
+ *  picks. */
 export function RunPicks({
-  run,
+  questions,
   results,
 }: {
-  run: ArenaRun;
+  questions: AskedQuestion[];
   results: Results;
 }) {
-  if (run.questions.length === 0) return null;
+  if (questions.length === 0) return null;
   return (
     <Section title="Picks">
       <div className="pt-1">
-        <PicksByRound questions={run.questions} results={results} />
+        <PicksByRound questions={questions} results={results} />
       </div>
     </Section>
   );
