@@ -58,7 +58,7 @@ export default async function ArenaRunPage({
         prev={paged ? neighbor(prev) : undefined}
         next={paged ? neighbor(next) : undefined}
       />
-      <div className="mx-auto w-full max-w-lg">
+      <div className="arena-run-view mx-auto w-full max-w-lg">
         <SharedBracket results={results} picks={run.picks} />
       </div>
       <RunPicks questions={run.questions} results={results} />

@@ -180,8 +180,15 @@ export function SharedBracket({
   picks: Picks;
 }) {
   const { slots, winners } = useBoard(results);
+  // No build-in ripple: these views transition as a whole (the arena carousel),
+  // so a swap should slide in already settled rather than re-play the mount.
   return (
-    <CircularBracket slots={slots} results={winners} predictions={picks} />
+    <CircularBracket
+      slots={slots}
+      results={winners}
+      predictions={picks}
+      animateEntrance={false}
+    />
   );
 }
 
