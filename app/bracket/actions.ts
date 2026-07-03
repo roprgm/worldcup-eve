@@ -3,6 +3,7 @@
 import { checkRateLimit } from "@vercel/firewall";
 import { z } from "zod";
 
+import { bracketPath } from "@/app/bracket/storage";
 import { writeJson } from "@/lib/storage/blob";
 import { matchByNumber, teamById } from "@/lib/tournament";
 
@@ -25,6 +26,6 @@ export async function shareBracket(picks: unknown): Promise<string | null> {
   if (!parsed.success) return null;
   // 12 hex chars (48 random bits) — plenty for unguessable share links.
   const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-  const stored = await writeJson(`brackets/${id}.json`, parsed.data);
+  const stored = await writeJson(bracketPath(id), parsed.data);
   return stored ? id : null;
 }
