@@ -9,8 +9,6 @@ import {
   type RefCallback,
   useCallback,
   useContext,
-  useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -1035,12 +1033,13 @@ export function CircularBracket(props: CircularBracketProps) {
     !!model.team && !!teamPaths?.has(model.team);
   // With a select callback, every team flag is tappable, not just explainable ones.
   const selectable = !!onNodeSelect;
-  // Node entrances are wave-staggered only while the data is replacing the
-  // loading skeletons; afterwards (a pick, a live result) they pop immediately.
-  const wasLoading = useRef(isLoading);
-  useEffect(() => {
-    wasLoading.current = isLoading;
-  }, [isLoading]);
+  // Node entrances are wave-staggered only on the render where the data replaces
+  // the loading skeletons; afterwards (a pick, a live result) they pop
+  // immediately. Derived during render from the previous isLoading value so the
+  // stagger doesn't depend on an effect committing between renders.
+  const [prevLoading, setPrevLoading] = useState(isLoading);
+  const staggered = prevLoading;
+  if (prevLoading !== isLoading) setPrevLoading(isLoading);
 
   const { containerRef, field, onPointerMove, onPointerLeave } =
     useProximityField(scaleByProximity);
@@ -1085,7 +1084,7 @@ export function CircularBracket(props: CircularBracketProps) {
                 key={nodeId(model.ref)}
                 model={model}
                 loading={isLoading}
-                staggered={wasLoading.current}
+                staggered={staggered}
                 predict={predict}
                 explainable={explainable(model)}
                 selectable={selectable}
@@ -1101,7 +1100,7 @@ export function CircularBracket(props: CircularBracketProps) {
                 key={nodeId(model.ref)}
                 model={model}
                 loading={isLoading}
-                staggered={wasLoading.current}
+                staggered={staggered}
                 predict={predict}
                 explainable={explainable(model)}
                 selectable={selectable}
