@@ -31,6 +31,9 @@ export function SiteNav() {
       >
         Bracket
       </Link>
+      <Link href="/arena" className={linkClass(pathname.startsWith("/arena"))}>
+        Arena
+      </Link>
     </nav>
   );
 }

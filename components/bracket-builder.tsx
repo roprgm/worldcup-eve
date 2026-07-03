@@ -12,36 +12,11 @@ import {
   type TeamCode,
 } from "@/components/circular-bracket";
 import { Button } from "@/components/ui/button";
+import { buildBoard } from "@/lib/arena/board";
 import type { Results } from "@/lib/results";
-import { matchByNumber, teamById } from "@/lib/tournament";
+import { matchByNumber } from "@/lib/tournament";
 
 type Picks = Record<number, TeamCode>;
-
-// R32 occupants from the scoreboard. ESPN uses slot placeholders ("2A") until
-// a side is settled, so only real team codes count as occupants.
-function confirmedSlots(results: Results): Record<SlotKey, TeamCode> {
-  const slots: Record<SlotKey, TeamCode> = {};
-  for (const m of results.matches) {
-    if (matchByNumber[m.n]?.round !== "R32") continue;
-    for (const side of ["home", "away"] as const) {
-      const code = m[side].code;
-      if (teamById[code]) slots[`${m.n}:${side}`] = code;
-    }
-  }
-  return slots;
-}
-
-// Played knockout matches, by match number → the actual winner.
-function playedWinners(results: Results): Record<number, TeamCode> {
-  const winners: Record<number, TeamCode> = {};
-  const byNumber = new Map(results.matches.map((m) => [m.n, m]));
-  for (const [num, side] of Object.entries(results.knockoutPicks)) {
-    const match = byNumber.get(Number(num));
-    const code = side === "home" ? match?.home.code : match?.away.code;
-    if (code) winners[Number(num)] = code;
-  }
-  return winners;
-}
 
 /** Advance the tapped node's team into the next match. Confirmed results can't
  *  be overridden, and replacing a previous pick also clears the displaced team
@@ -120,10 +95,7 @@ function ShareButton({ picks }: { picks: Picks }) {
 /** The board every bracket page draws on: the R32 occupants and the played
  *  winners, derived from the live results. */
 function useBoard(results: Results) {
-  return useMemo(
-    () => ({ slots: confirmedSlots(results), winners: playedWinners(results) }),
-    [results],
-  );
+  return useMemo(() => buildBoard(results), [results]);
 }
 
 /** A shared prediction laid over the live board, read-only: no tap-to-advance
