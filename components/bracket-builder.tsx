@@ -14,6 +14,7 @@ import {
 } from "@/components/circular-bracket";
 import { XIcon } from "@/components/icons";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { buildBoard } from "@/lib/arena/board";
 import type { Results } from "@/lib/results";
 import { matchByNumber } from "@/lib/tournament";
@@ -97,10 +98,11 @@ function ShareResult({ name, url }: { name: string; url: string }) {
   );
 }
 
-/** Ask for a name, then hand back the shareable link. The result is remembered
- *  with the picks it was for, so editing the bracket (a new picks object) drops
- *  back to the form so the new prediction gets a fresh link. */
+/** The share flow, in a modal: enter a name, get back a link to copy or post to
+ *  X. The result is remembered with the picks it was for, so editing the bracket
+ *  (a new picks object) asks for a fresh link. */
 function ShareBracket({ picks }: { picks: Picks }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -111,11 +113,12 @@ function ShareBracket({ picks }: { picks: Picks }) {
   } | null>(null);
 
   const current = result?.picks === picks ? result : null;
+  const empty = Object.keys(picks).length === 0;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (busy || !trimmed || Object.keys(picks).length === 0) return;
+    if (busy || !trimmed || empty) return;
     setBusy(true);
     setError(false);
     try {
@@ -134,33 +137,53 @@ function ShareBracket({ picks }: { picks: Picks }) {
     }
   };
 
-  if (current) return <ShareResult name={current.name} url={current.url} />;
-
   return (
-    <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={40}
-          placeholder="Your name"
-          aria-label="Your name"
-          className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 text-left text-sm text-foreground placeholder:text-subtle-foreground focus:border-border-strong focus:outline-none"
-        />
-        <Button
-          type="submit"
-          variant="outline"
-          size="sm"
-          disabled={busy || !name.trim() || Object.keys(picks).length === 0}
-        >
-          <Share2 className="size-3.5" />
-          {busy ? "Sharing…" : "Share"}
-        </Button>
-      </div>
-      {error && (
-        <p className="text-xs text-red-400">Couldn’t share — try again.</p>
-      )}
-    </form>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(true)}
+        disabled={empty}
+      >
+        <Share2 className="size-3.5" />
+        Share your bracket
+      </Button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={current ? "Your bracket is ready" : "Share your bracket"}
+      >
+        {current ? (
+          <ShareResult name={current.name} url={current.url} />
+        ) : (
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Add your name so your bracket can join the leaderboard, then share
+              the link.
+            </p>
+            {/* biome-ignore lint/a11y/noAutofocus: the name field is the modal's sole purpose */}
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              placeholder="Your name"
+              aria-label="Your name"
+              autoFocus
+              className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-subtle-foreground focus:border-border-strong focus:outline-none"
+            />
+            <Button type="submit" disabled={busy || !name.trim() || empty}>
+              <Share2 className="size-3.5" />
+              {busy ? "Creating link…" : "Create shareable link"}
+            </Button>
+            {error && (
+              <p className="text-xs text-red-400">
+                Couldn’t share — try again.
+              </p>
+            )}
+          </form>
+        )}
+      </Modal>
+    </>
   );
 }
 
@@ -180,15 +203,8 @@ export function SharedBracket({
   picks: Picks;
 }) {
   const { slots, winners } = useBoard(results);
-  // No build-in ripple: these views transition as a whole (the arena carousel),
-  // so a swap should slide in already settled rather than re-play the mount.
   return (
-    <CircularBracket
-      slots={slots}
-      results={winners}
-      predictions={picks}
-      animateEntrance={false}
-    />
+    <CircularBracket slots={slots} results={winners} predictions={picks} />
   );
 }
 

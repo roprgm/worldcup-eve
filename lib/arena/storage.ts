@@ -1,9 +1,9 @@
-// Arena runs, stored in Neon: one row per run, the whole run as jsonb. The list
-// is a query (no hand-maintained index file), and the summary each list row
-// needs is projected out in SQL so the heavy conversation is never fetched.
+// Arena runs, stored in Neon: one row per run, the whole run as jsonb. The
+// /arena page loads them all at once (minus the heavy conversation) so the list
+// and the detail carousel run entirely client-side.
 
 import { ensureSchema, sql } from "./db";
-import type { ArenaRun, ArenaRunSummary } from "./types";
+import type { ArenaRun, ArenaRunView } from "./types";
 
 // Slugs are the shareable run ids (e.g. "gpt-5"): lowercase, url-safe.
 const SLUG_RE = /^[a-z0-9][a-z0-9.-]{0,63}$/;
@@ -20,29 +20,16 @@ export function modelSlug(model: string): string {
     .replace(/^[-.]+|[-.]+$/g, "");
 }
 
-// The lightweight per-run projection the list needs, built in SQL so the run's
-// conversation and questions never leave the database.
-const SUMMARY = `jsonb_build_object(
-  'id', data->'id',
-  'model', data->'model',
-  'label', data->'label',
-  'createdAt', data->'createdAt',
-  'durationMs', data->'durationMs',
-  'usage', data->'usage',
-  'picks', data->'picks',
-  'champion', data->'champion',
-  'questionCount', jsonb_array_length(data->'questions'),
-  'error', data->'error'
-)`;
-
-/** All run summaries, newest first, or `[]` when the store is empty or absent. */
-export async function readIndex(): Promise<ArenaRunSummary[]> {
+/** Every run, newest first, minus the heavy conversation (which only the debug
+ *  view needs). `[]` when the store is empty or absent. */
+export async function readRuns(): Promise<ArenaRunView[]> {
   if (!sql) return [];
   await ensureSchema();
-  const rows = await sql.query(
-    `select ${SUMMARY} as summary from arena_runs order by created_at desc`,
-  );
-  return rows.map((r) => r.summary as ArenaRunSummary);
+  const rows = await sql`
+    select (data - 'conversation') as data
+    from arena_runs order by created_at desc
+  `;
+  return rows.map((r) => r.data as ArenaRunView);
 }
 
 /** The full stored run, or `null` for a malformed id or an absent row. */

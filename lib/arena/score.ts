@@ -6,7 +6,6 @@ import type { Results } from "@/lib/results";
 import type { Round } from "@/lib/tournament";
 import { playedWinners, type TeamCode } from "./board";
 import { bracketMatches } from "./bracket";
-import type { ArenaRunSummary } from "./types";
 
 const ROUND_POINTS: Record<Round, number> = {
   R32: 1,
@@ -54,18 +53,17 @@ export function scoreRun(
   return { points, maxPoints, correct, decided };
 }
 
-export interface RankedRun {
-  run: ArenaRunSummary;
+export interface RankedRun<T> {
+  run: T;
   score: Score;
 }
 
 /** Every run scored and ranked: most points first, then most correct picks,
  *  then fastest. The single ordering shared by the leaderboard and the detail
- *  view's prev/next pager. */
-export function rankRuns(
-  runs: ArenaRunSummary[],
-  results: Results,
-): RankedRun[] {
+ *  view's prev/next stepping. Generic over anything carrying picks + duration. */
+export function rankRuns<
+  T extends { picks: Record<number, TeamCode>; durationMs: number },
+>(runs: T[], results: Results): RankedRun<T>[] {
   return runs
     .map((run) => ({ run, score: scoreRun(run.picks, results) }))
     .sort(

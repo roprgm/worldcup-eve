@@ -32,20 +32,7 @@ export interface ArenaRun {
   error?: string;
 }
 
-/** The per-run entry the list page needs to rank and score every run without
- *  fetching each full run: projected out of the stored run in SQL (see
- *  storage.ts). Carries the picks (a handful of match → team entries) since
- *  scoring is recomputed live against the latest results, but omits the heavy
- *  conversation. */
-export interface ArenaRunSummary {
-  id: string;
-  model: string;
-  label: string;
-  createdAt: string;
-  durationMs: number;
-  usage: RunUsage;
-  picks: Record<number, TeamCode>;
-  champion?: TeamCode;
-  questionCount: number;
-  error?: string;
-}
+/** A run as the /arena page consumes it: everything except the heavy
+ *  conversation, which only the (future) debug view needs. The whole field is
+ *  loaded once so the list and the detail carousel run entirely client-side. */
+export type ArenaRunView = Omit<ArenaRun, "conversation">;

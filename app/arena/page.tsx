@@ -1,6 +1,5 @@
-import { CreateBracketCard } from "@/components/arena/create-bracket-card";
-import { RunList } from "@/components/arena/run-list";
-import { readIndex } from "@/lib/arena/storage";
+import { ArenaApp } from "@/components/arena/arena-app";
+import { readRuns } from "@/lib/arena/storage";
 import { getMatchResults } from "@/lib/results";
 
 export const metadata = {
@@ -12,26 +11,9 @@ export const metadata = {
 // Stored runs and live results both change; always render fresh.
 export const dynamic = "force-dynamic";
 
-/** The arena leaderboard: every model's predicted bracket, scored against the
- *  results so far. */
+/** The arena: every model's run is loaded once, then the leaderboard and the
+ *  per-run detail carousel run entirely client-side. */
 export default async function ArenaPage() {
-  const [runs, results] = await Promise.all([readIndex(), getMatchResults()]);
-  return (
-    <>
-      <header className="mb-6 flex flex-col items-center text-center">
-        <h1 className="animate-fade-up text-xl font-semibold tracking-tight text-balance text-foreground sm:text-2xl">
-          WorldCup Arena
-        </h1>
-        <p className="mt-2 max-w-md text-sm text-balance text-muted-foreground">
-          Which AI knows football best? Each model calls the entire knockout
-          bracket, and we score every pick against what really happens on the
-          pitch — the further a team is backed, the bigger the payoff.
-        </p>
-      </header>
-      <div className="flex flex-col gap-2">
-        <RunList runs={runs} results={results} />
-        <CreateBracketCard />
-      </div>
-    </>
-  );
+  const [runs, results] = await Promise.all([readRuns(), getMatchResults()]);
+  return <ArenaApp runs={runs} results={results} />;
 }

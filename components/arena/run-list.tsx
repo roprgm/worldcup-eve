@@ -1,10 +1,9 @@
 import { AlertTriangle, Trophy } from "lucide-react";
-import Link from "next/link";
 
 import { Flag } from "@/components/flags";
 import { LocalTime } from "@/components/ui/local-time";
 import { rankRuns, type Score } from "@/lib/arena/score";
-import type { ArenaRunSummary } from "@/lib/arena/types";
+import type { ArenaRunView } from "@/lib/arena/types";
 import type { Results } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
 
@@ -52,15 +51,18 @@ function RunRow({
   run,
   rank,
   score,
+  onSelect,
 }: {
-  run: ArenaRunSummary;
+  run: ArenaRunView;
   rank: number;
   score: Score;
+  onSelect: () => void;
 }) {
   return (
-    <Link
-      href={`/arena/${run.id}`}
-      className="group flex items-center gap-3 rounded-lg border border-surface-border bg-card px-3 py-3 transition-colors hover:border-border-strong hover:bg-surface-2 sm:gap-4 sm:px-4"
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group flex items-center gap-3 rounded-lg border border-surface-border bg-card px-3 py-3 text-left transition-colors hover:border-border-strong hover:bg-surface-2 sm:gap-4 sm:px-4"
     >
       <span className="w-5 shrink-0 text-center text-sm font-semibold tabular-nums text-muted-foreground">
         {rank}
@@ -103,18 +105,21 @@ function RunRow({
           </span>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }
 
 /** The arena leaderboard: every stored run ranked by the points it has earned
- *  against the results so far, then by how many picks it got right. */
+ *  against the results so far, then by how many picks it got right. Selecting a
+ *  row opens its detail (client-side, instant). */
 export function RunList({
   runs,
   results,
+  onSelect,
 }: {
-  runs: ArenaRunSummary[];
+  runs: ArenaRunView[];
   results: Results;
+  onSelect: (id: string) => void;
 }) {
   if (runs.length === 0)
     return (
@@ -133,7 +138,13 @@ export function RunList({
   return (
     <div className="flex flex-col gap-2">
       {rankRuns(runs, results).map(({ run, score }, i) => (
-        <RunRow key={run.id} run={run} rank={i + 1} score={score} />
+        <RunRow
+          key={run.id}
+          run={run}
+          rank={i + 1}
+          score={score}
+          onSelect={() => onSelect(run.id)}
+        />
       ))}
     </div>
   );

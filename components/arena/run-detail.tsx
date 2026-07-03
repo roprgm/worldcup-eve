@@ -6,7 +6,7 @@ import { Section } from "@/components/ui/section";
 import { playedWinners } from "@/lib/arena/board";
 import type { Score } from "@/lib/arena/score";
 import type { AskedQuestion } from "@/lib/arena/bracket";
-import type { ArenaRun } from "@/lib/arena/types";
+import type { ArenaRunView } from "@/lib/arena/types";
 import type { Results } from "@/lib/results";
 import type { Round } from "@/lib/tournament";
 
@@ -136,7 +136,7 @@ function PicksByRound({
 
 /** The run's stats card: the model id and how it did. Sits below the bracket.
  *  The conversation, reasoning and thinking live on a separate debug view. */
-export function RunMeta({ run, score }: { run: ArenaRun; score: Score }) {
+export function RunMeta({ run, score }: { run: ArenaRunView; score: Score }) {
   return (
     <div className="rounded-lg border border-surface-border bg-card p-4">
       <code className="text-xs text-muted-foreground">{run.model}</code>

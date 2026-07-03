@@ -90,9 +90,6 @@ export interface CircularBracketProps {
   isLoading?: boolean;
   /** Show each open node's leading candidate as a faded flag instead of "?". */
   predict?: boolean;
-  /** Play the node build-in ripple on mount. Off for views that transition as a
-   *  whole (e.g. the arena carousel), so a swap slides in already settled. */
-  animateEntrance?: boolean;
   /** Fires on every node tap, alongside the built-in popover. */
   onNodeSelect?: (node: BracketNodeRef) => void;
   className?: string;
@@ -1026,7 +1023,6 @@ export function CircularBracket(props: CircularBracketProps) {
   const {
     isLoading = false,
     predict,
-    animateEntrance = true,
     teamPaths,
     teamJourneys,
     onNodeSelect,
@@ -1077,7 +1073,6 @@ export function CircularBracket(props: CircularBracketProps) {
         onPointerLeave={onPointerLeave}
         className={cn(
           "relative mx-auto aspect-square w-full [--cf:clamp(20px,7.2cqw,44px)] @container",
-          !animateEntrance && "bracket-no-entrance",
           className,
         )}
       >
