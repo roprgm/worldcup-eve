@@ -20,14 +20,15 @@ export function modelSlug(model: string): string {
     .replace(/^[-.]+|[-.]+$/g, "");
 }
 
-/** Every run, newest first, minus the heavy conversation (which only the debug
- *  view needs). `[]` when the store is empty or absent. */
+/** Every enabled run, newest first, minus the heavy conversation (which only the
+ *  debug view needs). Disabled models are kept in the table but hidden from the
+ *  leaderboard. `[]` when the store is empty or absent. */
 export async function readRuns(): Promise<ArenaRunView[]> {
   if (!sql) return [];
   await ensureSchema();
   const rows = await sql`
     select (data - 'conversation') as data
-    from arena_runs order by created_at desc
+    from arena_runs where enabled order by created_at desc
   `;
   return rows.map((r) => r.data as ArenaRunView);
 }

@@ -22,6 +22,7 @@ export function ensureSchema(): Promise<void> {
       create table if not exists arena_runs (
         id         text primary key,
         model      text not null,
+        enabled    boolean not null default true,
         created_at timestamptz not null default now(),
         data       jsonb not null
       )
@@ -34,7 +35,8 @@ export function ensureSchema(): Promise<void> {
         picks      jsonb not null
       )
     `;
-    // Backfill the column on a table created before names existed.
+    // Backfill columns on tables created before they existed.
+    await sql`alter table arena_runs add column if not exists enabled boolean not null default true`;
     await sql`alter table arena_brackets add column if not exists name text`;
   })();
   return schemaReady;
