@@ -27,10 +27,12 @@ export type MessageBlock =
   | { kind: "widget"; part: EveDynamicToolPart };
 
 /** Split an assistant message into blocks: the prose first, then its widget(s).
- *  The agent calls a `show_*` tool before writing its line (so the line is
- *  informed by the tool's summary, and fast), which puts the tool part ahead of
- *  the text — but the answer reads best as a sentence then the card, so we render
- *  the text above the widget regardless of call order. */
+ *  The agent calls a `show_*` tool before writing its line — so the line is
+ *  informed by the tool's summary and the turn stays fast — which lands the tool
+ *  part (and its data) a beat ahead of the text. To keep the answer reading
+ *  top-down, we render the text above the widget, and hold the widget back until
+ *  the line exists (or the turn ends), so the card reveals just after the
+ *  sentence rather than flashing in before it. */
 export function messageBlocks(message: EveMessage): MessageBlock[] {
   let text = "";
   const widgets: MessageBlock[] = [];
@@ -38,7 +40,10 @@ export function messageBlocks(message: EveMessage): MessageBlock[] {
     if (part.type === "text") text += part.text;
     else if (isWidgetToolPart(part)) widgets.push({ kind: "widget", part });
   }
-  return [...(text ? [{ kind: "text" as const, text }] : []), ...widgets];
+  const blocks: MessageBlock[] = text ? [{ kind: "text", text }] : [];
+  const streaming = message.metadata?.status === "streaming";
+  if (text || !streaming) blocks.push(...widgets);
+  return blocks;
 }
 
 function hasWidget(message: EveMessage): boolean {
