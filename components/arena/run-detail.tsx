@@ -47,8 +47,8 @@ function MetaStat({ label, value }: { label: string; value: string }) {
 function TeamChip({ code, className }: { code: string; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>
-      <Flag code={code} size={14} />
-      <span className="text-xs font-medium">{code}</span>
+      <Flag code={code} size={16} />
+      <span className="text-sm font-medium">{code}</span>
     </span>
   );
 }
@@ -68,7 +68,7 @@ function QuestionRow({ q, actual }: { q: AskedQuestion; actual?: string }) {
               q.pick === q.home ? "text-foreground" : "text-muted-foreground"
             }
           />
-          <span className="text-xs text-muted-foreground/60">vs</span>
+          <span className="text-sm text-muted-foreground/60">vs</span>
           <TeamChip
             code={q.away}
             className={
@@ -78,7 +78,7 @@ function QuestionRow({ q, actual }: { q: AskedQuestion; actual?: string }) {
         </span>
         <span
           className={cn(
-            "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
+            "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium",
             !decided && "bg-surface-2 text-muted-foreground",
             correct && "bg-pick/15 text-pick",
             decided && !correct && "bg-red-500/15 text-red-400",
@@ -91,12 +91,12 @@ function QuestionRow({ q, actual }: { q: AskedQuestion; actual?: string }) {
               : "Not played yet"
           }
         >
-          <Flag code={q.pick} size={12} />
+          <Flag code={q.pick} size={14} />
           {q.pick}
         </span>
       </div>
       {q.reasoning && (
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           {q.reasoning}
         </p>
       )}

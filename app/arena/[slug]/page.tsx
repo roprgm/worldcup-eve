@@ -1,5 +1,3 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RunMeta, RunPicks } from "@/components/arena/run-detail";
@@ -53,27 +51,18 @@ export default async function ArenaRunPage({
   const paged = ranked.length > 1 && pos >= 0;
 
   return (
-    <>
-      <Link
-        href="/arena"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Arena
-      </Link>
-      <div className="space-y-6">
-        <RunNav
-          title={run.label}
-          rank={paged ? `Rank ${pos + 1} of ${ranked.length}` : ""}
-          prev={paged ? neighbor(prev) : undefined}
-          next={paged ? neighbor(next) : undefined}
-        />
-        <div className="mx-auto w-full max-w-lg">
-          <SharedBracket results={results} picks={run.picks} />
-        </div>
-        <RunPicks run={run} results={results} />
-        <RunMeta run={run} score={score} />
+    <div className="space-y-6">
+      <RunNav
+        title={run.label}
+        rank={paged ? `Rank ${pos + 1} of ${ranked.length}` : ""}
+        prev={paged ? neighbor(prev) : undefined}
+        next={paged ? neighbor(next) : undefined}
+      />
+      <div className="mx-auto w-full max-w-lg">
+        <SharedBracket results={results} picks={run.picks} />
       </div>
-    </>
+      <RunPicks run={run} results={results} />
+      <RunMeta run={run} score={score} />
+    </div>
   );
 }
