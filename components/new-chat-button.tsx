@@ -41,7 +41,12 @@ export function NewChatButton() {
   }
 
   return (
-    <Link href="/" aria-label="New chat" title="New chat" className={buttonClass}>
+    <Link
+      href="/"
+      aria-label="New chat"
+      title="New chat"
+      className={buttonClass}
+    >
       <MessageSquarePlus className="size-4" />
       <span className="hidden sm:inline">New chat</span>
     </Link>

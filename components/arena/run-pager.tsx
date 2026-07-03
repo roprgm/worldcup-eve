@@ -40,7 +40,9 @@ export function RunPager({
   }, [prev, next, router]);
 
   return (
-    <nav className="flex items-center justify-between gap-2 text-muted-foreground">
+    // A 3-column grid with equal side columns keeps the position dead-centre,
+    // independent of how long the neighbours' names are.
+    <nav className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-muted-foreground">
       {prev ? (
         <Link
           href={`/arena/${prev.slug}`}
@@ -54,7 +56,7 @@ export function RunPager({
           <ChevronLeft className="size-4 shrink-0" />
         </span>
       )}
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground/70">
+      <span className="shrink-0 text-center text-xs tabular-nums text-muted-foreground/70">
         {position}
       </span>
       {next ? (
