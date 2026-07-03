@@ -29,10 +29,13 @@ export function ensureSchema(): Promise<void> {
     await sql`
       create table if not exists arena_brackets (
         id         text primary key,
+        name       text,
         created_at timestamptz not null default now(),
         picks      jsonb not null
       )
     `;
+    // Backfill the column on a table created before names existed.
+    await sql`alter table arena_brackets add column if not exists name text`;
   })();
   return schemaReady;
 }

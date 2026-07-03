@@ -29,8 +29,8 @@ export default async function ArenaPage() {
         </p>
       </header>
       <div className="flex flex-col gap-2">
-        <CreateBracketCard />
         <RunList runs={runs} results={results} />
+        <CreateBracketCard />
       </div>
     </>
   );

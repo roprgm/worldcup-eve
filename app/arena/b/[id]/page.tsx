@@ -22,15 +22,16 @@ export default async function SharedBracketPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const picks = await readBracket(id);
-  if (!picks) notFound();
+  const bracket = await readBracket(id);
+  if (!bracket) notFound();
+  const { name, picks } = bracket;
   const results = await getMatchResults();
   const questions = matchupsFromPicks(buildBoard(results), picks);
   const score = scoreRun(picks, results);
 
   return (
     <div className="space-y-6">
-      <RunNav title="Shared bracket" />
+      <RunNav title={name ? `${name}’s bracket` : "Shared bracket"} />
       <div className="mx-auto w-full max-w-lg">
         <SharedBracket results={results} picks={picks} />
       </div>
