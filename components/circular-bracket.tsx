@@ -674,11 +674,10 @@ function FlagNode({
         className={cn(ringClass, eliminated && "opacity-40")}
       />
     );
-  const label = explainable
-    ? `Show ${code}'s World Cup run`
-    : hasNote
-      ? `Show why ${code} was picked`
-      : `Select ${code}`;
+  let label: string;
+  if (explainable) label = `Show ${code}'s World Cup run`;
+  else if (hasNote) label = `Show why ${code} was picked`;
+  else label = `Select ${code}`;
   return (
     <button
       type="button"
