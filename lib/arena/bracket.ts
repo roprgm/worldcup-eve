@@ -1,7 +1,8 @@
 // Turning a bracket into a sequence of "A or B" questions. Walking the knockout
-// graph from the Round of 32 inward, every undecided match whose two teams are
-// known becomes one question; the answer advances a team, which in turn resolves
-// the matchups of later rounds. This is the whole shape of an arena run.
+// graph from the Round of 32 inward, every match becomes one question whose two
+// teams follow from the model's own earlier picks — so the model commits to a
+// full, self-consistent bracket without ever seeing which matches have really
+// been played. This is the whole shape of an arena run.
 
 import {
   type KnockoutMatch,
@@ -25,24 +26,30 @@ export interface Matchup {
   away: TeamCode;
 }
 
-/** A question that was actually asked, with the winner the model chose and the
- *  raw reply it came from — kept for scoring and debugging. */
+/** A question that was actually asked, with the winner the model chose plus the
+ *  reasoning and raw reply it came from — kept for scoring and the debug view. */
 export interface AskedQuestion extends Matchup {
   pick: TeamCode;
+  /** The model's written justification for the pick, when it gave one. */
+  reasoning?: string;
+  /** The model's native reasoning/thinking tokens, when the provider returns them. */
+  thinking?: string;
+  /** The full raw reply, verbatim. */
   raw?: string;
 }
 
-/** The two teams contesting a match, given the board and the winners resolved so
- *  far. A side is `undefined` when its feeder isn't decided yet. */
+/** The two teams contesting a match, given the R32 occupants and the winners the
+ *  model has picked so far. A side is `undefined` when its feeder isn't picked
+ *  yet (e.g. an R32 slot that the group stage hasn't filled). Reality is never
+ *  consulted here — the bracket is built purely from the model's own picks. */
 function sides(
   match: KnockoutMatch,
   board: Board,
-  resolved: Record<number, TeamCode>,
+  picks: Record<number, TeamCode>,
 ): { home?: TeamCode; away?: TeamCode } {
   const teamOf = (side: Side): TeamCode | undefined => {
     const ref = side === "home" ? match.home : match.away;
-    if (ref.kind === "match")
-      return board.winners[ref.match] ?? resolved[ref.match];
+    if (ref.kind === "match") return picks[ref.match];
     // R32 sides come from group/third slots, not earlier matches.
     return board.slots[slotKey(match.number, side)];
   };
@@ -50,24 +57,27 @@ function sides(
 }
 
 /** Decide one match — the answer to a single "A or B" question. */
-export type Decider = (m: Matchup) => Promise<{ pick: TeamCode; raw?: string }>;
+export type Decider = (m: Matchup) => Promise<{
+  pick: TeamCode;
+  reasoning?: string;
+  thinking?: string;
+  raw?: string;
+}>;
 
-/** Walk the bracket R32 → final, asking `decide` for every undecided match whose
- *  two teams are both known. Real results are used as-is (never asked), and a
- *  match with an unresolved side is skipped — leaving a gap the later rounds
- *  inherit. Returns only the predicted winners (not the locked ones) and the
- *  questions asked, in order. */
+/** Walk the bracket R32 → final, asking `decide` for every match whose two teams
+ *  are known (from the R32 slots and the picks already made). Every match is
+ *  asked — including ones that have really been played — so the model predicts a
+ *  complete bracket and can be scored the moment a match finishes. A match with
+ *  an unresolved side is skipped, leaving a gap the later rounds inherit. */
 export async function predictBracket(
   board: Board,
   decide: Decider,
 ): Promise<{ picks: Record<number, TeamCode>; questions: AskedQuestion[] }> {
-  const resolved: Record<number, TeamCode> = { ...board.winners };
   const picks: Record<number, TeamCode> = {};
   const questions: AskedQuestion[] = [];
 
   for (const match of bracketMatches) {
-    if (resolved[match.number]) continue; // already settled by a real result
-    const { home, away } = sides(match, board, resolved);
+    const { home, away } = sides(match, board, picks);
     if (!home || !away) continue; // a side isn't known — can't ask this one
 
     const matchup: Matchup = {
@@ -76,12 +86,11 @@ export async function predictBracket(
       home,
       away,
     };
-    const { pick, raw } = await decide(matchup);
+    const { pick, reasoning, thinking, raw } = await decide(matchup);
     // Guard against a stray reply: only the two contenders are valid winners.
     const winner = pick === away ? away : home;
-    resolved[match.number] = winner;
     picks[match.number] = winner;
-    questions.push({ ...matchup, pick: winner, raw });
+    questions.push({ ...matchup, pick: winner, reasoning, thinking, raw });
   }
 
   return { picks, questions };

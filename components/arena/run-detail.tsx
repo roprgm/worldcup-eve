@@ -57,49 +57,53 @@ function TeamChip({ code, className }: { code: string; className?: string }) {
   );
 }
 
-/** One asked question: the matchup, the model's pick, and — once the match is
- *  played — whether the pick was right. */
+/** One asked question: the matchup, the model's pick with its short reasoning,
+ *  and — once the match is played — whether the pick was right. */
 function QuestionRow({ q, actual }: { q: AskedQuestion; actual?: string }) {
   const decided = actual !== undefined;
   const correct = decided && actual === q.pick;
   return (
-    <li className="flex items-center gap-2 py-1.5 text-sm">
-      <span className="w-8 shrink-0 text-xs tabular-nums text-muted-foreground">
-        #{q.match}
-      </span>
-      <span className="flex min-w-0 flex-1 items-center gap-1.5">
-        <TeamChip
-          code={q.home}
-          className={
-            q.pick === q.home ? "text-foreground" : "text-muted-foreground"
+    <li className="py-2">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <TeamChip
+            code={q.home}
+            className={
+              q.pick === q.home ? "text-foreground" : "text-muted-foreground"
+            }
+          />
+          <span className="text-xs text-muted-foreground/60">vs</span>
+          <TeamChip
+            code={q.away}
+            className={
+              q.pick === q.away ? "text-foreground" : "text-muted-foreground"
+            }
+          />
+        </span>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
+            !decided && "bg-surface-2 text-muted-foreground",
+            correct && "bg-pick/15 text-pick",
+            decided && !correct && "bg-red-500/15 text-red-400",
+          )}
+          title={
+            decided
+              ? correct
+                ? "Correct"
+                : `Wrong — ${actual} won`
+              : "Not played yet"
           }
-        />
-        <span className="text-xs text-muted-foreground/60">vs</span>
-        <TeamChip
-          code={q.away}
-          className={
-            q.pick === q.away ? "text-foreground" : "text-muted-foreground"
-          }
-        />
-      </span>
-      <span
-        className={cn(
-          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
-          !decided && "bg-surface-2 text-muted-foreground",
-          correct && "bg-pick/15 text-pick",
-          decided && !correct && "bg-red-500/15 text-red-400",
-        )}
-        title={
-          decided
-            ? correct
-              ? "Correct"
-              : `Wrong — ${actual} won`
-            : "Not played yet"
-        }
-      >
-        <Flag code={q.pick} size={12} />
-        {q.pick}
-      </span>
+        >
+          <Flag code={q.pick} size={12} />
+          {q.pick}
+        </span>
+      </div>
+      {q.reasoning && (
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          {q.reasoning}
+        </p>
+      )}
     </li>
   );
 }
@@ -134,34 +138,8 @@ function PicksByRound({
   );
 }
 
-// The conversation content is always plain text in our runs; anything unexpected
-// is stringified so the transcript still renders.
-const asText = (content: unknown) =>
-  typeof content === "string" ? content : JSON.stringify(content, null, 2);
-
-function Transcript({ run }: { run: ArenaRun }) {
-  return (
-    <div className="space-y-2">
-      {run.conversation.map((msg, i) => (
-        <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: transcript is a static, ordered log
-          key={i}
-          className="rounded-md border border-surface-border bg-card px-3 py-2"
-        >
-          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-            {msg.role}
-          </div>
-          <pre className="whitespace-pre-wrap break-words font-sans text-xs text-foreground">
-            {asText(msg.content)}
-          </pre>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** The metadata, per-pick breakdown and full transcript shown under a run's
- *  bracket on its detail page. */
+/** The metadata and per-pick breakdown shown under a run's bracket. The
+ *  conversation, reasoning and thinking live on a separate debug view, not here. */
 export function RunDetail({
   run,
   score,
@@ -221,12 +199,6 @@ export function RunDetail({
           </div>
         </Section>
       )}
-
-      <Section title="Conversation" defaultOpen={false}>
-        <div className="pt-1">
-          <Transcript run={run} />
-        </div>
-      </Section>
     </div>
   );
 }

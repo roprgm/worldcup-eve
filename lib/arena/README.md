@@ -5,11 +5,16 @@ and we score them against reality as the tournament unfolds.
 
 A bracket is just a set of winners. Rather than ask a model for that shape all at
 once, we turn it into a chain of single-match **"A or B" questions**: walk the
-knockout graph from the Round of 32 inward, and every undecided match whose two
-teams are known becomes one question. Each answer advances a team, which resolves
-the matchups of later rounds — so by the final the whole bracket is filled from
-nothing but binary picks. Matches that already have a real result are used as-is
-(never asked); a match with an unresolved side is skipped.
+knockout graph from the Round of 32 inward, and every match becomes one question.
+Each answer advances a team, which resolves the matchups of the later rounds — so
+by the final the whole bracket is filled from nothing but binary picks.
+
+The matchups are built purely from the model's **own** picks, and the model is
+never told which games have actually been played — a "past" tie looks exactly
+like a future one. So it commits to a complete, self-consistent forecast (every
+round, played or not), which keeps the comparison fair and avoids leaking real
+results into the prompt. Each answer also carries a short written reason (and the
+provider's native reasoning tokens, when returned), stored with the pick.
 
 ## Pieces
 
@@ -18,11 +23,14 @@ nothing but binary picks. Matches that already have a real result are used as-is
   with the `/bracket` builder.
 - `bracket.ts` — `predictBracket(board, decide)` walks the bracket and asks
   `decide` one match at a time. Provider-agnostic: the decider is any
-  `(matchup) => { pick }`.
+  `(matchup) => { pick, reasoning? }`.
 - `score.ts` — `scoreRun(picks, results)`: a correct pick is worth its round's
   weight, doubling each round (R32 = 1 … final = 16). Only decided matches count.
+  `rankRuns` orders the whole field (shared by the leaderboard and the pager).
 - `storage.ts` / `types.ts` — one Vercel Blob per run plus a small index blob;
-  each run stores its picks, timing/token metadata and the full conversation.
+  each run stores its picks, reasoning, timing/token metadata and the full
+  conversation. `modelSlug` gives the readable run id (`openai/gpt-5` → `gpt-5`),
+  so re-running a model updates its run in place.
 - `run.ts` — the bench script (`bun run arena`).
 
 ## Running the bench
@@ -37,5 +45,5 @@ bun run arena anthropic/claude-sonnet-5 openai/gpt-5
 ```
 
 Each model gets a fresh conversation: a system prompt, then one question per
-undecided match. The predicted bracket, execution time, token usage and the
+knockout match. The predicted bracket, execution time, token usage and the
 whole transcript are written to blob storage, and the run shows up on `/arena`.

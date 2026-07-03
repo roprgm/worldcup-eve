@@ -6,6 +6,7 @@ import type { Results } from "@/lib/results";
 import type { Round } from "@/lib/tournament";
 import { playedWinners, type TeamCode } from "./board";
 import { bracketMatches } from "./bracket";
+import type { ArenaRunSummary } from "./types";
 
 const ROUND_POINTS: Record<Round, number> = {
   R32: 1,
@@ -51,4 +52,26 @@ export function scoreRun(
   }
 
   return { points, maxPoints, correct, decided };
+}
+
+export interface RankedRun {
+  run: ArenaRunSummary;
+  score: Score;
+}
+
+/** Every run scored and ranked: most points first, then most correct picks,
+ *  then fastest. The single ordering shared by the leaderboard and the detail
+ *  view's prev/next pager. */
+export function rankRuns(
+  runs: ArenaRunSummary[],
+  results: Results,
+): RankedRun[] {
+  return runs
+    .map((run) => ({ run, score: scoreRun(run.picks, results) }))
+    .sort(
+      (a, b) =>
+        b.score.points - a.score.points ||
+        b.score.correct - a.score.correct ||
+        a.run.durationMs - b.run.durationMs,
+    );
 }

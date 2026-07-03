@@ -17,7 +17,7 @@ import { buildResults } from "@/lib/results";
 import { type Round, teamById } from "@/lib/tournament";
 import { type Board, buildBoard, type TeamCode } from "./board";
 import { type AskedQuestion, type Matchup, predictBracket } from "./bracket";
-import { saveRun } from "./storage";
+import { modelSlug, saveRun } from "./storage";
 import type { ArenaRun, RunUsage } from "./types";
 
 // Default line-up — every id is overridable from the command line. Kept small so
@@ -51,22 +51,26 @@ const ROUND_LABEL: Record<Round, string> = {
 
 const SYSTEM_PROMPT = [
   "You are competing in the WorldCup Arena: predict the 2026 FIFA World Cup knockout bracket.",
-  "You will be asked a sequence of single-match questions, one per knockout match, starting with the Round of 32 and moving inward to the final. Each later question already reflects the winners you picked in the earlier rounds.",
+  "You will be asked a sequence of single-match questions, one per knockout match, from the Round of 32 inward to the final. Each later matchup follows from the winners you picked in the earlier rounds.",
+  "Predict purely from football reasoning — team and player strength, recent form, and how the styles match up. This is a forecast: do not assume you know how any of these matches actually turned out, and never base a pick on a result you believe already happened.",
   "Knockout matches cannot end in a draw — a level score is settled in extra time or on penalties, so always name exactly one winner.",
-  "Answer each question with only the winning team's 3-letter FIFA code (for example: BRA). Do not add any explanation.",
+  "For each question, give one or two sentences of reasoning, then end your reply with a final line in exactly this form (nothing after it):",
+  "PICK: <3-letter code>",
 ].join("\n");
 
 const teamLabel = (code: TeamCode) =>
   `${code} (${teamById[code]?.name ?? code})`;
 
-/** Which of the two contenders the reply names, or null if it names both or
- *  neither. Matches whole codes only, case-insensitively. */
-function parsePick(
+/** The code on the reply's last `PICK:` line when it is one of the two
+ *  contenders; otherwise a single unambiguous whole-word mention; else null. */
+function extractPick(
   reply: string,
   home: TeamCode,
   away: TeamCode,
 ): TeamCode | null {
   const up = reply.toUpperCase();
+  const tagged = [...up.matchAll(/PICK:\s*([A-Z]{3})/g)].at(-1)?.[1];
+  if (tagged === home || tagged === away) return tagged;
   const named = (code: TeamCode) => new RegExp(`\\b${code}\\b`).test(up);
   const h = named(home);
   const a = named(away);
@@ -74,6 +78,15 @@ function parsePick(
   if (a && !h) return away;
   return null;
 }
+
+// The reasoning is everything the model wrote apart from its PICK line(s), with
+// any echoed markdown heading dropped and whitespace collapsed to one clean line.
+const stripPick = (reply: string) =>
+  reply
+    .replace(/^\s*PICK:.*$/gim, "")
+    .replace(/^\s*#{1,6}\s.*$/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 function addUsage(
   total: RunUsage,
@@ -89,8 +102,6 @@ function addUsage(
     u.totalTokens ?? (u.inputTokens ?? 0) + (u.outputTokens ?? 0);
 }
 
-const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-
 /** Run one model over the board, keeping a single growing conversation so each
  *  answer sees the picks that led to the current matchup. */
 async function runModel(model: string, board: Board): Promise<void> {
@@ -102,15 +113,17 @@ async function runModel(model: string, board: Board): Promise<void> {
   const started = Date.now();
   let error: string | undefined;
 
+  // Note: the matchup is presented plainly, with no FIFA match number and no hint
+  // of whether it has been played — the model can't tell a "past" tie from a
+  // future one, which keeps every question a genuine forecast.
   const question = (m: Matchup, insist = false) =>
-    `Match #${m.match} · ${ROUND_LABEL[m.round]}: ${teamLabel(m.home)} vs ${teamLabel(m.away)}. Who wins and advances?` +
-    (insist
-      ? ` Reply with ONLY ${m.home} or ${m.away}.`
-      : ` Reply with just the winner's code (${m.home} or ${m.away}).`);
+    `${ROUND_LABEL[m.round]}: ${teamLabel(m.home)} vs ${teamLabel(m.away)}. Who advances?` +
+    (insist ? ` End with exactly "PICK: ${m.home}" or "PICK: ${m.away}".` : "");
 
   const decide = async (m: Matchup) => {
     let raw = "";
-    // One retry with a firmer instruction if the first reply is ambiguous.
+    let thinking: string | undefined;
+    // One retry with a firmer instruction if the pick can't be read out.
     for (let attempt = 0; attempt < 2; attempt++) {
       conversation.push({ role: "user", content: question(m, attempt > 0) });
       const res = await generateText({
@@ -119,13 +132,14 @@ async function runModel(model: string, board: Board): Promise<void> {
         allowSystemInMessages: true, // the system prompt heads the stored transcript
       });
       raw = res.text.trim();
+      thinking = res.reasoningText;
       conversation.push({ role: "assistant", content: raw });
       addUsage(usage, res.usage);
-      const pick = parsePick(raw, m.home, m.away);
-      if (pick) return { pick, raw };
+      const pick = extractPick(raw, m.home, m.away);
+      if (pick) return { pick, reasoning: stripPick(raw), thinking, raw };
     }
     // Fall back to the home side; the raw reply is stored so it's auditable.
-    return { pick: m.home, raw };
+    return { pick: m.home, reasoning: stripPick(raw), thinking, raw };
   };
 
   let picks: Record<number, TeamCode> = {};
@@ -144,7 +158,7 @@ async function runModel(model: string, board: Board): Promise<void> {
   if (error && questions.length === 0) return;
 
   const run: ArenaRun = {
-    id: newId(),
+    id: modelSlug(model),
     model,
     label,
     createdAt: new Date().toISOString(),

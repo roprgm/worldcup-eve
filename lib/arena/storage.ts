@@ -6,8 +6,21 @@ import { readJson, writeJson } from "@/lib/storage/blob";
 import { type ArenaRun, type ArenaRunSummary, toSummary } from "./types";
 
 const INDEX_PATH = "arena/index.json";
-const ID_RE = /^[a-f0-9]{12}$/;
+// Slugs are the shareable run ids (e.g. "gpt-5"): lowercase, url-safe.
+const SLUG_RE = /^[a-z0-9][a-z0-9.-]{0,63}$/;
 export const runPath = (id: string) => `arena/runs/${id}.json`;
+
+/** A readable, shareable run id from a gateway model id: the provider prefix is
+ *  dropped and the rest lowercased to url-safe chars. So "openai/gpt-5" → "gpt-5"
+ *  and "google/gemini-2.5-pro" → "gemini-2.5-pro". Re-running a model reuses its
+ *  slug, so its run is updated in place. */
+export function modelSlug(model: string): string {
+  const tail = model.split("/").pop() ?? model;
+  return tail
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+}
 
 /** All run summaries, newest first, or `[]` when nothing is stored. */
 export async function readIndex(): Promise<ArenaRunSummary[]> {
@@ -16,7 +29,7 @@ export async function readIndex(): Promise<ArenaRunSummary[]> {
 
 /** The full stored run, or `null` for a malformed id or an absent blob. */
 export async function readRun(id: string): Promise<ArenaRun | null> {
-  if (!ID_RE.test(id)) return null;
+  if (!SLUG_RE.test(id)) return null;
   return (await readJson<ArenaRun>(runPath(id))) ?? null;
 }
 

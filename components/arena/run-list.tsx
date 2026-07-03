@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Flag } from "@/components/flags";
 import { LocalTime } from "@/components/ui/local-time";
-import { type Score, scoreRun } from "@/lib/arena/score";
+import { rankRuns, type Score } from "@/lib/arena/score";
 import type { ArenaRunSummary } from "@/lib/arena/types";
 import type { Results } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
@@ -130,18 +130,9 @@ export function RunList({
       </div>
     );
 
-  const scored = runs
-    .map((run) => ({ run, score: scoreRun(run.picks, results) }))
-    .sort(
-      (a, b) =>
-        b.score.points - a.score.points ||
-        b.score.correct - a.score.correct ||
-        a.run.durationMs - b.run.durationMs,
-    );
-
   return (
     <div className="flex flex-col gap-2">
-      {scored.map(({ run, score }, i) => (
+      {rankRuns(runs, results).map(({ run, score }, i) => (
         <RunRow key={run.id} run={run} rank={i + 1} score={score} />
       ))}
     </div>
