@@ -26,26 +26,19 @@ export type MessageBlock =
   | { kind: "text"; text: string }
   | { kind: "widget"; part: EveDynamicToolPart };
 
-/** Split an assistant message into ordered blocks so a `show_*` widget renders
- *  inline where the agent called it — with prose free to come before or after.
- *  Consecutive text parts merge into one markdown run. */
+/** Split an assistant message into blocks: the prose first, then its widget(s).
+ *  The agent calls a `show_*` tool before writing its line (so the line is
+ *  informed by the tool's summary, and fast), which puts the tool part ahead of
+ *  the text — but the answer reads best as a sentence then the card, so we render
+ *  the text above the widget regardless of call order. */
 export function messageBlocks(message: EveMessage): MessageBlock[] {
-  const blocks: MessageBlock[] = [];
   let text = "";
-  const flush = () => {
-    if (text) blocks.push({ kind: "text", text });
-    text = "";
-  };
+  const widgets: MessageBlock[] = [];
   for (const part of message.parts) {
-    if (part.type === "text") {
-      text += part.text;
-    } else if (isWidgetToolPart(part)) {
-      flush();
-      blocks.push({ kind: "widget", part });
-    }
+    if (part.type === "text") text += part.text;
+    else if (isWidgetToolPart(part)) widgets.push({ kind: "widget", part });
   }
-  flush();
-  return blocks;
+  return [...(text ? [{ kind: "text" as const, text }] : []), ...widgets];
 }
 
 function hasWidget(message: EveMessage): boolean {
