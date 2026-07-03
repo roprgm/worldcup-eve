@@ -73,6 +73,11 @@ export function ArenaApp({
   const { run, score } = ranked[idx];
   const prevId = idx > 0 ? ranked[idx - 1].run.id : null;
   const nextId = idx < ranked.length - 1 ? ranked[idx + 1].run.id : null;
+  const reasoning = new Map(
+    run.questions
+      .filter((q) => q.reasoning)
+      .map((q) => [q.match, q.reasoning as string]),
+  );
 
   return (
     <div className="space-y-6">
@@ -95,7 +100,11 @@ export function ArenaApp({
       {/* One persistent bracket: only its picks change as you step, so the flags
           transition in place instead of the whole thing re-mounting. */}
       <div className="mx-auto w-full max-w-lg">
-        <SharedBracket results={results} picks={run.picks} />
+        <SharedBracket
+          results={results}
+          picks={run.picks}
+          reasoning={reasoning}
+        />
       </div>
       <RunPicks questions={run.questions} results={results} />
       <RunMeta run={run} score={score} />

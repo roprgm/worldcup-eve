@@ -90,6 +90,9 @@ export interface CircularBracketProps {
   isLoading?: boolean;
   /** Show each open node's leading candidate as a faded flag instead of "?". */
   predict?: boolean;
+  /** A short note for a node — e.g. the reasoning behind a pick — shown in a
+   *  popover when the node is tapped. Return undefined for nodes without one. */
+  nodeNote?: (ref: BracketNodeRef) => string | undefined;
   /** Fires on every node tap, alongside the built-in popover. */
   onNodeSelect?: (node: BracketNodeRef) => void;
   className?: string;
@@ -651,6 +654,7 @@ function FlagNode({
   eliminated,
   explainable,
   selectable,
+  hasNote,
   open,
   onToggle,
 }: NodeToggle & {
@@ -659,9 +663,10 @@ function FlagNode({
   eliminated: boolean;
   explainable: boolean;
   selectable: boolean;
+  hasNote: boolean;
 }) {
   const ringClass = won ? "ring-pick" : "ring-surface-divider";
-  if (!explainable && !selectable)
+  if (!explainable && !selectable && !hasNote)
     return (
       <RoundFlag
         code={code}
@@ -669,13 +674,16 @@ function FlagNode({
         className={cn(ringClass, eliminated && "opacity-40")}
       />
     );
+  const label = explainable
+    ? `Show ${code}'s World Cup run`
+    : hasNote
+      ? `Show why ${code} was picked`
+      : `Select ${code}`;
   return (
     <button
       type="button"
       onClick={(e) => onToggle(e.currentTarget)}
-      aria-label={
-        explainable ? `Show ${code}'s World Cup run` : `Select ${code}`
-      }
+      aria-label={label}
       aria-expanded={open}
       className="group block rounded-full"
     >
@@ -791,6 +799,8 @@ interface NodeModel {
   candidates?: Candidate[];
   live: boolean;
   liveLeaderCode?: TeamCode;
+  /** A note to reveal on tap (e.g. a pick's reasoning). */
+  note?: string;
 }
 
 const nodeId = (ref: BracketNodeRef) =>
@@ -811,6 +821,7 @@ function slotModel(pos: SlotPos, props: CircularBracketProps): NodeModel {
     eliminated: !!team && !!winner && winner !== team,
     live: props.live?.has(pos.match) ?? false,
     liveLeaderCode: props.liveLeader?.get(pos.match),
+    note: props.nodeNote?.({ match: pos.match, side: pos.side }),
   };
 }
 
@@ -830,6 +841,7 @@ function matchModel(pos: MatchPos, props: CircularBracketProps): NodeModel {
     candidates: winner ? undefined : asCandidates(prediction),
     live: props.live?.has(pos.match) ?? false,
     liveLeaderCode: props.liveLeader?.get(pos.match),
+    note: props.nodeNote?.({ match: pos.match }),
   };
 }
 
@@ -913,6 +925,7 @@ function BracketNode({
                   eliminated={model.eliminated}
                   explainable={explainable}
                   selectable={selectable}
+                  hasNote={!!model.note}
                   open={open}
                   onToggle={onToggle}
                 />
@@ -982,13 +995,50 @@ function ChampionNode({
   );
 }
 
+/** A node's note (e.g. why a team was picked): the picked team and match as a
+ *  header, then the note itself. */
+function NotePopup({
+  code,
+  subtitle,
+  text,
+}: {
+  code?: string;
+  subtitle: string;
+  text: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        {code && <RoundFlag code={code} size="16px" />}
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium tracking-wide text-foreground/80">
+            {code ?? "Pick"}
+          </p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <p className="text-sm leading-relaxed text-foreground/90">{text}</p>
+    </div>
+  );
+}
+
 /** The popover content for an open node, or `null` when it has nothing to show:
- *  a locked-in (or guessed) team opens its run so far plus its road to the
- *  final; an undecided match opens its chances list. */
+ *  a note when one is provided; otherwise a locked-in (or guessed) team's run so
+ *  far and road to the final, or an undecided match's chances list. */
 function popoverContent(
   ref: BracketNodeRef,
   props: CircularBracketProps,
 ): ReactNode {
+  const note = props.nodeNote?.(ref);
+  if (note) {
+    const pick = ref.side
+      ? props.slots?.[slotKey(ref.match, ref.side)]
+      : asGuess(props.predictions?.[ref.match]);
+    return (
+      <NotePopup code={pick} subtitle={matchSubtitle(ref.match)} text={note} />
+    );
+  }
+
   const team = ref.side
     ? props.slots?.[slotKey(ref.match, ref.side)]
     : (props.results?.[ref.match] ?? asGuess(props.predictions?.[ref.match]));

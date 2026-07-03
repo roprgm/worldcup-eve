@@ -194,17 +194,28 @@ function useBoard(results: Results) {
 }
 
 /** A shared prediction laid over the live board, read-only: no tap-to-advance
- *  and no share button. */
+ *  and no share button. With `reasoning` (match → why the pick was made), tapping
+ *  a pick node reveals it in a popover. */
 export function SharedBracket({
   results,
   picks,
+  reasoning,
 }: {
   results: Results;
   picks: Picks;
+  reasoning?: Map<number, string>;
 }) {
   const { slots, winners } = useBoard(results);
+  const nodeNote = reasoning
+    ? (ref: BracketNodeRef) => (ref.side ? undefined : reasoning.get(ref.match))
+    : undefined;
   return (
-    <CircularBracket slots={slots} results={winners} predictions={picks} />
+    <CircularBracket
+      slots={slots}
+      results={winners}
+      predictions={picks}
+      nodeNote={nodeNote}
+    />
   );
 }
 
