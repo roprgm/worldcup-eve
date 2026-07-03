@@ -4,9 +4,9 @@ import { cn } from "cnfast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 
-export interface CarouselNeighbor {
+export interface NavNeighbor {
   slug: string;
   label: string;
 }
@@ -19,7 +19,7 @@ function Arrow({
   neighbor,
 }: {
   dir: "prev" | "next";
-  neighbor?: CarouselNeighbor;
+  neighbor?: NavNeighbor;
 }) {
   const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
   if (!neighbor)
@@ -46,19 +46,20 @@ function Arrow({
   );
 }
 
-/** The bracket as a carousel slide: an arrow on each side steps to the prev/next
- *  run (in leaderboard order) while the bracket stays in place, so you can watch
- *  the predictions change model to model. Left/right arrow keys work too. */
-export function RunCarousel({
+/** The run's title line: the model name with its leaderboard rank, flanked by
+ *  arrows that step to the prev/next run (in the same order as the leaderboard)
+ *  while the bracket below stays in place. Left/right arrow keys work too. */
+export function RunNav({
+  title,
+  rank,
   prev,
   next,
-  position,
-  children,
 }: {
-  prev?: CarouselNeighbor;
-  next?: CarouselNeighbor;
-  position: string;
-  children: ReactNode;
+  title: string;
+  /** e.g. "Rank 4 of 5"; empty when the run stands alone. */
+  rank?: string;
+  prev?: NavNeighbor;
+  next?: NavNeighbor;
 }) {
   const router = useRouter();
 
@@ -73,18 +74,22 @@ export function RunCarousel({
     return () => window.removeEventListener("keydown", onKey);
   }, [prev, next, router]);
 
+  const paged = Boolean(prev || next || rank);
+
   return (
-    <div>
-      <div className="flex items-center justify-center gap-2 sm:gap-4">
-        <Arrow dir="prev" neighbor={prev} />
-        <div className="min-w-0 w-full max-w-lg">{children}</div>
-        <Arrow dir="next" neighbor={next} />
+    <div className="flex items-center gap-3">
+      {paged && <Arrow dir="prev" neighbor={prev} />}
+      <div className="min-w-0 flex-1 text-center">
+        <h2 className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          {title}
+        </h2>
+        {rank && (
+          <p className="mt-0.5 text-xs tabular-nums text-muted-foreground/70">
+            {rank}
+          </p>
+        )}
       </div>
-      {position && (
-        <p className="mt-3 text-center text-xs tabular-nums text-muted-foreground/70">
-          {position}
-        </p>
-      )}
+      {paged && <Arrow dir="next" neighbor={next} />}
     </div>
   );
 }

@@ -2,11 +2,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import {
-  type CarouselNeighbor,
-  RunCarousel,
-} from "@/components/arena/run-carousel";
 import { RunMeta, RunPicks } from "@/components/arena/run-detail";
+import { type NavNeighbor, RunNav } from "@/components/arena/run-nav";
 import { SharedBracket } from "@/components/bracket-builder";
 import { rankRuns, scoreRun } from "@/lib/arena/score";
 import { readIndex, readRun } from "@/lib/arena/storage";
@@ -27,12 +24,11 @@ export async function generateMetadata({
 const neighbor = (r?: {
   id: string;
   label: string;
-}): CarouselNeighbor | undefined =>
-  r ? { slug: r.id, label: r.label } : undefined;
+}): NavNeighbor | undefined => (r ? { slug: r.id, label: r.label } : undefined);
 
-/** One arena run: the headline card, then the predicted bracket laid over the
- *  live results as a carousel slide (side arrows step to the prev/next run in
- *  leaderboard order, bracket in place), then the per-pick breakdown. */
+/** One arena run: a title line (model name + rank, arrows stepping to the
+ *  prev/next run), the predicted bracket laid over the live results, the per-pick
+ *  breakdown, and the stats card at the bottom. */
 export default async function ArenaRunPage({
   params,
 }: {
@@ -46,8 +42,8 @@ export default async function ArenaRunPage({
   ]);
   if (!run) notFound();
 
-  // The carousel walks the same order as the leaderboard; the run's own score
-  // comes from that ranking when it's in the index, else computed directly.
+  // The arrows walk the same order as the leaderboard; the run's own score comes
+  // from that ranking when it's in the index, else computed directly.
   const ranked = rankRuns(index, results);
   const pos = ranked.findIndex((r) => r.run.id === run.id);
   const score = pos >= 0 ? ranked[pos].score : scoreRun(run.picks, results);
@@ -66,15 +62,17 @@ export default async function ArenaRunPage({
         Arena
       </Link>
       <div className="space-y-6">
-        <RunMeta run={run} score={score} />
-        <RunCarousel
+        <RunNav
+          title={run.label}
+          rank={paged ? `Rank ${pos + 1} of ${ranked.length}` : ""}
           prev={paged ? neighbor(prev) : undefined}
           next={paged ? neighbor(next) : undefined}
-          position={paged ? `${pos + 1} of ${ranked.length}` : ""}
-        >
+        />
+        <div className="mx-auto w-full max-w-lg">
           <SharedBracket results={results} picks={run.picks} />
-        </RunCarousel>
+        </div>
         <RunPicks run={run} results={results} />
+        <RunMeta run={run} score={score} />
       </div>
     </>
   );

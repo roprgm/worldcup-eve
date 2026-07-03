@@ -2,7 +2,6 @@ import { cn } from "cnfast";
 import { AlertTriangle } from "lucide-react";
 
 import { Flag } from "@/components/flags";
-import { LocalTime } from "@/components/ui/local-time";
 import { Section } from "@/components/ui/section";
 import { playedWinners } from "@/lib/arena/board";
 import type { Score } from "@/lib/arena/score";
@@ -22,20 +21,17 @@ const ROUND_LABEL: Record<Round, string> = {
 
 const ROUND_ORDER: Round[] = ["R32", "R16", "QF", "SF", "FINAL"];
 
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
-
 const formatDuration = (ms: number) =>
   ms >= 60_000
     ? `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`
     : `${(ms / 1000).toFixed(1)}s`;
+
+// Compact token counts: 62003 → "62k", 2612 → "2.6k".
+const compactTokens = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const formatTokens = (n: number) => compactTokens.format(n).toLowerCase();
 
 function MetaStat({ label, value }: { label: string; value: string }) {
   return (
@@ -138,15 +134,12 @@ function PicksByRound({
   );
 }
 
-/** The run's headline card: which model, and how it did. Sits above the bracket.
+/** The run's stats card: the model id and how it did. Sits below the bracket.
  *  The conversation, reasoning and thinking live on a separate debug view. */
 export function RunMeta({ run, score }: { run: ArenaRun; score: Score }) {
   return (
     <div className="rounded-lg border border-surface-border bg-card p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="text-lg font-semibold text-foreground">{run.label}</h2>
-        <code className="text-xs text-muted-foreground">{run.model}</code>
-      </div>
+      <code className="text-xs text-muted-foreground">{run.model}</code>
       {run.error && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
           <AlertTriangle className="size-3.5 shrink-0" />
@@ -158,25 +151,12 @@ export function RunMeta({ run, score }: { run: ArenaRun; score: Score }) {
         <MetaStat label="correct" value={`${score.correct}/${score.decided}`} />
         <MetaStat label="picks" value={String(run.questions.length)} />
         <MetaStat label="champion" value={run.champion ?? "—"} />
-        <MetaStat
-          label="tokens"
-          value={run.usage.totalTokens.toLocaleString()}
-        />
+        <MetaStat label="tokens" value={formatTokens(run.usage.totalTokens)} />
         <MetaStat
           label="in / out"
-          value={`${run.usage.inputTokens.toLocaleString()} / ${run.usage.outputTokens.toLocaleString()}`}
+          value={`${formatTokens(run.usage.inputTokens)} / ${formatTokens(run.usage.outputTokens)}`}
         />
         <MetaStat label="duration" value={formatDuration(run.durationMs)} />
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            run at
-          </span>
-          <span className="text-sm text-foreground">
-            <LocalTime iso={run.createdAt}>
-              {formatDateTime(run.createdAt)}
-            </LocalTime>
-          </span>
-        </div>
       </div>
     </div>
   );
