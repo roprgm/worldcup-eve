@@ -1,6 +1,6 @@
-import { MessageSquarePlus } from "lucide-react";
 import Link from "next/link";
 import { BallIcon, GitHubIcon } from "@/components/icons";
+import { NewChatButton } from "@/components/new-chat-button";
 import { SiteNav } from "@/components/site-nav";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -27,19 +27,7 @@ export function Header() {
         <span className="mx-2 hidden h-4 w-px rotate-18 bg-border-strong sm:block" />
         <SiteNav />
         <div className="ml-auto flex items-center gap-1.5">
-          <Link
-            href="/"
-            aria-label="New chat"
-            title="New chat"
-            className={buttonVariants({
-              variant: "outline",
-              size: "icon",
-              className: "sm:w-auto sm:px-2.5",
-            })}
-          >
-            <MessageSquarePlus className="size-4" />
-            <span className="hidden sm:inline">New chat</span>
-          </Link>
+          <NewChatButton />
           {/* External link — a plain anchor is correct here. */}
           <a
             href="https://github.com/roprgm/worldcup-eve"

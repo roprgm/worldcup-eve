@@ -7,15 +7,12 @@ import {
   resolvedKnockoutTeams,
   teamName,
 } from "@/agent/lib/fixtures";
-import { relativeTournamentDay } from "@/agent/lib/time";
+import { relativeTournamentDay, tournamentDay } from "@/agent/lib/time";
 import { getMatchResults, type MatchResult } from "@/lib/results";
-import { buildMatchDetail } from "@/lib/results/match-detail";
 import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
 
 // A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
-// Cap how many incident timelines we fetch (one ESPN call each).
-const MAX_TIMELINES = 4;
 
 const isTeam = (code: string | undefined): code is string =>
   Boolean(code && teamById[code]);
@@ -31,7 +28,7 @@ interface Fixture {
 
 export default defineTool({
   description:
-    "World Cup fixtures, past or future: who plays whom, kickoff time, stadium, status and final score. Use it for a team's schedule, a single fixture — including a game between two named teams (when or where it's played) — a result, what's on today or live, or, with timeline:true, a match's goals and cards. Show the fixtures as a `match` code block. Its body is ONLY explicit match numbers, or the literal `today`, or the literal `live`; for any other day, range, or list (e.g. tomorrow), take the numbers from this tool's result and put those in the body.",
+    "World Cup fixtures and results: who plays whom, kickoff, stadium, status, final score. Any schedule, fixture, result, venue, today/live, or date-range question — including a game between two named teams. For goals and cards use timeline instead. ALWAYS follow with ONE `match` block; its body is ONLY match numbers, `today`, or `live` — for anything else, list this result's match numbers.",
   inputSchema: z.object({
     team: z
       .string()
@@ -55,14 +52,16 @@ export default defineTool({
       .describe(
         "Only today's, the soonest future kickoff (next), still-upcoming, or already-played matches.",
       ),
-    timeline: z
-      .boolean()
+    from: z
+      .string()
       .optional()
-      .describe(
-        "Include the goals/cards/subs timeline (for incident questions).",
-      ),
+      .describe("Only matches on or after this date (YYYY-MM-DD), inclusive."),
+    to: z
+      .string()
+      .optional()
+      .describe("Only matches on or before this date (YYYY-MM-DD), inclusive."),
   }),
-  async execute({ team, matches, venue, status, when, timeline }) {
+  async execute({ team, matches, venue, status, when, from, to }) {
     const now = new Date();
     const nowMs = now.getTime();
     const results = await getMatchResults();
@@ -109,6 +108,13 @@ export default defineTool({
       .filter((m) => !venueQuery || norm(m.venue).includes(venueQuery))
       .filter((m) => !status || (m.result?.status ?? "scheduled") === status)
       .filter((m) => {
+        if (!from && !to) return true;
+        const day = tournamentDay(new Date(m.kickoffAt));
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+        return true;
+      })
+      .filter((m) => {
         if (!when) return true;
         if (when === "past") return played(m.kickoffAt);
         if (when === "upcoming") return !played(m.kickoffAt);
@@ -131,25 +137,6 @@ export default defineTool({
       return { matches: [], note };
     }
 
-    const timelineByNumber = new Map<number, unknown>();
-    if (timeline) {
-      const targets = selected
-        .filter((m) => (m.result?.status ?? "scheduled") !== "scheduled")
-        .slice(0, MAX_TIMELINES);
-      await Promise.all(
-        targets.map(async (m) => {
-          try {
-            timelineByNumber.set(
-              m.number,
-              (await buildMatchDetail(m.number)).events,
-            );
-          } catch {
-            // Leave the match without a timeline if the detail feed fails.
-          }
-        }),
-      );
-    }
-
     const rows = selected.map((m) => {
       const state = m.result?.status ?? "scheduled";
       return {
@@ -165,7 +152,6 @@ export default defineTool({
         day: relativeTournamentDay(new Date(m.kickoffAt), now),
         venue: m.venue,
         venueTz: venueTimeZone(m.venue) ?? "UTC",
-        timeline: timelineByNumber.get(m.number),
       };
     });
 

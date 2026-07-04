@@ -20,19 +20,22 @@ export async function readJson<T>(pathname: string): Promise<T | null> {
   }
 }
 
-/** Overwrite the private JSON blob at `pathname`; logs and continues on error. */
+/** Overwrite the private JSON blob at `pathname`. Returns whether it was
+ *  stored; logs and continues on error. */
 export async function writeJson(
   pathname: string,
   data: unknown,
-): Promise<void> {
-  if (!enabled()) return;
+): Promise<boolean> {
+  if (!enabled()) return false;
   try {
     await put(pathname, JSON.stringify(data), {
       access: "private",
       allowOverwrite: true,
       contentType: "application/json",
     });
+    return true;
   } catch (error) {
     console.error(`blob write failed for ${pathname}:`, error);
+    return false;
   }
 }

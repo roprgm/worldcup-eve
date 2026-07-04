@@ -5,9 +5,11 @@
     "": {
       "name": "worldcup-eve",
       "dependencies": {
+        "@neondatabase/serverless": "^1.1.0",
         "@tanstack/react-query": "^5.101.1",
         "@vercel/analytics": "^2.0.1",
         "@vercel/blob": "^2.5.0",
+        "@vercel/firewall": "^1.2.1",
         "@vercel/functions": "^3.7.2",
         "ai": "7.0.0-beta.178",
         "bottleneck": "^2.19.5",
@@ -161,6 +163,8 @@
     "@mongodb-js/zstd": ["@mongodb-js/zstd@7.0.0", "", { "dependencies": { "node-addon-api": "^8.5.0", "prebuild-install": "^7.1.3" } }, "sha512-mQ2s0pYYiav+tzCDR05Zptem8Ey2v8s11lri5RKGhTtL4COVCvVCk5vtyRYNT+9L8qSfyOqqefF9UtnW8mC5jA=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.2" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q=="],
+
+    "@neondatabase/serverless": ["@neondatabase/serverless@1.1.0", "", {}, "sha512-r3ZZhRjEcfEdKIZnoB1RusNgvHuaBRqfCzV4Gi+5A9yUX0S4HTws/ASWqt13wL4y4I+0rqsWGdA2w7EQXHi3+Q=="],
 
     "@next/env": ["@next/env@16.2.9", "", {}, "sha512-ki5VxxXfzD/9TDe13wyeTKIjQTAwBVpnr8KhRDUr8ltMUq1/NBpWNT5tiPoxiGl+PHM4X2ahSOiPk6iAimIzPg=="],
 
@@ -363,6 +367,8 @@
     "@vercel/cli-config": ["@vercel/cli-config@0.2.0", "", { "dependencies": { "xdg-app-paths": "5", "zod": "4.1.11" } }, "sha512-fJRRRB7734BDuXZ89yBEaA2ncYhH7bWX30mk04W80J6VAfQc+4iB8lyzAdaGpFV3/vNlkt9VZt+/uoQoWX6UsQ=="],
 
     "@vercel/cli-exec": ["@vercel/cli-exec@1.0.0", "", { "dependencies": { "execa": "5.1.1" } }, "sha512-kQF8LGie/Hbdq9/psJxLE7owRTcqMQMhgybU04gCeR7cbQAr5t8OrjefDNColJv1QSSucFt4pLwRiARVmlOnug=="],
+
+    "@vercel/firewall": ["@vercel/firewall@1.2.1", "", {}, "sha512-WlxjEPpf+GWYMontNNZqZjvLL40ziGwy9swwI9da/L1fB/syAO1S2fMtlBXkp4EGVF6nlXSKmwvkUd6YPWJbbg=="],
 
     "@vercel/functions": ["@vercel/functions@3.7.2", "", { "dependencies": { "@vercel/oidc": "3.6.2" }, "peerDependencies": { "@aws-sdk/credential-provider-web-identity": "*", "ws": ">=8" }, "optionalPeers": ["@aws-sdk/credential-provider-web-identity", "ws"] }, "sha512-5ZH3vUeFXbpXazWnSfOcnf9q+upMdTbdpE1z9FBPrhZjhWtaQa3L95jRHXsE7LBecGjSOdlvVkac/kz2WCJg8A=="],
 
