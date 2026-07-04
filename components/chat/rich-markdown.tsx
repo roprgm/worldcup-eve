@@ -39,7 +39,7 @@ const WIDGET_LANGUAGES = [
   "path",
   "slot",
   "chances",
-  "scores",
+  "predicted_scores",
   "bracket",
 ];
 
@@ -104,7 +104,7 @@ function renderWidget(language: string, body: string): ReactNode {
       const top = numbersIn(body)[0];
       return top ? <StageOddsWidget top={top} /> : null;
     }
-    case "scores": {
+    case "predicted_scores": {
       const match = numbersIn(body).find((n) => n >= 73);
       if (match) return <ScoreMatrixWidget match={match} />;
       const teams = teamCodesIn(body);

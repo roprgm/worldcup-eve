@@ -37,7 +37,7 @@ function resolveMatch(
 
 export default defineTool({
   description:
-    "Every exact score's chance for ONE decided knockout match (73-104) with a live market, plus its regulation three-way and to-advance odds. Give a match number or two team names/codes. Show the result as a `scores` block (body: the match number) — the widget paints the full goal matrix, so speak one line and never recite the scorelines. If no market exists the tool says so; answer win-odds questions with odds instead.",
+    "The market's PREDICTED chance for every exact scoreline of ONE decided knockout match (73-104) with a live market, plus its regulation three-way and to-advance odds. This is a forecast, not a result — for a played or in-progress match's actual score use matches or timeline. Give a match number or two team names/codes. Show the result as a `predicted_scores` block (body: the match number) — the widget paints the full goal matrix, so speak one line and never recite the scorelines. If no market exists the tool says so; answer win-odds questions with odds instead.",
   inputSchema: z.object({
     match: z
       .number()
@@ -85,7 +85,7 @@ export default defineTool({
     };
   },
   // One spoken line's worth: the top scorelines and who goes through. The
-  // `scores` widget carries the full matrix.
+  // `predicted_scores` widget carries the full matrix.
   toModelOutput(output) {
     if (output.kind === "none")
       return {
@@ -103,7 +103,7 @@ export default defineTool({
         : `${output.away.name} advance ${output.advance.awayPct}%`;
     return {
       type: "text",
-      value: `Match ${output.match} (${output.round}), ${output.home.name} vs ${output.away.name} — most likely ${top}. ${ahead}. Show the scores widget (body: ${output.match}) for the full matrix.`,
+      value: `Match ${output.match} (${output.round}), ${output.home.name} vs ${output.away.name} — most likely ${top}. ${ahead}. Show the predicted_scores widget (body: ${output.match}) for the full matrix.`,
     };
   },
 });
