@@ -1,19 +1,10 @@
 import { AlertTriangle, Trophy } from "lucide-react";
 
 import { Flag } from "@/components/flags";
-import { LocalTime } from "@/components/ui/local-time";
 import { rankRuns, type Score } from "@/lib/arena/score";
 import type { ArenaRunView } from "@/lib/arena/types";
 import type { Results } from "@/lib/results";
 import { teamById } from "@/lib/tournament";
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 
 const formatDuration = (ms: number) =>
   ms >= 60_000
@@ -93,17 +84,8 @@ function RunRow({
       <div className="hidden md:block">
         <Stat label="tokens" value={run.usage.totalTokens.toLocaleString()} />
       </div>
-      <div className="hidden text-right md:block">
-        <div className="flex flex-col items-end leading-tight">
-          <span className="text-sm tabular-nums text-foreground">
-            {formatDuration(run.durationMs)}
-          </span>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            <LocalTime iso={run.createdAt}>
-              {formatDate(run.createdAt)}
-            </LocalTime>
-          </span>
-        </div>
+      <div className="hidden md:block">
+        <Stat label="time" value={formatDuration(run.durationMs)} />
       </div>
     </button>
   );

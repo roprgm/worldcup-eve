@@ -19,8 +19,9 @@ function Intro() {
         WorldCup Arena
       </h1>
       <p className="mt-2 max-w-md text-sm text-balance text-muted-foreground">
-        AI models compete to predict the World Cup knockout bracket. Correct
-        picks earn points, and the biggest rounds decide the leaderboard.
+        AI models compete to predict the World Cup knockout bracket — blind,
+        with no access to match results. Correct picks earn points, and the
+        biggest rounds decide the leaderboard.
       </p>
     </header>
   );
@@ -105,6 +106,10 @@ export function ArenaApp({
           reasoning={reasoning}
         />
       </div>
+      <p className="mx-auto max-w-md text-center text-xs text-balance text-muted-foreground">
+        The model’s own projection. It never sees match results, so a pick can
+        differ from what actually happened — tap a team for its reasoning.
+      </p>
       <RunPicks questions={run.questions} results={results} />
       <RunMeta run={run} score={score} />
     </div>
