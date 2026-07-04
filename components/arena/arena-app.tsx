@@ -19,9 +19,9 @@ function Intro() {
         WorldCup Arena
       </h1>
       <p className="mt-2 max-w-md text-sm text-balance text-muted-foreground">
-        AI models compete to predict the World Cup knockout bracket — blind,
-        with no access to match results. Correct picks earn points, and the
-        biggest rounds decide the leaderboard.
+        Each AI model predicted the whole knockout bracket in advance, so its
+        picks are pure forecasts, not results. Right calls earn points, worth
+        more every round.
       </p>
     </header>
   );
