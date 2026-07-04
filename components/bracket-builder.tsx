@@ -193,8 +193,10 @@ function useBoard(results: Results) {
   return useMemo(() => buildBoard(results), [results]);
 }
 
-/** A shared prediction laid over the live board, read-only: no tap-to-advance
- *  and no share button. With `reasoning` (match → why the pick was made), tapping
+/** A shared prediction, read-only: no tap-to-advance and no share button. Shows
+ *  the projection itself — the picks — not the real outcome, so every node keeps
+ *  the predicted winner even after that match is played (only the R32 occupants
+ *  come from reality). With `reasoning` (match → why the pick was made), tapping
  *  a pick node reveals it in a popover. */
 export function SharedBracket({
   results,
@@ -205,17 +207,12 @@ export function SharedBracket({
   picks: Picks;
   reasoning?: Map<number, string>;
 }) {
-  const { slots, winners } = useBoard(results);
+  const { slots } = useBoard(results);
   const nodeNote = reasoning
     ? (ref: BracketNodeRef) => (ref.side ? undefined : reasoning.get(ref.match))
     : undefined;
   return (
-    <CircularBracket
-      slots={slots}
-      results={winners}
-      predictions={picks}
-      nodeNote={nodeNote}
-    />
+    <CircularBracket slots={slots} predictions={picks} nodeNote={nodeNote} />
   );
 }
 
