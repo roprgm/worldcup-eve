@@ -8,11 +8,10 @@ export default defineEval({
     const chances = await t.send(
       "¿Cuáles son las chances de México de ganar la final?",
     );
-    chances.calledTool("outlook");
-    chances.messageIncludes("```chances");
+    chances.calledTool("show_chances");
 
     const route = await t.send("¿Cuál es la ruta a la final?");
-    route.messageIncludes("```path");
+    route.calledTool("show_path");
 
     t.succeeded();
     t.noFailedActions();

@@ -7,7 +7,7 @@ export default defineEval({
     await t.send("Who will win?");
 
     t.succeeded();
-    t.calledTool("outlook");
+    t.calledTool("show_chances");
     t.noFailedActions();
     t.judge.autoevals.closedQA(
       "Does the answer treat the question as being about winning the World Cup (a title favorite or champion odds) rather than about one specific upcoming match?",

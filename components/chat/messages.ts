@@ -5,6 +5,8 @@ import type {
   UseEveAgentStatus,
 } from "eve/react";
 
+import { isWidgetToolPart } from "@/components/chat/tool-widget";
+
 /** Whether a turn is in flight — the composer and thread key off this. */
 export function isBusy(status: UseEveAgentStatus): boolean {
   return status === "submitted" || status === "streaming";
@@ -17,6 +19,35 @@ export function messageText(message: EveMessage): string {
     if (part.type === "text") text += part.text;
   }
   return text;
+}
+
+/** A prose run or a widget, in the order the agent produced them. */
+export type MessageBlock =
+  | { kind: "text"; text: string }
+  | { kind: "widget"; part: EveDynamicToolPart };
+
+/** Split an assistant message into blocks: the prose first, then its widget(s).
+ *  The agent calls a `show_*` tool before writing its line — so the line is
+ *  informed by the tool's summary and the turn stays fast — which lands the tool
+ *  part (and its data) a beat ahead of the text. To keep the answer reading
+ *  top-down, we render the text above the widget, and hold the widget back until
+ *  the line exists (or the turn ends), so the card reveals just after the
+ *  sentence rather than flashing in before it. */
+export function messageBlocks(message: EveMessage): MessageBlock[] {
+  let text = "";
+  const widgets: MessageBlock[] = [];
+  for (const part of message.parts) {
+    if (part.type === "text") text += part.text;
+    else if (isWidgetToolPart(part)) widgets.push({ kind: "widget", part });
+  }
+  const blocks: MessageBlock[] = text ? [{ kind: "text", text }] : [];
+  const streaming = message.metadata?.status === "streaming";
+  if (text || !streaming) blocks.push(...widgets);
+  return blocks;
+}
+
+function hasWidget(message: EveMessage): boolean {
+  return message.parts.some(isWidgetToolPart);
 }
 
 export function messageKey(message: EveMessage, index: number): string {
@@ -35,7 +66,11 @@ export function questionPart(
 }
 
 export function isRenderableMessage(message: EveMessage): boolean {
-  return messageText(message).length > 0 || questionPart(message) !== undefined;
+  return (
+    messageText(message).length > 0 ||
+    hasWidget(message) ||
+    questionPart(message) !== undefined
+  );
 }
 
 export function activeQuestion(

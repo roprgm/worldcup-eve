@@ -8,10 +8,12 @@ import {
   assistantActivityLabel,
   isBusy,
   isRenderableMessage,
+  messageBlocks,
   messageKey,
   messageText,
   questionPart,
 } from "@/components/chat/messages";
+import { ToolWidget } from "@/components/chat/tool-widget";
 import type { ChatView } from "@/components/chat/use-chat";
 import { BallIcon } from "@/components/icons";
 import { Markdown } from "@/components/ui/markdown";
@@ -84,7 +86,8 @@ function AssistantRow({
   activity: string | null;
 }) {
   const question = message ? questionPart(message) : undefined;
-  const text = message ? messageText(message) : "";
+  const blocks = message ? messageBlocks(message) : [];
+  const hasContent = blocks.length > 0;
 
   // Decide the entrance animation once, at mount. A row that first appears
   // mid-flight (activity loader or streaming text) settles in place — the avatar
@@ -105,8 +108,16 @@ function AssistantRow({
       <Bubble variant="ghost">
         <div className="flex flex-col gap-3">
           {question && <QuestionPrompt respond={respond} part={question} />}
-          {text && <ChatMarkdown>{text}</ChatMarkdown>}
-          {!text && !question && activity && <Activity label={activity} />}
+          {blocks.map((block, i) =>
+            block.kind === "text" ? (
+              <ChatMarkdown key={`text-${i}`}>{block.text}</ChatMarkdown>
+            ) : (
+              <ToolWidget key={block.part.toolCallId} part={block.part} />
+            ),
+          )}
+          {!hasContent && !question && activity && (
+            <Activity label={activity} />
+          )}
         </div>
       </Bubble>
     </Message>
