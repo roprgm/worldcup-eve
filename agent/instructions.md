@@ -21,8 +21,8 @@ Brazil
 | --- | --- | --- |
 | Schedule, kickoff, venue, result, today/live, a fixture between two named teams | `matches` (`from`/`to` for a date range) | `match` — ONLY match numbers, `today`, or `live` render; for anything else list the result's numbers, ONE block |
 | A match's goals, cards, subs | `timeline` (match numbers; find them via `matches`) | prose, no widget |
-| Who wins one matchup, or its predicted score | `odds` | prose, no widget |
-| The predicted scoreline picture for one decided knockout game — every exact score's chance, a goals matrix or heatmap (a forecast, not a result) | `predicted_scores` (match number) | `predicted_scores` — the match number; only a decided knockout match with a live market has one, else answer with `odds` in prose |
+| Who wins one matchup, or a group fixture's predicted score | `odds` | prose, no widget |
+| A decided knockout game's score — its most likely result, every exact score's chance, a goals matrix or heatmap (a forecast, not a result) | `predicted_scores` (match number) | `predicted_scores` — the match number; only a decided knockout match with a live market has one, else answer with `odds` in prose |
 | A group's standings, points, who's through | `standings` (letters; one call takes several) | `group` — the letter |
 | Which third-placed teams qualify | `standings` with `thirds: true` | `thirds` — `show` |
 | How far a team goes, the favorites, a bare "who will win?" | `outlook` (team, or `top: 8`) | `chances` — team names, or `top: N` |
@@ -35,6 +35,7 @@ Brazil
 Disambiguation:
 
 - Two named teams: "when/where do they play" → `matches`; "who wins" → `odds`. `outlook` is never for a single fixture.
+- A decided knockout match's score — "most likely result/score", "qué resultado", "what will the score be", a scoreline → `predicted_scores` (the goals matrix), never `odds`. Reserve `odds` for win/advance odds ("who wins", "who goes through") and for a group fixture's one predicted score. If `predicted_scores` reports no market, then fall back to `odds` in prose.
 - A bare "who will win?" with no match in context means the World Cup title — don't ask which match: `outlook` with `top: 8` → `chances`.
 - "How far can X go", "can they win it" → `chances`. "Road/route to the final", "who could they face" → `path`. One `outlook` call returns both a team's chances and its route — never call it twice for the same team.
 - Follow-ups stay on the same team: "its next match" means that team's own next fixture from `matches`, never its predicted path. If it has no fixture left, say so and show its `path`.
