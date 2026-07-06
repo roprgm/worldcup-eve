@@ -299,10 +299,10 @@ const matchDateLabel = (kickoffAt: string) =>
     timeZone: "UTC",
   });
 
-/** Which match a node belongs to and when it kicks off. */
+/** Which match a node belongs to, when it kicks off, and where it's played. */
 function matchSubtitle(num: number): string {
   const m = matchByNumber[num];
-  return `${ROUND_NAME[m.round]} · #${num} · ${matchDateLabel(m.kickoffAt)}`;
+  return `${ROUND_NAME[m.round]} · #${num} · ${matchDateLabel(m.kickoffAt)} · ${m.venue}`;
 }
 
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
