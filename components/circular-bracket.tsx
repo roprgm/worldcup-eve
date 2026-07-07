@@ -306,7 +306,9 @@ function matchSubtitle(num: number): string {
 }
 
 const pct = (v: number) => `${(v / SIZE) * 100}%`;
+// Precise form drives the bar widths; the label rounds to whole points.
 const formatPct = (p: number) => `${(p * 100).toPrecision(4)}%`;
+const formatPctLabel = (p: number) => `${Math.round(p * 100)}%`;
 
 // ── Building blocks ──────────────────────────────────────────────────────────
 
@@ -437,8 +439,8 @@ function OddsRow({
   const rose = delta > 0;
   const moved = hasMoved(c);
   const pctLabel = moved
-    ? `${formatPct(start)} -> ${formatPct(now)}`
-    : formatPct(now);
+    ? `${formatPctLabel(start)} -> ${formatPctLabel(now)}`
+    : formatPctLabel(now);
   const barTitle = moved
     ? `now ${formatPct(now)} · start ${formatPct(start)}`
     : undefined;
@@ -481,7 +483,7 @@ function OddsRow({
       <span
         className={cn(
           "shrink-0 whitespace-nowrap pr-0.5 text-right text-xs tabular-nums",
-          wideLabel ? "w-28" : "w-12",
+          wideLabel ? "w-24" : "w-10",
           top ? "font-semibold text-foreground" : "text-muted-foreground",
         )}
       >
