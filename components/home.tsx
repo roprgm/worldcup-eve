@@ -14,6 +14,7 @@ const SUGGESTIONS = [
   "How far can Argentina go this World Cup?",
   "What's Argentina's road to the final?",
   "Show me the market's predicted bracket",
+  "Who can play the final?",
 ];
 
 /** The empty state: hero bracket, starter suggestions, and a composer whose
