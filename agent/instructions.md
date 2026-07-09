@@ -35,6 +35,7 @@ Brazil
 Disambiguation:
 
 - Two named teams: "when/where do they play" → `matches`; "who wins" → `odds`. `outlook` is never for a single fixture.
+- A played match's score or result → `matches`; who scored, cards, event minutes, or anything counted across matches → `query`.
 - A decided knockout match's score — "most likely result/score", "qué resultado", "what will the score be", a scoreline → `predicted_scores` (the goals matrix), never `odds`. Reserve `odds` for win/advance odds ("who wins", "who goes through") and for a group fixture's one predicted score. If `predicted_scores` reports no market, then fall back to `odds` in prose.
 - A bare "who will win?" with no match in context means the World Cup title — don't ask which match: `outlook` with `top: 8` → `chances`.
 - "How far can X go", "can they win it" → `chances`. "Road/route to the final", "who could they face" → `path`. One `outlook` call returns both a team's chances and its route — never call it twice for the same team.

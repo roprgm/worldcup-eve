@@ -8,7 +8,7 @@ const MAX_ROWS = 50;
 export default defineTool({
   description:
     `One read-only SQL SELECT over what already happened this World Cup — a match's goals/cards/subs, and any cross-match stat the other tools can't do: most/fewest goals, goals before a minute, card counts, scorers, per-team/venue/group aggregates. ${SCHEMA_DOC} ` +
-    `Up to ${MAX_ROWS} rows come back; aggregate rather than fetch raw rows. Select matches.n whenever matches are the subject. On an error result, fix the SQL and retry. E.g. goals in the first 5 minutes: select m.n, m.home_name, m.away_name, e.minute, e.player from events e join matches m on m.n = e.match_n where e.type in ('goal','penalty_goal','own_goal') and e.minute <= 5 order by e.minute.`,
+    `NOT for a fixture's schedule, score, or venue by itself — matches answers those without SQL. Up to ${MAX_ROWS} rows come back; aggregate rather than fetch raw rows. Select matches.n whenever matches are the subject. On an error result, fix the SQL and retry. E.g. goals in the first 5 minutes: select m.n, m.home_name, m.away_name, e.minute, e.player from events e join matches m on m.n = e.match_n where e.type in ('goal','penalty_goal','own_goal') and e.minute <= 5 order by e.minute.`,
   inputSchema: z.object({
     sql: z
       .string()
