@@ -11,9 +11,10 @@ import { HomeBracket } from "@/components/widgets/circular-bracket-widget";
 const SUGGESTIONS = [
   "Which matches are playing today?",
   "Who is most likely to play in match 100?",
-  "How far can Brazil go this World Cup?",
+  "How far can Argentina go this World Cup?",
   "What's Argentina's road to the final?",
   "Show me the market's predicted bracket",
+  "Who can play the final?",
 ];
 
 /** The empty state: hero bracket, starter suggestions, and a composer whose
