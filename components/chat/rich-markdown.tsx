@@ -13,6 +13,7 @@ import { PredictionGroupWidget } from "@/components/widgets/prediction-group-wid
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { ScoreMatrixWidget } from "@/components/widgets/score-matrix-widget";
 import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
+import { TableWidget } from "@/components/widgets/table-widget";
 import { TeamPathWidget } from "@/components/widgets/team-path-widget";
 import { ThirdsRankingWidget } from "@/components/widgets/thirds-widget";
 import { codeFor } from "@/agent/lib/team-aliases";
@@ -41,6 +42,7 @@ const WIDGET_LANGUAGES = [
   "chances",
   "predicted_scores",
   "bracket",
+  "table",
 ];
 
 // Drop a leading "key:"/"key=" label so `team: Argentina` reads as `Argentina`.
@@ -114,6 +116,8 @@ function renderWidget(language: string, body: string): ReactNode {
       // In chat the bracket answers prediction questions, so show the market
       // overlay by default (the card keeps an in-place toggle to hide it).
       return <CircularBracketWidget predict />;
+    case "table":
+      return <TableWidget body={body} />;
     default:
       return null;
   }
