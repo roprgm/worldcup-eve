@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 
+import { Devtools } from "@/components/devtools";
+
 // One QueryClient per browser session, kept stable across renders. Each endpoint
 // drives its own cadence via refetchInterval, so don't pile extra refetches on
 // top — keeping cached data "fresh" means revisiting the page reuses it instantly.
@@ -19,5 +21,9 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <Devtools>{children}</Devtools>
+    </QueryClientProvider>
+  );
 }

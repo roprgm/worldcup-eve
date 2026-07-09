@@ -17,6 +17,7 @@
         "cnfast": "^0.0.8",
         "date-fns": "^4.4.0",
         "eve": "^0.18.0",
+        "eve-devtools": "^0.0.1",
         "geist": "^1.7.2",
         "lucide-react": "^1.21.0",
         "next": "^16.2.9",
@@ -922,6 +923,8 @@
     "etag": ["etag@1.8.1", "", {}, "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg=="],
 
     "eve": ["eve@0.18.0", "", { "dependencies": { "nitro": "3.0.260610-beta" }, "peerDependencies": { "@opentelemetry/api": "^1.0.0", "ai": "^7.0.0", "braintrust": "^3.0.0", "just-bash": "^3.0.0", "microsandbox": "^0.5.0" }, "optionalPeers": ["@opentelemetry/api", "braintrust", "just-bash", "microsandbox"], "bin": { "eve": "./bin/eve.js" } }, "sha512-vEYiZe5D3m1s0UvuS5oSsNaJ10PD3oXzmwY1dLxlRncPjHZNGlmb84fG//KOU/HI6AsQuL3/gvgxUuS48jCRnw=="],
+
+    "eve-devtools": ["eve-devtools@0.0.1", "", { "peerDependencies": { "react": ">=17" }, "optionalPeers": ["react"] }, "sha512-yzagJVANbtdoqZVHNAmEoVnStlguZQxPmQYY88XOslkkJRx5QIPRJjU+6QGJ0Oa14X8PzAYfcJ9t/pEGlRKwDA=="],
 
     "events-universal": ["events-universal@1.0.1", "", { "dependencies": { "bare-events": "^2.7.0" } }, "sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw=="],
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEveDevtools } from "eve-devtools/react";
 import type { EveMessageData, UseEveAgentHelpers } from "eve/react";
 import { useEveAgent } from "eve/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -35,10 +36,12 @@ const useHydrated = () =>
 export function useChat(id: string) {
   const [initial] = useState(() => restoreChat(id));
   const hydrated = useHydrated();
+  const devtools = useEveDevtools();
 
   const agent = useEveAgent({
     initialSession: initial?.session,
     initialEvents: initial?.events,
+    onEvent: devtools?.onEvent,
     prepareSend: (input) => ({
       ...input,
       clientContext: {
@@ -46,6 +49,13 @@ export function useChat(id: string) {
       },
     }),
   });
+
+  // The trace panel only sees streamed events; replay restored ones once so
+  // it covers the whole conversation.
+  useEffect(() => {
+    if (!devtools) return;
+    for (const event of initial?.events ?? []) devtools.onEvent(event);
+  }, [devtools, initial]);
 
   // Persist every event so a refresh resumes anywhere. eve's cursor lags
   // mid-turn and resets when a stream aborts (reload, stop): pin streamIndex
