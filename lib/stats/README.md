@@ -10,9 +10,8 @@ through the model's context.
 
 - `db.ts` — the Neon client and self-provisioning schema (same pattern as
   `arena/db.ts`): no migration step, and every caller no-ops without a
-  connection string. Prefers `STATS_DATABASE_URL` (a dedicated project, so the
-  stats mirror stays apart from the app database) and falls back to
-  `DATABASE_URL`.
+  `DATABASE_URL`. Provisioning also creates `stats_reader`, a no-login role
+  with select on the three stats tables and nothing else.
 - `sync.ts` — `syncStats()`, one idempotent pass: bulk-upsert all 104 matches
   from the `results` scoreboard, then fetch event timelines for live matches and
   not-yet-ingested finals (capped per run; a backlog backfills itself across
@@ -29,6 +28,7 @@ through the model's context.
 | `teams` | one per team | `code`, `name`, `grp` |
 
 Group scores are oriented to *our* fixtures (via `results`' `groupScores`);
-knockout sides use the feed's orientation. Read access for the agent goes
-through a `READ ONLY` transaction in the `query` tool, so the connection never
-needs a write-capable role on the agent's path.
+knockout sides use the feed's orientation. The database is shared with the rest
+of the app, but the model never touches it with app privileges: the `query`
+tool runs each statement as `stats_reader` (`SET LOCAL ROLE`) inside a
+`READ ONLY` transaction — it cannot write, and it cannot read any other table.

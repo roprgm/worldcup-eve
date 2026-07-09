@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { ensureSchema, sql } from "@/lib/stats/db";
+import { ensureSchema, sql, STATS_READER } from "@/lib/stats/db";
 
 const MAX_ROWS = 50;
 
@@ -32,10 +32,14 @@ export default defineTool({
       };
     try {
       await ensureSchema();
-      // The read-only transaction is the real write barrier; the wrapper caps
-      // the row count regardless of what the statement asks for.
-      const [rows] = await sql.transaction(
-        [sql.query(`select * from (\n${query}\n) as q limit ${MAX_ROWS + 1}`)],
+      // Defense in depth, all server-enforced: the statement runs as the
+      // select-only STATS_READER role inside a READ ONLY transaction, and the
+      // wrapper caps the row count regardless of what it asks for.
+      const [, rows] = await sql.transaction(
+        [
+          sql.query(`set local role ${STATS_READER}`),
+          sql.query(`select * from (\n${query}\n) as q limit ${MAX_ROWS + 1}`),
+        ],
         { readOnly: true },
       );
       if (rows.length > MAX_ROWS)
