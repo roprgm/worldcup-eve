@@ -203,3 +203,20 @@ export async function syncStats(): Promise<void> {
     await syncEvents(n).catch(() => {});
   }
 }
+
+// Run as a script: repeat the cron's capped pass until every played match is
+// ingested — a one-shot backfill. Run: bun run sync:stats
+if ((import.meta as { main?: boolean }).main) {
+  if (!sql)
+    throw new Error("DATABASE_URL is not set — run `vercel env pull` first.");
+  let pending: number;
+  do {
+    await syncStats();
+    const [row] = await sql`
+      select count(*)::int as n from matches
+      where status = 'final' and not events_synced
+    `;
+    pending = (row as { n: number }).n;
+    console.log(`pass done, ${pending} played matches still pending`);
+  } while (pending > 0);
+}

@@ -18,7 +18,10 @@ through the model's context.
   not-yet-ingested finals (capped per run; a backlog backfills itself across
   runs). Live matches re-sync every pass — VAR can rewrite a timeline — and a
   final is ingested once (`events_synced`). Driven by the
-  `agent/schedules/sync-stats.ts` cron every minute.
+  `agent/schedules/sync-stats.ts` cron every minute. To backfill in one go
+  instead of waiting for the cron (e.g. before a first deploy or in local dev),
+  run `bun run sync:stats` — it repeats the capped pass until nothing is
+  pending. Needs `DATABASE_URL` (`vercel env pull`).
 
 Group scores are oriented to *our* fixtures (via `results`' `groupScores`);
 knockout sides use the feed's orientation. The database is shared with the rest
