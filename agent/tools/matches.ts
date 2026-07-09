@@ -8,14 +8,11 @@ import {
   teamName,
 } from "@/agent/lib/fixtures";
 import { relativeTournamentDay, tournamentDay } from "@/agent/lib/time";
-import { getMatchResults, type MatchResult } from "@/lib/results";
-import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
+import { getMatchResults, type MatchResult, realTeamCode } from "@/lib/results";
+import { matchSchedule, venueTimeZone } from "@/lib/tournament";
 
 // A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
-
-const isTeam = (code: string | undefined): code is string =>
-  Boolean(code && teamById[code]);
 
 interface Fixture {
   number: number;
@@ -81,20 +78,16 @@ export default defineTool({
     const filtered: Fixture[] = matchSchedule
       .map((m) => {
         const result = resultByNumber.get(m.number);
-        const resultCode = (side: "home" | "away") =>
-          isTeam(result?.[side].code) ? result?.[side].code : undefined;
         return {
           number: m.number,
           homeId:
             m.homeId ??
             resolved.get(m.number)?.home ??
-            resultCode("home") ??
-            null,
+            realTeamCode(result?.home),
           awayId:
             m.awayId ??
             resolved.get(m.number)?.away ??
-            resultCode("away") ??
-            null,
+            realTeamCode(result?.away),
           kickoffAt: m.kickoffAt,
           venue: m.venue,
           result,

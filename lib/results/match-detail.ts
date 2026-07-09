@@ -38,9 +38,31 @@ interface BoxscoreTeam {
 }
 
 interface MatchSummary {
-  header?: { competitions?: Array<{ status?: Status; details?: Incident[] }> };
+  header?: {
+    competitions?: Array<{
+      status?: Status;
+      details?: Incident[];
+      competitors?: Array<{ team?: Team }>;
+    }>;
+  };
   keyEvents?: Incident[];
   boxscore?: { teams?: BoxscoreTeam[] };
+}
+
+// Key events name their team but omit its abbreviation; fill it in from the
+// header's competitors (same feed, same spellings) so consumers get codes.
+function withTeamCodes(
+  events: Incident[],
+  competitors: Array<{ team?: Team }>,
+): Incident[] {
+  const codeByName = new Map(
+    competitors.map((c) => [c.team?.displayName, c.team?.abbreviation]),
+  );
+  return events.map((e) => {
+    if (!e.team?.displayName || e.team.abbreviation) return e;
+    const abbreviation = codeByName.get(e.team.displayName);
+    return abbreviation ? { ...e, team: { ...e.team, abbreviation } } : e;
+  });
 }
 
 export interface MatchDetail {
@@ -65,12 +87,14 @@ export async function buildMatchDetail(
   if (!competition)
     throw new Error(`No competition found for match ${matchNumber}`);
 
+  const events = summary.keyEvents?.length
+    ? summary.keyEvents
+    : (competition.details ?? []);
+
   return {
     id: matchNumber,
     status: competition.status,
-    events: summary.keyEvents?.length
-      ? summary.keyEvents
-      : (competition.details ?? []),
+    events: withTeamCodes(events, competition.competitors ?? []),
     ...(includeStats
       ? {
           teams:

@@ -3,14 +3,13 @@
 // fetches: live matches re-sync every run, finished ones once (events_synced),
 // so a backlog of played matches backfills itself within a few runs.
 
-import { getMatchResults, type MatchResult, type Results } from "../results";
+import { getMatchResults, realTeamCode, type Results } from "../results";
 import { buildMatchDetail, type Incident } from "../results/match-detail";
 import {
   groupMatches,
   knockoutMatches,
   type Round,
   teamById,
-  teams,
 } from "../tournament";
 import type { Score } from "../tournament/standings";
 import { ensureSchema, sql } from "./db";
@@ -48,10 +47,6 @@ interface MatchRow {
 const teamName = (code: string | null) =>
   code ? (teamById[code]?.name ?? null) : null;
 
-// ESPN lists a slot label (e.g. "2A") until a knockout side is decided.
-const realCode = (side?: MatchResult["home"]) =>
-  side && teamById[side.code] ? side.code : null;
-
 function groupWinner(
   status: string,
   score: Score | undefined,
@@ -61,15 +56,6 @@ function groupWinner(
   if (status !== "final" || !score) return null;
   if (score.h > score.a) return homeId;
   if (score.a > score.h) return awayId;
-  return null;
-}
-
-// Knockout winners come from ESPN's winner flag, which also covers matches
-// decided on penalties (where the score stays level).
-function knockoutWinner(result: MatchResult | undefined) {
-  if (result?.status !== "final") return null;
-  if (result.home.winner) return realCode(result.home);
-  if (result.away.winner) return realCode(result.away);
   return null;
 }
 
@@ -101,27 +87,28 @@ function matchRows(results: Results): MatchRow[] {
 
   const knockout: MatchRow[] = knockoutMatches.map((m) => {
     const result = resultByNumber.get(m.number);
-    const home = realCode(result?.home);
-    const away = realCode(result?.away);
+    // knockoutPicks already reads the feed's winner flag, which also covers
+    // matches decided on penalties (where the score stays level).
+    const winner = results.knockoutPicks[m.number];
     return {
       n: m.number,
       round: ROUND_NAMES[m.round],
       grp: null,
       matchday: null,
-      home_code: home,
-      home_name: teamName(home),
-      away_code: away,
-      away_name: teamName(away),
+      home_code: realTeamCode(result?.home),
+      home_name: teamName(realTeamCode(result?.home)),
+      away_code: realTeamCode(result?.away),
+      away_name: teamName(realTeamCode(result?.away)),
       home_score: result?.home.score ?? null,
       away_score: result?.away.score ?? null,
       status: result?.status ?? "scheduled",
-      winner_code: knockoutWinner(result),
+      winner_code: winner ? realTeamCode(result?.[winner]) : null,
       kickoff: m.kickoffAt,
       venue: m.venue,
     };
   });
 
-  return [...group, ...knockout].sort((a, b) => a.n - b.n);
+  return [...group, ...knockout];
 }
 
 function parseClock(value?: string) {
@@ -142,27 +129,13 @@ function eventType(e: Incident): string {
     .replace(/^_+|_+$/g, "");
 }
 
-// The summary feed's events name their team but carry no FIFA code; match the
-// name against the scoreboard's two sides (same feed, same spellings).
-function teamCode(result: MatchResult | undefined, name?: string) {
-  if (!result || !name) return null;
-  if (name === result.home.name) return realCode(result.home);
-  if (name === result.away.name) return realCode(result.away);
-  return null;
-}
-
-function eventRow(
-  matchN: number,
-  seq: number,
-  e: Incident,
-  result: MatchResult | undefined,
-) {
+function eventRow(matchN: number, seq: number, e: Incident) {
   return {
     match_n: matchN,
     seq,
     ...parseClock(e.clock?.displayValue),
     type: eventType(e),
-    team_code: e.team?.abbreviation ?? teamCode(result, e.team?.displayName),
+    team_code: e.team?.abbreviation ?? null,
     team_name: e.team?.displayName ?? null,
     player: e.participants?.[0]?.athlete?.displayName ?? null,
     detail: e.text ?? e.shortText ?? null,
@@ -171,13 +144,10 @@ function eventRow(
 
 // Replace a match's whole timeline (VAR can rewrite it mid-game) and mark a
 // final as ingested so it is never fetched again.
-async function syncEvents(
-  matchN: number,
-  result: MatchResult | undefined,
-): Promise<void> {
+async function syncEvents(matchN: number): Promise<void> {
   if (!sql) return;
   const detail = await buildMatchDetail(matchN);
-  const rows = detail.events.map((e, seq) => eventRow(matchN, seq, e, result));
+  const rows = detail.events.map((e, seq) => eventRow(matchN, seq, e));
   await sql.transaction([
     sql.query("delete from events where match_n = $1", [matchN]),
     sql.query(
@@ -202,42 +172,34 @@ export async function syncStats(): Promise<void> {
   await ensureSchema();
   const results = await getMatchResults();
 
-  await sql.query(
-    `insert into teams (code, name, grp)
-     select * from jsonb_to_recordset($1::jsonb) as r(code text, name text, grp text)
-     on conflict (code) do nothing`,
-    [
-      JSON.stringify(
-        teams.map((t) => ({ code: t.id, name: t.name, grp: t.group })),
-      ),
-    ],
-  );
+  // One round trip: the pending select runs after — and sees — the upsert.
+  // Live matches first, so one missing its summary feed can't starve them.
+  const [, pending] = (await sql.transaction([
+    sql.query(
+      `insert into matches (n, round, grp, matchday, home_code, home_name, away_code, away_name,
+                            home_score, away_score, status, winner_code, kickoff, venue)
+       select * from jsonb_to_recordset($1::jsonb)
+         as r(n int, round text, grp text, matchday int, home_code text, home_name text,
+              away_code text, away_name text, home_score int, away_score int, status text,
+              winner_code text, kickoff timestamptz, venue text)
+       on conflict (n) do update set
+         home_code = excluded.home_code, home_name = excluded.home_name,
+         away_code = excluded.away_code, away_name = excluded.away_name,
+         home_score = excluded.home_score, away_score = excluded.away_score,
+         status = excluded.status, winner_code = excluded.winner_code`,
+      [JSON.stringify(matchRows(results))],
+    ),
+    sql.query(
+      `select n from matches
+       where status = 'live' or (status = 'final' and not events_synced)
+       order by (status = 'live') desc, n
+       limit $1`,
+      [MAX_DETAIL_FETCHES],
+    ),
+  ])) as [unknown, { n: number }[]];
 
-  await sql.query(
-    `insert into matches (n, round, grp, matchday, home_code, home_name, away_code, away_name,
-                          home_score, away_score, status, winner_code, kickoff, venue)
-     select * from jsonb_to_recordset($1::jsonb)
-       as r(n int, round text, grp text, matchday int, home_code text, home_name text,
-            away_code text, away_name text, home_score int, away_score int, status text,
-            winner_code text, kickoff timestamptz, venue text)
-     on conflict (n) do update set
-       home_code = excluded.home_code, home_name = excluded.home_name,
-       away_code = excluded.away_code, away_name = excluded.away_name,
-       home_score = excluded.home_score, away_score = excluded.away_score,
-       status = excluded.status, winner_code = excluded.winner_code`,
-    [JSON.stringify(matchRows(results))],
-  );
-
-  // Live first so a match missing its summary feed can't starve the in-play ones.
-  const pending = (await sql`
-    select n from matches
-    where status = 'live' or (status = 'final' and not events_synced)
-    order by (status = 'live') desc, n
-    limit ${MAX_DETAIL_FETCHES}
-  `) as { n: number }[];
-  const resultByNumber = new Map(results.matches.map((m) => [m.n, m]));
   for (const { n } of pending) {
     // A match whose summary isn't published yet just stays pending for next run.
-    await syncEvents(n, resultByNumber.get(n)).catch(() => {});
+    await syncEvents(n).catch(() => {});
   }
 }

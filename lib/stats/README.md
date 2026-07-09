@@ -8,10 +8,11 @@ through the model's context.
 
 ## Pieces
 
-- `db.ts` — the Neon client and self-provisioning schema (same pattern as
-  `arena/db.ts`): no migration step, and every caller no-ops without a
-  `DATABASE_URL`. Provisioning also creates `stats_reader`, a no-login role
-  with select on the three stats tables and nothing else.
+- `db.ts` — the Neon client, the self-provisioning schema (same pattern as
+  `arena/db.ts`: one idempotent transaction per process, no migration step,
+  no-ops without a `DATABASE_URL`), and `readerQuery` — the only door model SQL
+  goes through. The schema itself is documented where it lives: the commented
+  DDL and the model-facing `SCHEMA_DOC` sit side by side in this file.
 - `sync.ts` — `syncStats()`, one idempotent pass: bulk-upsert all 104 matches
   from the `results` scoreboard, then fetch event timelines for live matches and
   not-yet-ingested finals (capped per run; a backlog backfills itself across
@@ -19,16 +20,12 @@ through the model's context.
   final is ingested once (`events_synced`). Driven by the
   `agent/schedules/sync-stats.ts` cron every minute.
 
-## Schema
-
-| table | row | notes |
-| ----- | --- | ----- |
-| `matches` | one per FIFA match number 1–104 | `round`, `grp`/`matchday` (group stage only), sides as FIFA `*_code` + `*_name` (null while a knockout slot is undecided), scores (null until kickoff), `status`, `winner_code` (covers penalty shoot-outs: level score + winner), `kickoff`, `venue` |
-| `events` | one per timeline incident | `minute`/`stoppage` ("45'+2'" → 45/2), normalized `type` (`goal`, `own_goal`, `penalty_goal`, `yellow_card`, `red_card`, `substitution`, …), team, `player`, and the feed's `detail` sentence |
-| `teams` | one per team | `code`, `name`, `grp` |
-
 Group scores are oriented to *our* fixtures (via `results`' `groupScores`);
 knockout sides use the feed's orientation. The database is shared with the rest
-of the app, but the model never touches it with app privileges: the `query`
-tool runs each statement as `stats_reader` (`SET LOCAL ROLE`) inside a
-`READ ONLY` transaction — it cannot write, and it cannot read any other table.
+of the app, but the model never touches it with app privileges: `readerQuery`
+runs each statement as `stats_reader` (a no-login role that can select the
+three stats tables and nothing else) inside a `READ ONLY` transaction,
+row-capped by a wrapping select — three fences, all enforced by Postgres rather
+than by inspecting the SQL. The agent's `query` tool adds the model-facing
+contract on top: single SELECT/WITH statements, and errors returned as data
+(with a schema hint) so the model repairs and retries.

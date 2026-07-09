@@ -10,6 +10,7 @@ import {
   groupFixture,
   groupMatches,
   groupLetters,
+  teamById,
   type GroupLetter,
 } from "../tournament";
 import {
@@ -68,6 +69,10 @@ export interface MatchResult {
   home: Side;
   away: Side;
 }
+
+/** A side's FIFA code, or null while ESPN still lists a slot label like "2A". */
+export const realTeamCode = (side?: Side): string | null =>
+  side && teamById[side.code] ? side.code : null;
 export interface Results {
   updatedAt: string;
   matches: MatchResult[];
