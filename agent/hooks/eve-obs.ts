@@ -1,49 +1,41 @@
-import { defineHook } from "eve/hooks";
-import { waitUntil } from "@vercel/functions";
+import { defineHook, type HookContext } from "eve/hooks";
 
 /**
- * Pushes session activity to the eve-obs dashboard.
+ * Notifies eve-obs after every completed turn (and on session failure);
+ * eve-obs pulls the session's event stream back through this app's
+ * observability routes and stores it. No-op unless EVE_OBS_URL and
+ * EVE_OBS_TOKEN are set.
  *
- * After every completed turn (and on session failure) it notifies eve-obs,
- * which pulls the session's full event stream back through this app's own
- * observability endpoints — the transcript is never re-encoded here, so the
- * two projects only share one tiny notification shape.
- *
- * Configuration (both unset = the hook is a no-op):
- *   EVE_OBS_URL   — base URL of the eve-obs deployment
- *   EVE_OBS_TOKEN — bearer token; must match EVE_OBS_INGEST_TOKEN on eve-obs
+ * The request is awaited because the workflow runtime suspends once the
+ * handler resolves — a dangling fetch would never complete. The user's reply
+ * is already delivered by then, so this adds no visible latency. Failures
+ * only log: observability must never fail a turn.
  */
-function notifyEveObs(sessionId: string): void {
-  const base = process.env.EVE_OBS_URL;
-  if (!base) return;
-  const token = process.env.EVE_OBS_TOKEN;
-
-  const request = fetch(`${base.replace(/\/$/, "")}/api/sync/eve`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ sessionIds: [sessionId] }),
-    signal: AbortSignal.timeout(10_000),
-  }).catch(() => {
-    // Observability must never fail a turn — drop the notification.
-  });
+async function notifyEveObs(_event: unknown, ctx: HookContext): Promise<void> {
+  const { EVE_OBS_URL, EVE_OBS_TOKEN } = process.env;
+  if (!EVE_OBS_URL || !EVE_OBS_TOKEN) return;
 
   try {
-    waitUntil(request);
-  } catch {
-    // Outside a Vercel function context (local dev): fire and forget.
+    const response = await fetch(new URL("/api/sync/eve", EVE_OBS_URL), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${EVE_OBS_TOKEN}`,
+      },
+      body: JSON.stringify({ sessionIds: [ctx.session.id] }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      console.warn(`[eve-obs] notify ${ctx.session.id}: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn(`[eve-obs] notify ${ctx.session.id}:`, error);
   }
 }
 
 export default defineHook({
   events: {
-    "turn.completed"(_event, ctx) {
-      notifyEveObs(ctx.session.id);
-    },
-    "session.failed"(_event, ctx) {
-      notifyEveObs(ctx.session.id);
-    },
+    "turn.completed": notifyEveObs,
+    "session.failed": notifyEveObs,
   },
 });
