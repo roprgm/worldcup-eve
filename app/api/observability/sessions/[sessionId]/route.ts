@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 
 function requireAuth(req: Request): Response | null {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!process.env.OBSERVABILITY_TOKEN || token !== process.env.OBSERVABILITY_TOKEN) {
+  if (
+    !process.env.OBSERVABILITY_TOKEN ||
+    token !== process.env.OBSERVABILITY_TOKEN
+  ) {
     return new Response("Unauthorized", { status: 401 });
   }
   return null;
@@ -20,7 +23,7 @@ function requireAuth(req: Request): Response | null {
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const unauthorized = requireAuth(req);
   if (unauthorized) return unauthorized;
@@ -29,10 +32,12 @@ export async function GET(
   const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
   const upstream = await fetch(
     new URL(`/eve/v1/session/${sessionId}/stream?startIndex=0`, req.url),
-    { headers: bypass ? { "x-vercel-protection-bypass": bypass } : {} }
+    { headers: bypass ? { "x-vercel-protection-bypass": bypass } : {} },
   );
   if (!upstream.ok) {
-    return new Response(`eve stream responded ${upstream.status}`, { status: upstream.status });
+    return new Response(`eve stream responded ${upstream.status}`, {
+      status: upstream.status,
+    });
   }
   return new Response(upstream.body, {
     headers: { "content-type": "application/x-ndjson; charset=utf-8" },
