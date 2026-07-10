@@ -124,11 +124,7 @@ function WidgetBlock({ language, code, isIncomplete }: CustomRendererProps) {
   if (isIncomplete) return null;
   const widget = renderWidget(language, code.trim());
   // A slight fade-up as it resolves, matching how chat messages enter.
-  // not-typeset keeps typeset's markdown rules out of the card; mt-4 stands in
-  // for the flow margin typeset only gives real markdown blocks.
-  return widget ? (
-    <div className="not-typeset mt-4 animate-fade-up">{widget}</div>
-  ) : null;
+  return widget ? <div className="animate-fade-up">{widget}</div> : null;
 }
 
 const WIDGET_RENDERERS: CustomRenderer[] = [

@@ -1,22 +1,5 @@
 @import "tailwindcss";
 
-/* shadcn/typeset — one file we own that styles everything inside a `typeset`
-   container. Chat markdown rhythm lives there, not in per-element utilities.
-   Its `typeset` layer sits after Tailwind's `utilities`, so inside a typeset
-   container typeset outranks the utility classes Streamdown paints on its
-   elements (and any of ours — style chat markdown via typeset.css, not
-   utilities). */
-@import "./typeset.css";
-
-/* Chat reading rhythm: the app's compact text scale on every viewport (font-size
-   here skips typeset's small-screen upscale, which is meant for articles). */
-.typeset-chat {
-  --typeset-size: var(--text-base);
-  --typeset-leading: 1.85;
-  --typeset-flow: 1.1em;
-  font-size: var(--typeset-size);
-}
-
 /* Let Tailwind pick up the classes Streamdown renders markdown with. */
 @source "../node_modules/streamdown/dist/index.js";
 

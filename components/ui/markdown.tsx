@@ -1,5 +1,5 @@
 import { cn } from "cnfast";
-import { type ComponentProps, createElement, memo } from "react";
+import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
 import { LocalTime } from "@/components/ui/local-time";
 
@@ -13,50 +13,6 @@ const STRIP_TRAILING_TAG_START = {
   name: "strip-trailing-tag-start",
   handle: (text: string) => text.replace(/<\s*$/, ""),
 };
-
-// Streamdown paints markdown elements with its own utility classes, which beat
-// typeset.css's zero-specificity rules. Text-flow elements render bare instead,
-// so typeset owns the typography; links, code, and images keep Streamdown's
-// components (safety modal, block handling).
-function bare(tag: string) {
-  const Bare = ({ node: _node, ...props }: { node?: unknown }) =>
-    createElement(tag, props);
-  Bare.displayName = `Bare(${tag})`;
-  return Bare;
-}
-
-// Wide tables scroll inside typeset's wrapper instead of compressing.
-function ScrollTable({
-  node: _node,
-  ...props
-}: ComponentProps<"table"> & { node?: unknown }) {
-  return (
-    <div className="typeset-scroll">
-      <table {...props} />
-    </div>
-  );
-}
-
-const TYPESET_COMPONENTS = Object.fromEntries(
-  [
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "ul",
-    "ol",
-    "li",
-    "blockquote",
-    "hr",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-  ].map((tag) => [tag, bare(tag)]),
-);
 
 /** Streams markdown safely, rendering agent-written custom tags as components.
  *  `<local-time iso>` is built in; callers can register more via `components` /
@@ -72,13 +28,12 @@ export const Markdown = memo(
     ...props
   }: StreamdownProps) => (
     <Streamdown
-      // space-y-0 knocks out Streamdown's own block spacing so typeset's flow
-      // margins are the only rhythm in play.
-      className={cn("typeset typeset-chat space-y-0", className)}
+      className={cn(
+        "text-base leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        className,
+      )}
       components={
         {
-          ...TYPESET_COMPONENTS,
-          table: ScrollTable,
           "local-time": LocalTime,
           ...components,
         } as StreamdownProps["components"]
