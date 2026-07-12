@@ -540,6 +540,13 @@ function OddsList({
           ))
         )}
       </div>
+      {shown.length > 0 && (
+        // These come from the model simulating the bracket, not the outright
+        // winner market — so they can differ from the "champion" card's odds.
+        <p className="mt-1.5 text-[10px] tracking-wide text-muted-foreground/45 uppercase">
+          Model projection
+        </p>
+      )}
     </div>
   );
 }

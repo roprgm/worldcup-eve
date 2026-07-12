@@ -84,6 +84,13 @@ export function PredictionChampionCard({
             ))}
           </div>
         )}
+        {leader && (
+          // The outright winner market, not the bracket's simulation — the two
+          // read the tournament differently, so they can disagree.
+          <span className="mt-1 text-[10px] tracking-wide text-muted-foreground/50 uppercase">
+            Betting market · outright odds
+          </span>
+        )}
       </div>
     </div>
   );
