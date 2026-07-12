@@ -3,18 +3,9 @@ import { Section } from "@/components/ui/section";
 import { PredictionChampionWidget } from "@/components/widgets/prediction-champion-widget";
 import { PredictionMatchWidget } from "@/components/widgets/prediction-match-widget";
 import { StageOddsWidget } from "@/components/widgets/stage-odds-widget";
-import { knockoutMatches, matchByNumber, type Round } from "@/lib/tournament";
-
-/** A round's matches, ordered by match number. */
-const roundMatches = (round: Round) =>
-  knockoutMatches
-    .filter((m) => m.round === round)
-    .sort((a, b) => a.number - b.number);
+import { matchByNumber } from "@/lib/tournament";
 
 const knockoutSections = [
-  { id: "R16", title: "Round of 16", matches: roundMatches("R16") },
-  { id: "QF", title: "Quarter-finals", matches: roundMatches("QF") },
-  { id: "SF", title: "Semi-finals", matches: roundMatches("SF") },
   {
     id: "FINALS",
     title: "Finals",
@@ -31,7 +22,7 @@ export default function PredictionsPage() {
       <div className="mx-auto w-full max-w-3xl space-y-3 px-3 py-3 sm:px-4">
         <Section title="Road to the final">
           <CardGridFrame className="space-y-3">
-            <StageOddsWidget />
+            <StageOddsWidget top={4} />
           </CardGridFrame>
         </Section>
 
