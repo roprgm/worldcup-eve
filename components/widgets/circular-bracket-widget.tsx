@@ -274,7 +274,7 @@ function useBracketData(): {
 }
 
 const HELP_TEXT =
-  "Tap an open node to see each team's chance of reaching the next round, or a locked-in flag to see its World Cup run and road to the final. The chances are computed from the betting market and refresh every minute.";
+  "Tap an open node to see each team's chance of reaching the next round, or a locked-in flag to see its World Cup run and road to the final. The chances come from a model that simulates the bracket from the betting market, so they can differ from the outright champion odds; they refresh every minute.";
 
 /** Header info affordance — a popover on tap (native `title` is hover-only). */
 function CircularBracketHelp() {
