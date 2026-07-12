@@ -37,7 +37,7 @@ function resolveMatch(
 
 export default defineTool({
   description:
-    "The market's PREDICTED chance for every exact scoreline of ONE decided knockout match (73-104) with a live market, plus its regulation three-way and to-advance odds. This is a forecast, not a result — for a played or in-progress match's actual score use matches or timeline. Give a match number or two team names/codes. Show the result as a `predicted_scores` block (body: the match number) — the widget paints the full goal matrix, so speak one line and never recite the scorelines. If no market exists the tool says so; answer win-odds questions with odds instead.",
+    "The market's PREDICTED chance for every exact scoreline of ONE decided knockout match (73-104) with a live market, plus its regulation three-way and to-advance odds. This is a forecast, not a result — for a played or in-progress match's actual score use matches or query. Give a match number or two team names/codes. Show the result as a `predicted_scores` block (body: the match number) — the widget paints the full goal matrix, so speak one line and never recite the scorelines. If no market exists the tool says so; answer win-odds questions with odds instead.",
   inputSchema: z.object({
     match: z
       .number()

@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 
 function requireAuth(req: Request): Response | null {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!process.env.OBSERVABILITY_TOKEN || token !== process.env.OBSERVABILITY_TOKEN) {
+  if (
+    !process.env.OBSERVABILITY_TOKEN ||
+    token !== process.env.OBSERVABILITY_TOKEN
+  ) {
     return new Response("Unauthorized", { status: 401 });
   }
   return null;

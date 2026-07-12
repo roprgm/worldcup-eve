@@ -8,14 +8,11 @@ import {
   teamName,
 } from "@/agent/lib/fixtures";
 import { relativeTournamentDay, tournamentDay } from "@/agent/lib/time";
-import { getMatchResults, type MatchResult } from "@/lib/results";
-import { matchSchedule, teamById, venueTimeZone } from "@/lib/tournament";
+import { getMatchResults, type MatchResult, realTeamCode } from "@/lib/results";
+import { matchSchedule, venueTimeZone } from "@/lib/tournament";
 
 // A match is live for two hours from kickoff, then it counts as played.
 const MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
-
-const isTeam = (code: string | undefined): code is string =>
-  Boolean(code && teamById[code]);
 
 interface Fixture {
   number: number;
@@ -28,7 +25,7 @@ interface Fixture {
 
 export default defineTool({
   description:
-    "World Cup fixtures and results: who plays whom, kickoff, stadium, status, final score. Any schedule, fixture, result, venue, today/live, or date-range question — including a game between two named teams. For goals and cards use timeline instead. ALWAYS follow with ONE `match` block; its body is ONLY match numbers, `today`, or `live` — for anything else, list this result's match numbers.",
+    "World Cup fixtures and results: who plays whom, kickoff, stadium, status, final score. Any schedule, fixture, result, venue, today/live, or date-range question — including a game between two named teams. For goals, cards, and cross-match stats use query instead. ALWAYS follow with ONE `match` block; its body is ONLY match numbers, `today`, or `live` — for anything else, list this result's match numbers.",
   inputSchema: z.object({
     team: z
       .string()
@@ -81,20 +78,16 @@ export default defineTool({
     const filtered: Fixture[] = matchSchedule
       .map((m) => {
         const result = resultByNumber.get(m.number);
-        const resultCode = (side: "home" | "away") =>
-          isTeam(result?.[side].code) ? result?.[side].code : undefined;
         return {
           number: m.number,
           homeId:
             m.homeId ??
             resolved.get(m.number)?.home ??
-            resultCode("home") ??
-            null,
+            realTeamCode(result?.home),
           awayId:
             m.awayId ??
             resolved.get(m.number)?.away ??
-            resultCode("away") ??
-            null,
+            realTeamCode(result?.away),
           kickoffAt: m.kickoffAt,
           venue: m.venue,
           result,
