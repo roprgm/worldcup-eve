@@ -437,10 +437,21 @@ export async function buildPredictions(
   // No epoch yet → baseline mirrors live, so deltas are zero and bars stay solid.
   const baseline = epoch ?? live;
 
+  // A champion must reach the final, so cap each team's champion price by its
+  // reach-final signal. The per-team champion sub-market can lag a team's
+  // elimination — its reach/elim markets resolve to 0 first — which would
+  // otherwise float a knocked-out team to the top until the next sync bakes it
+  // settled. reachObs is market-derived, so the champion stays a market read.
   const champion = toCandidates(
     normalize(
       new Map(
-        teamCodes.map((t) => [t, marketProb(prices, "champion", t) ?? 0]),
+        teamCodes.map((t) => [
+          t,
+          Math.min(
+            marketProb(prices, "champion", t) ?? 0,
+            reachObs.get(t)?.[3] ?? 0,
+          ),
+        ]),
       ),
     ),
   );

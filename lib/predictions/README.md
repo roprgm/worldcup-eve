@@ -56,7 +56,7 @@ anchor once and caching it on the passed `cache` object.
 | ----------------- | ---------------------------------------------------------------------- |
 | `updatedAt`       | ISO timestamp of this snapshot                                         |
 | `slots`           | every knockout slot (matches 73–104, home/away) as a team distribution |
-| `champion`        | the direct Polymarket champion market, normalized                      |
+| `champion`        | the direct Polymarket champion market, capped by each team's reach-final signal (so a just-eliminated team whose champion sub-market still lags can't lead) and normalized |
 | `bracketChampion` | BT-model winner of the Final — pairwise, no 50/50 assumption           |
 | `groups`          | per-group odds: P(win group), P(runner-up), P(advance)                 |
 | `reach`           | per-team P(reach R16 / QF / SF / Final), plus the market champion price |
