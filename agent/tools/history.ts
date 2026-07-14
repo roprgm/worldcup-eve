@@ -30,13 +30,19 @@ Prefer aggregates over listing rows; results are capped at ${MAX_ROWS} rows.`,
     const statement = query.trim().replace(/;\s*$/, "");
     if (!/^(select|with)\b/i.test(statement) || statement.includes(";"))
       return { error: "Only a single SELECT statement is allowed." };
+    // Cap in the database, not after transfer — an uncapped select * would
+    // ship whole tables over HTTP just to be sliced here.
+    const capped = `select * from (${statement}) q limit ${MAX_ROWS + 1}`;
     try {
       const [, rows] = await sql.transaction(
-        [sql.query("set local statement_timeout = 5000"), sql.query(statement)],
+        [sql.query("set local statement_timeout = 5000"), sql.query(capped)],
         { readOnly: true },
       );
       if (rows.length > MAX_ROWS)
-        return { rows: rows.slice(0, MAX_ROWS), totalRows: rows.length };
+        return {
+          rows: rows.slice(0, MAX_ROWS),
+          note: `Truncated to ${MAX_ROWS} rows — aggregate or narrow the query.`,
+        };
       return { rows };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };

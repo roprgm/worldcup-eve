@@ -33,8 +33,7 @@ every ten minutes (`agent/schedules/refresh-history.ts`) it upserts this Cup's
 finished matches — score and stage — straight from the live results feed,
 keyed to agree with the rows the sources eventually publish (local-calendar
 dates, their team spellings, the orientation of any row already in the table).
-The next full sync replaces the overlay with canonical rows, so its
-approximated details (venue city, neutrality) never outlive it. Goal rows for
+The next full sync replaces the overlay with the canonical rows. Goal rows for
 the freshest matches arrive with that sync too — until then the agent's
 `timeline` tool covers a recent match's scorers.
 
