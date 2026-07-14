@@ -1,8 +1,10 @@
 // The martj42/international_results dataset (CC0, public domain): every men's
 // full international since 1872, maintained as CSVs on GitHub. Canonical source
-// for the history tables. Renamed teams always appear under their current name
-// ("Russia" even for Soviet-era matches — former_names.csv recovers the name of
-// the day); dissolved teams keep their own ("Czechoslovakia", "German DR").
+// for the history tables — row fields keep the CSV header names, which are also
+// the table column names, so rows flow from file to database unchanged.
+// Renamed teams always appear under their current name ("Russia" even for
+// Soviet-era matches — former_names.csv recovers the name of the day);
+// dissolved teams keep their own ("Czechoslovakia", "German DR").
 
 import { parse } from "csv-parse/sync";
 
@@ -11,10 +13,10 @@ const BASE =
 
 export interface Match {
   date: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
+  home_team: string;
+  away_team: string;
+  home_score: number;
+  away_score: number;
   tournament: string;
   city: string;
   country: string;
@@ -23,28 +25,28 @@ export interface Match {
 
 export interface Goal {
   date: string;
-  homeTeam: string;
-  awayTeam: string;
+  home_team: string;
+  away_team: string;
   team: string;
   scorer: string | null;
   minute: number | null;
-  ownGoal: boolean;
+  own_goal: boolean;
   penalty: boolean;
 }
 
 export interface Shootout {
   date: string;
-  homeTeam: string;
-  awayTeam: string;
+  home_team: string;
+  away_team: string;
   winner: string;
-  firstShooter: string | null;
+  first_shooter: string | null;
 }
 
 export interface TeamName {
-  current: string;
-  former: string;
-  startDate: string;
-  endDate: string;
+  current_name: string;
+  former_name: string;
+  start_date: string;
+  end_date: string;
 }
 
 async function fetchCsv(file: string): Promise<Record<string, string>[]> {
@@ -60,15 +62,15 @@ const bool = (v: string) => v.toUpperCase() === "TRUE";
 
 export async function fetchMatches(): Promise<Match[]> {
   return (await fetchCsv("results.csv")).flatMap((r) => {
-    const homeScore = int(r.home_score);
-    const awayScore = int(r.away_score);
-    if (homeScore == null || awayScore == null) return []; // not played yet
+    const home_score = int(r.home_score);
+    const away_score = int(r.away_score);
+    if (home_score == null || away_score == null) return []; // not played yet
     return {
       date: r.date,
-      homeTeam: r.home_team,
-      awayTeam: r.away_team,
-      homeScore,
-      awayScore,
+      home_team: r.home_team,
+      away_team: r.away_team,
+      home_score,
+      away_score,
       tournament: r.tournament,
       city: r.city,
       country: r.country,
@@ -80,12 +82,12 @@ export async function fetchMatches(): Promise<Match[]> {
 export async function fetchGoals(): Promise<Goal[]> {
   return (await fetchCsv("goalscorers.csv")).map((r) => ({
     date: r.date,
-    homeTeam: r.home_team,
-    awayTeam: r.away_team,
+    home_team: r.home_team,
+    away_team: r.away_team,
     team: r.team,
     scorer: text(r.scorer),
     minute: int(r.minute),
-    ownGoal: bool(r.own_goal),
+    own_goal: bool(r.own_goal),
     penalty: bool(r.penalty),
   }));
 }
@@ -93,18 +95,18 @@ export async function fetchGoals(): Promise<Goal[]> {
 export async function fetchShootouts(): Promise<Shootout[]> {
   return (await fetchCsv("shootouts.csv")).map((r) => ({
     date: r.date,
-    homeTeam: r.home_team,
-    awayTeam: r.away_team,
+    home_team: r.home_team,
+    away_team: r.away_team,
     winner: r.winner,
-    firstShooter: text(r.first_shooter),
+    first_shooter: text(r.first_shooter),
   }));
 }
 
 export async function fetchTeamNames(): Promise<TeamName[]> {
   return (await fetchCsv("former_names.csv")).map((r) => ({
-    current: r.current,
-    former: r.former,
-    startDate: r.start_date,
-    endDate: r.end_date,
+    current_name: r.current,
+    former_name: r.former,
+    start_date: r.start_date,
+    end_date: r.end_date,
   }));
 }
