@@ -48,6 +48,23 @@ source data — and goals/shootouts reference their match by the same triple.
   a few one-off historical formats stay verbatim — 1950's "Final Round" was a
   round-robin group, not a final, and is stored as such.
 
+## Read-only access for the agent
+
+The `history` agent tool defends in depth: it accepts only a single SELECT
+statement, and runs it inside a `READ ONLY` Postgres transaction, so a
+mutation smuggled into a CTE fails at the database rather than at a regex.
+For a hard boundary, give the tool its own SELECT-only role and set
+`HISTORY_READER_URL` — that connection physically cannot write, or read
+anything beyond these four tables:
+
+```sql
+create role history_reader with login password '...';
+grant select on history_matches, history_goals,
+  history_shootouts, history_team_names to history_reader;
+```
+
+`DATABASE_URL` (the owning role) remains what `sync:history` writes with.
+
 ## Example queries
 
 ```sql
