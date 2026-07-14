@@ -14,6 +14,9 @@ Sources are grouped by the level of detail they provide. Detail levels:
   (enables "goals in the first half", xG, etc. — though L2 minute data already
   answers first-half questions).
 
+> **Status:** the CC0 sources (martj42 + openfootball) are implemented — see
+> `lib/history/` for the Postgres schema and the `bun run sync:history` script.
+
 ## Recommended combination
 
 For an initial sync that answers every example question, no payment needed:

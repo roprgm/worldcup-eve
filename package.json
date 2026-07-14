@@ -13,6 +13,7 @@
     "format:check": "biome format .",
     "start": "node scripts/start.mjs",
     "arena": "bun run lib/arena/run.ts",
+    "sync:history": "bun run lib/history/sync.ts",
     "sync:markets": "bun run lib/predictions/sync.ts",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
