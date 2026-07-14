@@ -4,7 +4,7 @@
 // ("Russia" even for Soviet-era matches — former_names.csv recovers the name of
 // the day); dissolved teams keep their own ("Czechoslovakia", "German DR").
 
-import { parseCsv } from "./csv";
+import { parse } from "csv-parse/sync";
 
 const BASE =
   "https://raw.githubusercontent.com/martj42/international_results/master/";
@@ -50,7 +50,7 @@ export interface TeamName {
 async function fetchCsv(file: string): Promise<Record<string, string>[]> {
   const res = await fetch(BASE + file);
   if (!res.ok) throw new Error(`GET ${file}: ${res.status}`);
-  return parseCsv(await res.text());
+  return parse(await res.text(), { columns: true });
 }
 
 // The dataset writes missing values as "NA" (an R convention) or empty strings.

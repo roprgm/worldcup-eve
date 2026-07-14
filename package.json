@@ -28,6 +28,7 @@
     "bottleneck": "^2.19.5",
     "class-variance-authority": "^0.7.1",
     "cnfast": "^0.0.8",
+    "csv-parse": "^7.0.1",
     "date-fns": "^4.4.0",
     "eve": "^0.18.0",
     "eve-devtools": "^0.0.2",
