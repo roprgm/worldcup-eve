@@ -5,8 +5,7 @@ can answer questions like "how many finals did Argentina reach?", "how often
 did Argentina play England?" or "how many first-half goals did Argentina score
 at World Cups?".
 
-Two public-domain (CC0) sources — no keys, no fees, no attribution required
-(the full source survey lives in `docs/historical-data-sources.md`):
+Two public-domain (CC0) sources — no keys, no fees, no attribution required:
 
 - [martj42/international_results](https://github.com/martj42/international_results) —
   every match, goal (scorer and minute) and penalty shootout, updated within
