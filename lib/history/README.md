@@ -25,6 +25,19 @@ A run fetches both sources and rebuilds all four tables in one transaction
 re-running is always safe, and refreshing after a matchday is the same command.
 The schema self-provisions on first run — no migration step.
 
+## Keeping up with the current Cup
+
+martj42 publishes results a few days after they're played, so a full sync
+alone would miss a final from last night. `live.ts` closes the gap: every ten
+minutes (`agent/schedules/refresh-history.ts`) it upserts this Cup's finished
+matches — score and stage — straight from the live results feed, keyed to
+agree with the rows martj42 will eventually publish (local-calendar dates,
+martj42's team spellings, the orientation of any row already in the table).
+The next full sync replaces the overlay with canonical rows, so its
+approximated details (venue city, neutrality) never outlive it. Goal rows for
+the freshest matches arrive with that sync too — until then the agent's
+`timeline` tool covers a recent match's scorers.
+
 ## Tables
 
 | table | one row per | notes |
