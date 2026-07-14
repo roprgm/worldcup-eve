@@ -31,7 +31,7 @@ For an initial sync that answers every example question, no payment needed:
 
 ## Free / open datasets (bulk download, best for initial sync)
 
-### martj42/international_results — CC0-like open data
+### martj42/international_results — CC0 1.0 (public domain)
 
 - <https://github.com/martj42/international_results> (also on
   [Kaggle](https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017))
@@ -43,7 +43,7 @@ For an initial sync that answers every example question, no payment needed:
 - No stage column (group/semi/final) — that's the gap Fjelstul fills for
   World Cups.
 
-### Fjelstul World Cup Database — CC-BY 4.0
+### Fjelstul World Cup Database — CC-BY-SA 4.0
 
 - <https://github.com/jfjelstul/worldcup>
 - All men's World Cups 1930–2022 and women's 1991–2019(+). 27 relational
@@ -155,6 +155,40 @@ For an initial sync that answers every example question, no payment needed:
   official numbers, useful to validate our aggregates.
 - **eloratings.net** — all-time international Elo ratings if we ever want
   strength-over-time context.
+
+## Licensing summary
+
+No attribution required:
+
+- **martj42/international_results** — CC0 1.0 (public domain). Commercial use,
+  modification, and redistribution allowed with no credit.
+- **openfootball** — CC0 / public domain. Same freedoms as above.
+- **Paid APIs (API-Football, Sportmonks, TheStatsAPI)** — subscription license;
+  no public attribution required, but reselling/redistributing the raw feed is
+  prohibited. Storing data in our own DB to serve app features is the normal
+  allowed use.
+- **Opta / Sportradar** — terms are whatever the enterprise contract says
+  (some deals do require an on-screen data credit).
+
+Attribution (or more) required:
+
+- **Fjelstul World Cup Database** — CC-BY-SA 4.0. Requires: author name
+  ("Joshua C. Fjelstul, Ph.D."), copyright notice, link to the license and the
+  repo, and noting modifications. **ShareAlike is the real constraint**: a
+  database derived from it must itself be published under CC-BY-SA if we ever
+  distribute it. Serving chat answers from it is fine; shipping/publishing the
+  merged DB would drag the license along.
+- **StatsBomb Open Data** — custom user agreement, not CC. Published analysis
+  or products using the data must credit StatsBomb as the source and use their
+  logo (media pack). Intended for research/football-analytics interest;
+  commercial products should get their OK first.
+- **football-data.org** — must display "Football data provided by the
+  Football-Data.org API" in a visible place; commercial use only on paid plans.
+- **TheSportsDB** — free tier: no app-store publishing at all; paid tier:
+  commercial use allowed but must credit TheSportsDB as data source (and link
+  back when using their artwork). No reselling the API.
+- **RSSSF / 11v11 / FBref** — copyrighted reference sites, no data license
+  granted; use for verification, not for bulk import into a product.
 
 ## What each example question needs
 
