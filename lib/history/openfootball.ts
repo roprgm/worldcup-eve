@@ -1,6 +1,6 @@
 // World Cup stages from openfootball/worldcup.json (CC0, public domain).
-// martj42 has every match but not the round it was played in; this adds
-// "Final", "Semi-finals", etc. so questions about reaching a stage work.
+// The results dataset has every match but not the round it was played in; this
+// adds "Final", "Semi-finals", etc. so questions about reaching a stage work.
 
 const EDITIONS = [
   1930, 1934, 1938, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986,

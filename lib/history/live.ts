@@ -1,8 +1,8 @@
 // Overlay the current Cup's finished matches onto history_matches straight
 // from the live results feed, so an all-time question includes a final played
-// minutes ago. martj42 publishes the same matches a few days later, and every
-// full sync replaces the overlay with its canonical rows — this only has to
-// agree with them on the (date, home_team, away_team) key.
+// minutes ago. The historical sources publish the same matches a few days
+// later, and every full sync replaces the overlay with their canonical rows —
+// this only has to agree with them on the (date, home_team, away_team) key.
 
 import type { MatchResult } from "@/lib/results";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/lib/tournament";
 import { ensureSchema, sql } from "./db";
 
-// martj42 spells a few team names differently than the tournament module.
+// The historical source spells a few team names differently than we do.
 const NAMES: Record<string, string> = {
   BIH: "Bosnia and Herzegovina",
   CZE: "Czech Republic",
@@ -40,7 +40,7 @@ const HOST_CITIES: Record<string, string> = {
 
 const scheduleByNumber = new Map(matchSchedule.map((m) => [m.number, m]));
 
-// martj42 dates matches by local calendar day, not UTC.
+// The historical source dates matches by local calendar day, not UTC.
 const localDate = (iso: string, venue: string) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: venueTimeZone(venue),
@@ -51,8 +51,8 @@ const rowKey = (date: string, home: string, away: string) =>
   `${date}|${home}|${away}`;
 
 /** History rows for finished matches, oriented to agree with rows already in
- *  the table — ESPN and martj42 occasionally disagree on home/away, and a
- *  flipped pair would double-count instead of updating. */
+ *  the table — the live feed and the historical source occasionally disagree
+ *  on home/away, and a flipped pair would double-count instead of updating. */
 export function buildOverlay(matches: MatchResult[], existing: Set<string>) {
   return matches
     .filter((m) => m.status === "final")
@@ -85,7 +85,7 @@ export function buildOverlay(matches: MatchResult[], existing: Set<string>) {
 }
 
 /** Upsert this Cup's finished matches; new rows insert, known ones just get
- *  score and stage refreshed (martj42's city/date details stay authoritative). */
+ *  score and stage refreshed — the historical source's other details stay. */
 export async function upsertCurrentCup(matches: MatchResult[]): Promise<void> {
   if (!sql) return;
   await ensureSchema();

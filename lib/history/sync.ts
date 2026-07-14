@@ -1,8 +1,8 @@
 // Full sync of the history tables from their public-domain sources: matches,
-// goals and shootouts from martj42/international_results, World Cup stages from
-// openfootball. The whole dataset is ~100k rows, so a run rebuilds everything
-// in one transaction — no incremental state, and re-running is always safe.
-// Run: bun run sync:history
+// goals and shootouts from the international-results dataset, World Cup stages
+// from openfootball. The whole dataset is ~100k rows, so a run rebuilds
+// everything in one transaction — no incremental state, and re-running is
+// always safe. Run: bun run sync:history
 
 import { ensureSchema, sql } from "./db";
 import {
@@ -11,7 +11,7 @@ import {
   fetchShootouts,
   fetchTeamNames,
   type Match,
-} from "./martj42";
+} from "./international-results";
 import { fetchStages, type StageRow } from "./openfootball";
 
 const key = (date: string, home: string, away: string) =>
@@ -27,8 +27,8 @@ const norm = (name: string) =>
     .trim()
     .toLowerCase();
 
-// openfootball names teams as of the match ("West Germany"), martj42 as of
-// today ("Germany") — this maps the former to the latter (normalized).
+// openfootball names teams as of the match ("West Germany"), the results
+// dataset as of today ("Germany") — this maps one to the other (normalized).
 const ALIASES: Record<string, string> = {
   "bosnia herzegovina": "bosnia and herzegovina",
   "cote d ivoire": "ivory coast",
@@ -45,9 +45,9 @@ const ALIASES: Record<string, string> = {
   zaire: "dr congo",
 };
 
-// Map each openfootball World Cup match to its martj42 match key (either
-// home/away orientation) and remember its stage; report the ones that don't
-// line up so a data drift is visible instead of silent.
+// Map each openfootball World Cup match to its match key in the results
+// dataset (either home/away orientation) and remember its stage; report the
+// ones that don't line up so a data drift is visible instead of silent.
 function resolveStages(stages: StageRow[], matches: Match[]) {
   const nameByNorm = new Map<string, string>();
   const played = new Set<string>();

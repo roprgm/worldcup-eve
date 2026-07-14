@@ -1,18 +1,12 @@
-// SQL over the historical internationals database (lib/history). Three layers
-// keep it read-only: the statement must be a single SELECT, it runs inside a
-// READ ONLY Postgres transaction (a mutation fails at the database no matter
-// how it's phrased), and with HISTORY_READER_URL set it connects as a role
-// that can only SELECT the history tables — see lib/history/README.md.
-// Errors return to the model so it can fix its SQL.
+// SQL over the historical internationals database (lib/history). Two layers
+// keep it read-only: the statement must be a single SELECT, and it runs inside
+// a READ ONLY Postgres transaction — a mutation fails at the database no
+// matter how it's phrased. Errors return to the model so it can fix its SQL.
 
-import { neon } from "@neondatabase/serverless";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { sql as appSql } from "@/lib/history/db";
-
-const readerUrl = process.env.HISTORY_READER_URL;
-const sql = readerUrl ? neon(readerUrl) : appSql;
+import { sql } from "@/lib/db";
 
 const MAX_ROWS = 200;
 

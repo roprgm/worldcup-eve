@@ -1,13 +1,11 @@
-// Neon (serverless Postgres) client for the arena. One tiny, flexible table —
-// the full run lives in a `jsonb` column, so the schema never has to change as
-// the run shape evolves. With no DATABASE_URL (plain local dev) every caller
-// no-ops, so the app still runs without a database.
+// Schema for the arena tables. Tiny and flexible — the full run lives in a
+// `jsonb` column, so the schema never has to change as the run shape evolves.
+// The client comes from lib/db — null without a DATABASE_URL (plain local
+// dev), so every caller no-ops and the app still runs without a database.
 
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-
-export const sql = url ? neon(url) : null;
+export { sql };
 
 let schemaReady: Promise<void> | null = null;
 

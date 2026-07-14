@@ -1,17 +1,15 @@
-// Neon (serverless Postgres) client for the history tables, following the same
-// self-provisioning pattern as the arena: tables are created on first use, and
-// with no DATABASE_URL (plain local dev) `sql` is null so callers can no-op.
+// Schema for the history tables, self-provisioning like the arena's: created
+// on first use, no separate migration step. The client comes from lib/db —
+// null without a DATABASE_URL, so callers no-op in plain local dev.
 //
 // Matches are keyed by (date, home_team, away_team) — the natural key of the
 // upstream dataset (two nations never meet twice on one day) — so goals and
 // shootouts reference their match by the same triple and the sync can mirror
 // the source files without inventing ids.
 
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-
-export const sql = url ? neon(url) : null;
+export { sql };
 
 let schemaReady: Promise<void> | null = null;
 

@@ -1,10 +1,10 @@
-// The martj42/international_results dataset (CC0, public domain): every men's
-// full international since 1872, maintained as CSVs on GitHub. Canonical source
-// for the history tables — row fields keep the CSV header names, which are also
-// the table column names, so rows flow from file to database unchanged.
-// Renamed teams always appear under their current name ("Russia" even for
-// Soviet-era matches — former_names.csv recovers the name of the day);
-// dissolved teams keep their own ("Czechoslovakia", "German DR").
+// The international-results dataset (github.com/martj42/international_results,
+// CC0 public domain): every men's full international since 1872, maintained as
+// CSVs. Canonical source for the history tables — row fields keep the CSV
+// header names, which are also the table column names, so rows flow from file
+// to database unchanged. Renamed teams always appear under their current name
+// ("Russia" even for Soviet-era matches — former_names.csv recovers the name
+// of the day); dissolved teams keep their own ("Czechoslovakia", "German DR").
 
 import { parse } from "csv-parse/sync";
 
