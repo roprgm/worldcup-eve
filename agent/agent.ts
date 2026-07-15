@@ -3,9 +3,6 @@ import { defineAgent } from "eve";
 export default defineAgent({
   model: "anthropic/claude-sonnet-5",
   reasoning: "low",
-  build: {
-    externalDependencies: ["@guanmingchiu/sqlparser-ts"],
-  },
   modelOptions: {
     providerOptions: {
       anthropic: {

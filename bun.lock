@@ -19,8 +19,8 @@
         "csv-parse": "^7.0.1",
         "date-fns": "^4.4.0",
         "eve": "^0.18.0",
-        "eve-devtools": "^0.0.2",
-        "eve-sql-tool": "^0.1.0",
+        "eve-devtools": "^0.0.3",
+        "eve-sql-tool": "^0.1.1",
         "geist": "^1.7.2",
         "lucide-react": "^1.21.0",
         "next": "^16.2.9",
@@ -165,8 +165,6 @@
     "@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.28.1", "", { "os": "win32", "cpu": "ia32" }, "sha512-zvb/mB2bSCoJOpoCBgYKKpX6YM6mJBlBUVUtVj41DlZJVEB6/0CKlRYxP5wWl1C1ILiCoAU5wZZ4q1P3qeS6Eg=="],
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.1", "", { "os": "win32", "cpu": "x64" }, "sha512-bm4Mowrv+GXMlpWX++EcXw/iLyd1o3+bJkC2DkWXYVvgZCqD/bSj9ctZeAMC3cIxgjRVR2Dufaiu4YPxr5gW1A=="],
-
-    "@guanmingchiu/sqlparser-ts": ["@guanmingchiu/sqlparser-ts@0.62.0", "", {}, "sha512-m0YUe1oPzaixw0YX8Es2B8tA8UDPwT6uMIsKocTfyOcpb8tQIYWrP5Im70LT3p8tARLm718M6SObAxNYc0Wi3A=="],
 
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
@@ -934,9 +932,9 @@
 
     "eve": ["eve@0.18.0", "", { "dependencies": { "nitro": "3.0.260610-beta" }, "peerDependencies": { "@opentelemetry/api": "^1.0.0", "ai": "^7.0.0", "braintrust": "^3.0.0", "just-bash": "^3.0.0", "microsandbox": "^0.5.0" }, "optionalPeers": ["@opentelemetry/api", "braintrust", "just-bash", "microsandbox"], "bin": { "eve": "./bin/eve.js" } }, "sha512-vEYiZe5D3m1s0UvuS5oSsNaJ10PD3oXzmwY1dLxlRncPjHZNGlmb84fG//KOU/HI6AsQuL3/gvgxUuS48jCRnw=="],
 
-    "eve-devtools": ["eve-devtools@0.0.2", "", { "peerDependencies": { "react": ">=17" }, "optionalPeers": ["react"] }, "sha512-l5BJ/3axq9jWSC03FzOl92kDOHZcCgZeEcuaIu9yIQX66jO6G0mGmbGYW5SkDWUZYOPnkS5vCuonZK8fcAiwJA=="],
+    "eve-devtools": ["eve-devtools@0.0.3", "", { "peerDependencies": { "react": ">=17" }, "optionalPeers": ["react"] }, "sha512-6F/cE39LgGa93QyOgFt9nsqgn9eaiD69KoEoi9MAscid7Qb28LU9EDyMcEm1AfieChiBrIFKHseZTPsJHJcf8A=="],
 
-    "eve-sql-tool": ["eve-sql-tool@0.1.0", "", { "dependencies": { "@guanmingchiu/sqlparser-ts": "^0.62.0", "@toon-format/toon": "^2.3.0" }, "peerDependencies": { "better-sqlite3": "^12.11.1", "eve": "^0.18.0 || ^0.24.0", "pg": "^8.22.0" }, "optionalPeers": ["better-sqlite3", "pg"] }, "sha512-+TSERl/aa++pymhwH22nQq9jWIbJvZCYfezJrqi2dl6G1eMTp8J2Ap8c18DOx/Hgjk0/1Eixn0tHxKo0h+zWQA=="],
+    "eve-sql-tool": ["eve-sql-tool@0.1.1", "", { "dependencies": { "@toon-format/toon": "^2.3.0" }, "peerDependencies": { "better-sqlite3": "^12.11.1", "eve": "^0.18.0 || ^0.24.0", "pg": "^8.22.0" }, "optionalPeers": ["better-sqlite3", "pg"] }, "sha512-ebZNvEdT5fvWue1E5WDTA7/HUkCwrjx1flIhWJe8bxHYglxF+zwA9gYYw5LvBrHL2IusCOPISErClTRUux95KQ=="],
 
     "events-universal": ["events-universal@1.0.1", "", { "dependencies": { "bare-events": "^2.7.0" } }, "sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw=="],
 
