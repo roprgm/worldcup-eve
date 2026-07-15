@@ -1,12 +1,13 @@
 import { defineSqlTool } from "eve-sql-tool";
 import { postgres } from "eve-sql-tool/postgres";
 
-if (!process.env.DATABASE_URL) {
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!databaseUrl) {
   throw new Error("DATABASE_URL or POSTGRES_URL is required.");
 }
 
 export default defineSqlTool({
-  database: postgres(process.env.DATABASE_URL),
+  database: postgres(databaseUrl),
   tables: [
     "history_matches",
     "history_goals",
