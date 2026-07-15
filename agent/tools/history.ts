@@ -3,6 +3,7 @@
 // a READ ONLY Postgres transaction — a mutation fails at the database no
 // matter how it's phrased. Errors return to the model so it can fix its SQL.
 
+import { encode } from "@toon-format/toon";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
@@ -53,12 +54,14 @@ Prefer aggregates over listing rows; results are capped at ${MAX_ROWS} rows.`,
         [sql.query("set local statement_timeout = 5000"), sql.query(capped)],
         { readOnly: true },
       );
+      // TOON output (one header line, one row per line) — the uniform rows a
+      // SELECT produces cost far fewer tokens than JSON's repeated keys.
       if (rows.length > MAX_ROWS)
-        return {
+        return encode({
           rows: plainRows(rows.slice(0, MAX_ROWS)),
           note: `Truncated to ${MAX_ROWS} rows — aggregate or narrow the query.`,
-        };
-      return { rows: plainRows(rows) };
+        });
+      return encode({ rows: plainRows(rows) });
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
