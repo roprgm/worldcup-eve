@@ -6,8 +6,15 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL or POSTGRES_URL is required.");
 }
 
+const connectionUrl = new URL(databaseUrl);
+const sslMode = connectionUrl.searchParams.get("sslmode");
+
+if (sslMode === "prefer" || sslMode === "require" || sslMode === "verify-ca") {
+  connectionUrl.searchParams.set("sslmode", "verify-full");
+}
+
 export default defineSqlTool({
-  database: postgres(databaseUrl),
+  database: postgres(connectionUrl.toString()),
   tables: [
     "history_matches",
     "history_goals",
