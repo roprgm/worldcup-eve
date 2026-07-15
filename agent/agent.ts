@@ -4,7 +4,7 @@ export default defineAgent({
   model: "anthropic/claude-sonnet-5",
   reasoning: "low",
   build: {
-    externalDependencies: ["eve-sql-tool"],
+    externalDependencies: ["@guanmingchiu/sqlparser-ts"],
   },
   modelOptions: {
     providerOptions: {
