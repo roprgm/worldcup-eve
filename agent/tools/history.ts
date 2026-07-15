@@ -10,6 +10,21 @@ import { sql } from "@/lib/db";
 
 const MAX_ROWS = 200;
 
+// The driver hands back some Postgres types as objects — `date` columns as JS
+// Date instances — but a tool result must be plain JSON. Dates at UTC midnight
+// render as the bare calendar day the model expects.
+function plain(value: unknown): unknown {
+  if (value instanceof Date)
+    return value.toISOString().replace(/T00:00:00\.000Z$/, "");
+  if (typeof value === "bigint") return Number(value);
+  return value;
+}
+
+const plainRows = (rows: Record<string, unknown>[]) =>
+  rows.map((row) =>
+    Object.fromEntries(Object.entries(row).map(([c, v]) => [c, plain(v)])),
+  );
+
 export default defineTool({
   description: `Historical football database — every men's full international since 1872 (World Cups, qualifiers, continental cups, friendlies): results, goal scorers with minute, penalty shootouts, World Cup stages. Query it with one read-only SELECT for anything about past matches, head-to-heads, titles, or scoring records. For the live tournament prefer matches/standings/timeline. Tables:
 - history_matches(date, home_team, away_team, home_score, away_score, tournament, city, country, neutral, stage) — stage is set on 'FIFA World Cup' rows: 'Group stage', 'Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Third place', 'Final'.
@@ -40,10 +55,10 @@ Prefer aggregates over listing rows; results are capped at ${MAX_ROWS} rows.`,
       );
       if (rows.length > MAX_ROWS)
         return {
-          rows: rows.slice(0, MAX_ROWS),
+          rows: plainRows(rows.slice(0, MAX_ROWS)),
           note: `Truncated to ${MAX_ROWS} rows — aggregate or narrow the query.`,
         };
-      return { rows };
+      return { rows: plainRows(rows) };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
