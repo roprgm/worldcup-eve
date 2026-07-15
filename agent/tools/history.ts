@@ -25,7 +25,6 @@ const plainRows = (rows: Record<string, unknown>[]) =>
   rows.map((row) =>
     Object.fromEntries(Object.entries(row).map(([c, v]) => [c, plain(v)])),
   );
-
 export default defineTool({
   description: `Historical football database — every men's full international since 1872 (World Cups, qualifiers, continental cups, friendlies): results, goal scorers with minute, penalty shootouts, World Cup stages. Query it with one read-only SELECT for anything about past matches, head-to-heads, titles, or scoring records. For the live tournament prefer matches/standings/timeline. Tables:
 - history_matches(date, home_team, away_team, home_score, away_score, tournament, city, country, neutral, stage) — stage is set on 'FIFA World Cup' rows: 'Group stage', 'Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Third place', 'Final'.

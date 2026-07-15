@@ -23,7 +23,9 @@ DATABASE_URL=postgres://... bun run sync:history
 A run fetches both sources and rebuilds all four tables in one transaction
 (~50k matches, ~48k goals, a few seconds). There is no incremental state:
 re-running is always safe, and refreshing after a matchday is the same command.
-The schema self-provisions on first run — no migration step.
+The schema self-provisions on first run — no migration step. Production also
+runs this full sync daily at 06:00 UTC through
+`agent/schedules/sync-history.ts`.
 
 ## Keeping up with the current Cup
 

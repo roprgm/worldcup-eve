@@ -4,15 +4,15 @@
 // everything in one transaction — no incremental state, and re-running is
 // always safe. Run: bun run sync:history
 
-import { ensureSchema, sql } from "./db";
+import { ensureSchema, sql } from "@/lib/history/db";
 import {
   fetchGoals,
   fetchMatches,
   fetchShootouts,
   fetchTeamNames,
   type Match,
-} from "./international-results";
-import { fetchStages, type StageRow } from "./openfootball";
+} from "@/lib/history/international-results";
+import { fetchStages, type StageRow } from "@/lib/history/openfootball";
 
 const key = (date: string, home: string, away: string) =>
   `${date}|${home}|${away}`;
@@ -117,7 +117,9 @@ export async function buildTables() {
   };
 }
 
-if ((import.meta as { main?: boolean }).main) {
+// Rebuild every history table from the canonical public sources. Exported for
+// the daily schedule as well as the one-off CLI command.
+export async function syncHistory(): Promise<void> {
   if (!sql)
     throw new Error(
       "DATABASE_URL (or POSTGRES_URL) must point at Neon Postgres",
@@ -164,3 +166,5 @@ if ((import.meta as { main?: boolean }).main) {
       `WARNING ${misses.length} World Cup matches missing a stage:\n  ${misses.join("\n  ")}`,
     );
 }
+
+if ((import.meta as { main?: boolean }).main) await syncHistory();
