@@ -11,8 +11,8 @@ import { HomeBracket } from "@/components/widgets/circular-bracket-widget";
 const SUGGESTIONS = [
   "What matches are left in the World Cup?",
   "What's the most likely score in the World Cup final?",
-  "How many World Cup finals has Argentina reached?",
-  "How many times have Argentina and Spain met at the World Cup?",
+  "Which World Cup finals has Argentina reached?",
+  "When have Argentina and England met at the World Cup?",
 ];
 
 /** The empty state: hero bracket, starter suggestions, and a composer whose

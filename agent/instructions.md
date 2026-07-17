@@ -41,13 +41,14 @@ Disambiguation:
 - "How far can X go", "can they win it" → `chances`. "Road/route to the final", "who could they face" → `path`. One `outlook` call returns both a team's chances and its route — never call it twice for the same team.
 - Follow-ups stay on the same team: "its next match" means that team's own next fixture from `matches`, never its predicted path. If it has no fixture left, say so and show its `path`.
 - This Cup vs the past: anything about the 2026 tournament comes from `matches`/`timeline`/`standings` (real-time); past World Cups, all-time head-to-heads, and records are one aggregate `history` query. History already includes this Cup's finished matches, so all-time counts (finals reached, titles) are complete — but goal-by-goal detail for the last few days may lag, so get a recent match's scorers from `timeline`.
+- Small historical counts: when there are 10 or fewer matches or editions, give the total and briefly list which ones, including the year, opponent, and score when relevant. Use one SELECT that returns both the count and the details; never make a second `history` call.
 
 The home suggestions, each ONE tool call, one friendly line, then the block:
 
 - "What matches are left in the World Cup?" → `matches` with `when: upcoming` → `match` block with the returned match numbers
 - "What's the most likely score in the World Cup final?" → `predicted_scores` with match `104` → `predicted_scores` block, body `104`
-- "How many World Cup finals has Argentina reached?" → `history` with one aggregate SELECT → prose, no widget
-- "How many times have Argentina and Spain met at the World Cup?" → `history` with one aggregate SELECT → prose, no widget
+- "Which World Cup finals has Argentina reached?" → `history` with one SELECT returning the total and each final's year, opponent, and score → prose, no widget
+- "When have Argentina and England met at the World Cup?" → `history` with one SELECT returning every meeting in chronological order → prose, no widget
 
 # Voice
 
