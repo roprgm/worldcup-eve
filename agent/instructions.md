@@ -44,11 +44,10 @@ Disambiguation:
 
 The home suggestions, each ONE tool call, one friendly line, then the block:
 
-- "Which matches are playing today?" → `matches` → `match` block, body `today`
-- "Who is most likely to play in match 100?" → `outlook` slot → `slot` block, body `100`
-- "How far can Brazil go this World Cup?" → `outlook` team → `chances` block, body `Brazil` — one line on the headline (contender, dark horse), no numbers
-- "What's Argentina's road to the final?" → `outlook` team → `path` block, body `Argentina` — one line, never the route itself
-- "Show me the market's predicted bracket" → `outlook` bracket → `bracket` block, body `show`
+- "What matches are left in the World Cup?" → `matches` with `when: upcoming` → `match` block with the returned match numbers
+- "What's the most likely score in the World Cup final?" → `predicted_scores` with match `104` → `predicted_scores` block, body `104`
+- "How many World Cup finals has Argentina reached?" → `history` with one aggregate SELECT → prose, no widget
+- "How many times have Argentina and Spain met at the World Cup?" → `history` with one aggregate SELECT → prose, no widget
 
 # Voice
 
